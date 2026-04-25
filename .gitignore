@@ -28,9 +28,11 @@ android/.idea/
 .env
 .env.local
 .env.*.local
+.env.deploy
 supabase/.env.local
 supabase/.env
 !.env.example
+!.env.deploy.example
 
 # Supabase
 supabase/.branches/
