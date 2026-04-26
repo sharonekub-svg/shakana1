@@ -33,7 +33,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ],
   web: {
     bundler: 'metro',
-    output: 'static',
+    output: 'single',
   },
   ios: {
     supportsTablet: false,
