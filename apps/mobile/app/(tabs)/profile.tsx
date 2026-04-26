@@ -15,36 +15,47 @@ import { useLocale } from '@/i18n/locale';
 
 type RowProps = {
   label: string;
+  description?: string;
   value?: string;
-  code: string;
   danger?: boolean;
   onPress?: () => void;
 };
 
-function Row({ label, value, code, danger, onPress }: RowProps) {
+function Row({ label, description, value, danger, onPress }: RowProps) {
+  const content = (
+    <>
+      <View style={{ flex: 1, gap: 3 }}>
+        <Text style={[styles.rowLabel, danger && { color: colors.err }]}>{label}</Text>
+        {description ? <Text style={styles.rowDescription}>{description}</Text> : null}
+      </View>
+      {value ? <Text style={styles.rowValue}>{value}</Text> : null}
+      {onPress && !danger ? (
+        <Svg width={7} height={12} viewBox="0 0 7 12" fill="none">
+          <Path d="M5 10L1 6l4-4" stroke={colors.mu2} strokeWidth={2} strokeLinecap="square" />
+        </Svg>
+      ) : null}
+    </>
+  );
+
+  if (!onPress) {
+    return <View style={styles.row}>{content}</View>;
+  }
+
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.cardSoft }]}
       accessibilityRole="button"
     >
-      <View style={[styles.codeWrap, danger && { backgroundColor: colors.err }]}>
-        <Text style={[styles.codeText, danger && { color: colors.white }]}>{code}</Text>
-      </View>
-      <Text style={[styles.rowLabel, danger && { color: colors.err }]}>{label}</Text>
-      {value ? <Text style={styles.rowValue}>{value}</Text> : null}
-      {!danger ? (
-        <Svg width={7} height={12} viewBox="0 0 7 12" fill="none">
-          <Path d="M5 10L1 6l4-4" stroke={colors.mu2} strokeWidth={2} strokeLinecap="square" />
-        </Svg>
-      ) : null}
+      {content}
     </Pressable>
   );
 }
 
 export default function ProfileTab() {
   const router = useRouter();
-  const { t } = useLocale();
+  const { language } = useLocale();
+  const isHebrew = language === 'he';
   const user = useAuthStore((s) => s.user);
   const reset = useAuthStore((s) => s.reset);
   const { data: profile } = useProfile(user?.id);
@@ -59,7 +70,15 @@ export default function ProfileTab() {
       resetAnalytics();
       reset();
     } catch (e) {
-      pushToast(e instanceof Error ? e.message : t('common.signOutFailed'), 'error');
+      pushToast(e instanceof Error ? e.message : isHebrew ? 'לא הצלחתי להתנתק.' : 'Sign out failed.', 'error');
+    }
+  };
+
+  const handleSupport = async () => {
+    try {
+      await Linking.openURL('mailto:support@shakana.app');
+    } catch {
+      pushToast(isHebrew ? 'לא הצלחתי לפתוח את אפליקציית המייל.' : 'Could not open your email app.', 'error');
     }
   };
 
@@ -70,7 +89,12 @@ export default function ProfileTab() {
           <View style={styles.header}>
             <View>
               <Text style={styles.kicker}>SHAKANA</Text>
-              <Text style={styles.title}>{t('tabs.profile.title')}</Text>
+              <Text style={styles.title}>{isHebrew ? 'פרופיל' : 'Profile'}</Text>
+              <Text style={styles.subtitle}>
+                {isHebrew
+                  ? 'כאן תמצא הגדרות שמפעילות את החשבון שלך, ומסכי מידע שלא משנים כלום.'
+                  : 'This page mixes account settings with read-only info pages. Only the settings change your account.'}
+              </Text>
             </View>
           </View>
 
@@ -79,11 +103,11 @@ export default function ProfileTab() {
               <Text style={styles.avatarText}>{initials || 'SK'}</Text>
             </View>
             <View style={{ flex: 1, gap: 4 }}>
-              <Text style={styles.name}>{profile ? `${profile.first_name} ${profile.last_name}` : t('common.signedOut')}</Text>
+              <Text style={styles.name}>{profile ? `${profile.first_name} ${profile.last_name}` : isHebrew ? 'לא מחובר' : 'Signed out'}</Text>
               {profile ? (
                 <>
                   <Text style={styles.cardLine}>
-                    {profile.street} {profile.building}, {t('auth.address.apartment')} {profile.apt}
+                    {profile.street} {profile.building}, {isHebrew ? 'דירה' : 'Apt'} {profile.apt}
                   </Text>
                   <Text style={styles.cardLine}>{profile.city}</Text>
                 </>
@@ -93,27 +117,71 @@ export default function ProfileTab() {
 
           <LanguageSwitcher />
 
-          <Text style={styles.section}>{t('common.account')}</Text>
+          <Text style={styles.section}>{isHebrew ? 'חשבון' : 'Account'}</Text>
           <View style={styles.group}>
-            <Row code="ADR" label={t('common.savedAddress')} value={profile ? `${profile.street} ${profile.building}` : ''} />
-            <Row code="TEL" label={t('common.phoneNumber')} value={profile?.phone ? `+972 ${profile.phone}` : ''} />
-            <Row code="PAY" label={t('common.paymentMethod')} value={t('common.add')} onPress={() => router.push('/(tabs)/profile/payment')} />
-            <Row code="ALR" label={t('common.alerts')} onPress={() => router.push('/(tabs)/profile/alerts')} />
+            <Row
+              label={isHebrew ? 'כתובת שמורה' : 'Saved address'}
+              description={isHebrew ? 'משמשת למשלוחים בלבד' : 'Used for deliveries'}
+              value={profile ? `${profile.street} ${profile.building}` : ''}
+            />
+            <Row
+              label={isHebrew ? 'מספר טלפון' : 'Phone number'}
+              description={isHebrew ? 'משמש לכניסה ולעדכונים' : 'Used for sign-in and order updates'}
+              value={profile?.phone ? `+972 ${profile.phone}` : ''}
+            />
+            <Row
+              label={isHebrew ? 'תשלום' : 'Payment'}
+              description={isHebrew ? 'פותח את מסך ההסבר על תשלום' : 'Opens the payment explanation page'}
+              value={isHebrew ? 'לצפייה' : 'Open'}
+              onPress={() => router.push('/(tabs)/profile/payment')}
+            />
+            <Row
+              label={isHebrew ? 'התראות' : 'Alerts'}
+              description={isHebrew ? 'הפעלה וכיבוי של התראות לחשבון הזה' : 'Toggle notifications for this account'}
+              value={isHebrew ? 'לצפייה' : 'Open'}
+              onPress={() => router.push('/(tabs)/profile/alerts')}
+            />
           </View>
 
-          <Text style={styles.section}>{t('common.policy')}</Text>
+          <Text style={styles.section}>{isHebrew ? 'מידע' : 'Info'}</Text>
           <View style={styles.group}>
-            <Row code="DOC" label={t('common.terms')} onPress={() => router.push('/(tabs)/profile/terms')} />
-            <Row code="LCK" label={t('common.privacy')} onPress={() => router.push('/(tabs)/profile/privacy')} />
-            <Row code="MAIL" label={t('common.support')} value="support@shakana.app" onPress={() => Linking.openURL('mailto:support@shakana.app')} />
-            <Row code="OUT" label={t('common.signOut')} danger onPress={handleLogout} />
+            <Row
+              label={isHebrew ? 'תנאי שימוש' : 'Terms of use'}
+              description={isHebrew ? 'מסך מידע בלבד, לא משנה את החשבון' : 'Read only. This does not change your account.'}
+              value={isHebrew ? 'לקריאה' : 'Read'}
+              onPress={() => router.push('/(tabs)/profile/terms')}
+            />
+            <Row
+              label={isHebrew ? 'מדיניות פרטיות' : 'Privacy policy'}
+              description={isHebrew ? 'מסך מידע בלבד, לא משנה את החשבון' : 'Read only. This does not change your account.'}
+              value={isHebrew ? 'לקריאה' : 'Read'}
+              onPress={() => router.push('/(tabs)/profile/privacy')}
+            />
+            <Row
+              label={isHebrew ? 'תמיכה' : 'Support'}
+              description={isHebrew ? 'פותח מייל לתמיכה' : 'Opens email support'}
+              value="support@shakana.app"
+              onPress={handleSupport}
+            />
+            <Row
+              label={isHebrew ? 'התנתקות' : 'Sign out'}
+              description={isHebrew ? 'יוציא אותך מהחשבון' : 'Logs you out of this account'}
+              danger
+              onPress={handleLogout}
+            />
           </View>
 
+          <Text style={styles.section}>{isHebrew ? 'אזור מסוכן' : 'Danger zone'}</Text>
           <View style={styles.group}>
-            <Row code="DEL" label={t('common.deleteAccount')} danger onPress={() => router.push('/(tabs)/profile/delete')} />
+            <Row
+              label={isHebrew ? 'מחיקת חשבון' : 'Delete account'}
+              description={isHebrew ? 'מוחק את החשבון והמידע הקשור אליו' : 'Permanently deletes this account and related data'}
+              danger
+              onPress={() => router.push('/(tabs)/profile/delete')}
+            />
           </View>
 
-          <Text style={styles.version}>{t('tabs.profile.version')}</Text>
+          <Text style={styles.version}>{isHebrew ? 'גרסה 1.0.0 · 2026' : 'Version 1.0.0 · 2026'}</Text>
         </View>
       </ScrollView>
     </ScreenBase>
@@ -134,6 +202,14 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   title: { fontFamily: fontFamily.display, fontSize: 26, color: colors.tx },
+  subtitle: {
+    marginTop: 8,
+    maxWidth: 330,
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    lineHeight: 20,
+    color: colors.mu,
+  },
   card: {
     backgroundColor: colors.white,
     borderRadius: 28,
@@ -183,19 +259,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     minHeight: 54,
   },
-  codeWrap: {
-    width: 42,
-    height: 36,
-    borderRadius: radii.pill,
-    backgroundColor: colors.cardSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.br,
-  },
-  codeText: { fontSize: 10, letterSpacing: 1, color: colors.tx, fontFamily: fontFamily.bodyBold },
-  rowLabel: { flex: 1, fontSize: 15, color: colors.tx, fontFamily: fontFamily.body },
-  rowValue: { fontSize: 14, color: colors.mu, fontFamily: fontFamily.body },
+  rowLabel: { fontSize: 15, color: colors.tx, fontFamily: fontFamily.body },
+  rowDescription: { fontSize: 12, color: colors.mu, fontFamily: fontFamily.body, lineHeight: 18 },
+  rowValue: { fontSize: 14, color: colors.mu2, fontFamily: fontFamily.body },
   version: {
     textAlign: 'center',
     fontSize: 11,

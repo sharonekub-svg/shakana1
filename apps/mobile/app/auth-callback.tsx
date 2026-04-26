@@ -31,15 +31,12 @@ export default function AuthCallback() {
       }
 
       const code = Array.isArray(params.code) ? params.code[0] : params.code;
-      if (!code) {
-        router.replace('/(auth)/welcome');
-        return;
-      }
-
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
-      if (error) {
-        setMessage(error.message);
-        return;
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          setMessage(error.message);
+          return;
+        }
       }
 
       const { data: sessionData } = await supabase.auth.getSession();
@@ -48,7 +45,14 @@ export default function AuthCallback() {
 
       const userId = sessionData.session?.user.id;
       if (!userId) {
-        router.replace('/(auth)/welcome');
+        const { data: implicitSession } = await supabase.auth.getSession();
+        const implicitUserId = implicitSession.session?.user.id;
+        if (!implicitUserId) {
+          router.replace('/(auth)/welcome');
+          return;
+        }
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', implicitUserId).maybeSingle();
+        router.replace(isProfileComplete(profile) ? '/(tabs)/building' : '/(auth)/name');
         return;
       }
 

@@ -15,7 +15,8 @@ import { useLocale } from '@/i18n/locale';
 
 export default function DeleteAccountScreen() {
   const router = useRouter();
-  const { t } = useLocale();
+  const { t, language } = useLocale();
+  const isHebrew = language === 'he';
   const deleteAccount = useDeleteAccount();
   const pushToast = useUiStore((s) => s.pushToast);
   const reset = useAuthStore((s) => s.reset);
@@ -43,6 +44,11 @@ export default function DeleteAccountScreen() {
         <View>
           <Text style={styles.kicker}>SHAKANA</Text>
           <Text style={styles.title}>{t('profile.deleteTitle')}</Text>
+          <Text style={styles.subtitle}>
+            {isHebrew
+              ? 'זה מוחק את החשבון הזה וכל מה שמחובר אליו.'
+              : 'This permanently removes this account and everything tied to it.'}
+          </Text>
         </View>
       </View>
 
@@ -80,6 +86,14 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.display,
     fontSize: 28,
     color: colors.tx,
+  },
+  subtitle: {
+    marginTop: 8,
+    maxWidth: 330,
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    lineHeight: 20,
+    color: colors.mu,
   },
   card: {
     padding: 16,

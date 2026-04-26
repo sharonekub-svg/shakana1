@@ -16,7 +16,8 @@ const points = [
 
 export default function PrivacyScreen() {
   const router = useRouter();
-  const { t } = useLocale();
+  const { t, language } = useLocale();
+  const isHebrew = language === 'he';
 
   return (
     <ScreenBase style={styles.screen}>
@@ -25,6 +26,11 @@ export default function PrivacyScreen() {
         <View>
           <Text style={styles.kicker}>SHAKANA</Text>
           <Text style={styles.title}>{t('profile.privacyTitle')}</Text>
+          <Text style={styles.subtitle}>
+            {isHebrew
+              ? 'זה מסך מידע בלבד. הוא לא משנה דבר בחשבון.'
+              : 'This is read only. It does not change anything in your account.'}
+          </Text>
         </View>
       </View>
 
@@ -62,6 +68,14 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.display,
     fontSize: 28,
     color: colors.tx,
+  },
+  subtitle: {
+    marginTop: 8,
+    maxWidth: 320,
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    lineHeight: 20,
+    color: colors.mu,
   },
   card: {
     gap: 14,

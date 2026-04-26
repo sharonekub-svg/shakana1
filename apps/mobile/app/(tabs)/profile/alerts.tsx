@@ -39,7 +39,8 @@ function ToggleRow({
 
 export default function AlertsSettings() {
   const router = useRouter();
-  const { t } = useLocale();
+  const { t, language } = useLocale();
+  const isHebrew = language === 'he';
   const settings = useNotificationSettingsStore((s) => s.settings);
   const hydrated = useNotificationSettingsStore((s) => s.hydrated);
   const load = useNotificationSettingsStore((s) => s.load);
@@ -58,6 +59,11 @@ export default function AlertsSettings() {
         <View>
           <Text style={styles.kicker}>SHAKANA</Text>
           <Text style={styles.title}>{t('profile.alertsTitle')}</Text>
+          <Text style={styles.subtitle}>
+            {isHebrew
+              ? 'המתגים כאן שייכים לחשבון הזה בלבד.'
+              : 'These toggles apply to this account only.'}
+          </Text>
         </View>
       </View>
 
@@ -113,6 +119,14 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.display,
     fontSize: 28,
     color: colors.tx,
+  },
+  subtitle: {
+    marginTop: 8,
+    maxWidth: 320,
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    lineHeight: 20,
+    color: colors.mu,
   },
   card: {
     backgroundColor: colors.white,

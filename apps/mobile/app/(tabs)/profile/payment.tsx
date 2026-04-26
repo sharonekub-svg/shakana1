@@ -13,7 +13,8 @@ import { useLocale } from '@/i18n/locale';
 
 export default function PaymentSettings() {
   const router = useRouter();
-  const { t } = useLocale();
+  const { t, language } = useLocale();
+  const isHebrew = language === 'he';
   const user = useAuthStore((s) => s.user);
   const { data: orders = [] } = useUserOrders(user?.id);
   const pendingOrders = orders.filter((order) => !['completed', 'cancelled'].includes(order.status));
@@ -26,6 +27,11 @@ export default function PaymentSettings() {
         <View>
           <Text style={styles.kicker}>SHAKANA</Text>
           <Text style={styles.title}>{t('profile.paymentTitle')}</Text>
+          <Text style={styles.subtitle}>
+            {isHebrew
+              ? 'זה משפיע רק על התשלום של החשבון הזה, ולא שומר כרטיס בתוך הפרופיל.'
+              : 'This affects checkout for this account only. It does not store a card inside the profile.'}
+          </Text>
         </View>
       </View>
 
@@ -80,6 +86,14 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.display,
     fontSize: 28,
     color: colors.tx,
+  },
+  subtitle: {
+    marginTop: 8,
+    maxWidth: 320,
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    lineHeight: 20,
+    color: colors.mu,
   },
   card: {
     gap: 10,

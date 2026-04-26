@@ -1,17 +1,19 @@
 import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { env } from './env';
 import { secureAuthStorage } from './secureStorage';
 import type { Database } from '@/types/database';
+
+const flowType = Platform.OS === 'web' ? 'implicit' : 'pkce';
 
 export const supabase = createClient<Database>(env.supabaseUrl, env.supabaseAnonKey, {
   auth: {
     storage: secureAuthStorage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
-    flowType: 'pkce',
+    detectSessionInUrl: Platform.OS === 'web',
+    flowType,
   },
   global: {
     headers: { 'x-shk-client': 'mobile' },

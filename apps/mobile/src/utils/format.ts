@@ -11,5 +11,5 @@ export function phoneDigitsOnly(formatted: string): string {
 
 export function formatAgorot(amount: number): string {
   const shekels = amount / 100;
-  return `₪${shekels.toLocaleString('he-IL', { maximumFractionDigits: 2 })}`;
+  return `\u20aa${shekels.toLocaleString('he-IL', { maximumFractionDigits: 2 })}`;
 }

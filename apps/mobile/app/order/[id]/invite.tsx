@@ -34,7 +34,7 @@ export default function InviteSheet() {
     if (!token || !id) return;
     try {
       await Share.share({
-        message: `הצטרפו אליי להזמנה קבוצתית ב-שכנה: ${universal}`,
+        message: `${appLink}\n${universal}\n\nOpen Shakana to join the order and see the full details.`,
       });
       trackInviteSent(String(id));
     } catch (e) {
