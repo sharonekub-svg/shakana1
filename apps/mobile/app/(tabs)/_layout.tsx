@@ -40,7 +40,7 @@ function ProfileIcon({ color, active }: IconProps) {
 
 export default function TabsLayout() {
   const { t } = useLocale();
-  const mainRoutes = new Set(['building', 'orders', 'profile']);
+  const mainRoutes = new Set(['building', 'orders', 'account']);
 
   return (
     <Tabs
@@ -65,13 +65,14 @@ export default function TabsLayout() {
         tabBarIcon: ({ color, focused }) => {
           if (route.name === 'building') return <HomeIcon color={color} active={focused} />;
           if (route.name === 'orders') return <OrdersIcon color={color} active={focused} />;
+          if (route.name === 'account') return <ProfileIcon color={color} active={focused} />;
           return <ProfileIcon color={color} active={focused} />;
         },
       })}
     >
       <Tabs.Screen name="building" options={{ title: t('tabs.home.title') }} />
       <Tabs.Screen name="orders" options={{ title: t('tabs.orders.title') }} />
-      <Tabs.Screen name="profile" options={{ title: t('tabs.profile.title') }} />
+      <Tabs.Screen name="account" options={{ title: t('tabs.profile.title') }} />
     </Tabs>
   );
 }

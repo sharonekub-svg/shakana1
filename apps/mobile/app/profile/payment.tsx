@@ -46,7 +46,7 @@ export default function PaymentSettings() {
           <Text style={styles.cardTitle}>{t('profile.paymentNextOrder')}</Text>
           <Text style={styles.cardBody}>{nextOrder.product_title ?? nextOrder.product_url}</Text>
           <Text style={styles.cardNote}>
-            {formatAgorot(nextOrder.product_price_agorot)} • {nextOrder.max_participants} {t('tabs.orders.seats')}
+            {formatAgorot(nextOrder.product_price_agorot)} ג€¢ {nextOrder.max_participants} {t('tabs.orders.seats')}
           </Text>
           <Pressable style={styles.secondaryBtn} onPress={() => router.push(`/order/${nextOrder.id}/pay`)}>
             <Text style={styles.secondaryBtnText}>{t('profile.paymentContinue')}</Text>

@@ -159,7 +159,7 @@ export default function BuildingTab() {
                 <Text style={styles.brandTitle}>{t('tabs.home.title')}</Text>
               </View>
             </View>
-            <Pressable style={styles.topAction} onPress={() => router.push('/(tabs)/profile')}>
+          <Pressable style={styles.topAction} onPress={() => router.push('/(tabs)/account')}>
               <Text style={styles.topActionText}>{t('tabs.home.profile')}</Text>
             </Pressable>
           </View>
