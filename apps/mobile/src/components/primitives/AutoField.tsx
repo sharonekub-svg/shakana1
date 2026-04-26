@@ -17,6 +17,7 @@ type Props = {
   value: string;
   onChange: (v: string) => void;
   onSelect?: (v: string) => void;
+  onSubmitEditing?: () => void;
   placeholder?: string;
   suggestions?: string[];
   loading?: boolean;
@@ -29,6 +30,7 @@ export function AutoField({
   value,
   onChange,
   onSelect,
+  onSubmitEditing,
   placeholder,
   suggestions = [],
   loading,
@@ -63,8 +65,9 @@ export function AutoField({
             setOpen(true);
           }}
           onBlur={() => {
-            setTimeout(() => setFocused(false), 120);
+            setTimeout(() => setFocused(false), 180);
           }}
+          onSubmitEditing={onSubmitEditing}
           placeholder={placeholder}
           placeholderTextColor={colors.mu}
           autoCorrect={false}
@@ -121,7 +124,7 @@ export function AutoField({
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 8, position: 'relative' },
+  wrap: { gap: 8, position: 'relative', zIndex: 20 },
   label: { fontSize: 13, color: colors.mu, fontFamily: fontFamily.bodyBold },
   input: {
     backgroundColor: colors.white,
@@ -146,7 +149,8 @@ const styles = StyleSheet.create({
     top: 82,
     start: 0,
     end: 0,
-    zIndex: 50,
+    zIndex: 100,
+    elevation: 12,
     maxHeight: 220,
     backgroundColor: colors.white,
     borderRadius: radii.lg,

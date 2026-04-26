@@ -45,6 +45,12 @@ export default function Address() {
     setStreetSuggs([]);
   };
 
+  const commitBestCity = () => {
+    if (citySuggs.length > 0) {
+      selectCity(citySuggs[0]);
+    }
+  };
+
   const runCitySearch = useCallback((q: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (q.trim().length < 2) {
@@ -157,6 +163,7 @@ export default function Address() {
               setCityLocked(false);
             }}
             onSelect={selectCity}
+            onSubmitEditing={commitBestCity}
             placeholder={t('auth.address.citySearch')}
             suggestions={citySuggs}
             loading={cityLoad}
@@ -188,6 +195,9 @@ export default function Address() {
           onSelect={(v) => {
             setStreet(v);
             setStreetSuggs([]);
+          }}
+          onSubmitEditing={() => {
+            if (streetSuggs.length > 0) setStreet(streetSuggs[0]);
           }}
           placeholder={cityLocked ? t('auth.address.streetSearch', { city }) : t('auth.address.cityFirst')}
           suggestions={streetSuggs}
