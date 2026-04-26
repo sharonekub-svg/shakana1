@@ -3,6 +3,7 @@ export type OrderStatus =
   | 'open'
   | 'paying'
   | 'escrow'
+  | 'card_issued'
   | 'delivered'
   | 'completed'
   | 'cancelled';

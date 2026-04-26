@@ -60,20 +60,52 @@ done
 supabase functions deploy stripe-webhook --no-verify-jwt
 ```
 
-## 5. Point Stripe at the webhook
+## 5. Point Stripe at the webhooks
+
+Two webhook endpoints — one for collecting participant payments, one for
+authorizing the issued virtual card in real time.
+
+### 5a. Payments webhook
 
 In the Stripe Dashboard → Developers → Webhooks → **Add endpoint**:
 
 ```
 URL: https://<your-supabase-ref>.functions.supabase.co/stripe-webhook
 Events:
-  - payment_intent.amount_capturable_updated
   - payment_intent.succeeded
   - payment_intent.canceled
   - payment_intent.payment_failed
 ```
 
-Copy the new signing secret (`whsec_...`) into `.env.deploy` as `STRIPE_WEBHOOK_SECRET`, then run `supabase secrets set --env-file supabase/.env.local` again.
+Copy the new signing secret (`whsec_...`) into `.env.deploy` as `STRIPE_WEBHOOK_SECRET`.
+
+### 5b. Issuing webhook (VCC)
+
+Create a Stripe Issuing cardholder (one per platform — represents Shakana
+as the merchant of record). In Stripe → Issuing → Cardholders → **New
+cardholder** (Type: Company). Copy the cardholder id (`ich_...`) into
+`.env.deploy` as `STRIPE_ISSUING_CARDHOLDER_ID`.
+
+Then add a second webhook endpoint:
+
+```
+URL: https://<your-supabase-ref>.functions.supabase.co/stripe-issuing-webhook
+Events:
+  - issuing_authorization.request
+  - issuing_authorization.created
+  - issuing_card.updated
+```
+
+⚠️ Crucial: this endpoint **must respond within 2 seconds** to authorization
+requests, otherwise Stripe declines on its own. If the function ever gets
+slow, route it through a closer region.
+
+Copy this endpoint's signing secret into `.env.deploy` as
+`STRIPE_ISSUING_WEBHOOK_SECRET`. (It's a different secret than the
+payments webhook — Stripe issues one per endpoint.)
+
+After updating `.env.deploy`, run `supabase secrets set --env-file
+supabase/.env.local` to push the new secrets to your edge functions.
 
 ## 6. Verify
 

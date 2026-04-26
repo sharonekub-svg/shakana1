@@ -62,7 +62,8 @@ export default function OrderShell() {
     // Route to correct sub-screen based on order + this participant's state.
     if (!order || !me) return;
     if (order.status === 'completed') router.replace(`/order/${order.id}/complete`);
-    else if (order.status === 'escrow' || order.status === 'delivered') router.replace(`/order/${order.id}/escrow`);
+    else if (order.status === 'escrow' || order.status === 'card_issued' || order.status === 'delivered')
+      router.replace(`/order/${order.id}/escrow`);
   }, [order, me, router]);
 
   if (isLoading || !data) {

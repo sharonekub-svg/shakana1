@@ -1,4 +1,4 @@
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Svg, { Path } from 'react-native-svg';
 
@@ -7,9 +7,7 @@ import { BackBtn } from '@/components/primitives/BackBtn';
 import { colors, radii } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { useOrder } from '@/api/orders';
-import { buildZaraCartUrl } from '@/lib/zara';
 import { formatAgorot } from '@/utils/format';
-import { useUiStore } from '@/stores/uiStore';
 
 function Check() {
   return (
@@ -29,7 +27,6 @@ export default function Complete() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { data, isLoading } = useOrder(id);
-  const pushToast = useUiStore((s) => s.pushToast);
 
   if (isLoading || !data) {
     return (
@@ -38,17 +35,6 @@ export default function Complete() {
       </ScreenBase>
     );
   }
-
-  const isZara = (data.order.product_url ?? '').includes('zara.com');
-  const zaraUrl = buildZaraCartUrl(data.order.id, data.items);
-
-  const openZara = async () => {
-    try {
-      await Linking.openURL(zaraUrl);
-    } catch {
-      pushToast('לא ניתן לפתוח את ZARA', 'error');
-    }
-  };
 
   return (
     <ScreenBase style={{ paddingTop: 20, paddingBottom: 36 }}>
@@ -78,15 +64,11 @@ export default function Complete() {
         </View>
       </View>
 
-      {isZara ? (
-        <Pressable
-          onPress={openZara}
-          style={({ pressed }) => [styles.zaraBtn, pressed && { opacity: 0.9 }]}
-          accessibilityRole="button"
-        >
-          <Text style={styles.zaraLabel}>פתח סל ZARA 🛍️</Text>
-        </Pressable>
-      ) : null}
+      <View style={styles.note}>
+        <Text style={styles.noteText}>
+          ✅ הכרטיס הוירטואלי שולם בחנות. ההזמנה תגיע לכתובת המשתפת בתוך הימים הקרובים.
+        </Text>
+      </View>
     </ScreenBase>
   );
 }
@@ -123,11 +105,11 @@ const styles = StyleSheet.create({
   receiptRow: { flexDirection: 'row', justifyContent: 'space-between' },
   rowK: { fontFamily: fontFamily.body, color: colors.mu, fontSize: 14 },
   rowV: { fontFamily: fontFamily.bodySemi, color: colors.tx, fontSize: 14 },
-  zaraBtn: {
-    backgroundColor: colors.tx,
-    borderRadius: radii.lg,
-    paddingVertical: 16,
-    alignItems: 'center',
+  note: {
+    backgroundColor: colors.accLight,
+    borderRadius: radii.md,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
-  zaraLabel: { color: colors.white, fontFamily: fontFamily.bodySemi, fontSize: 16 },
+  noteText: { fontFamily: fontFamily.body, fontSize: 13, color: colors.acc, lineHeight: 20 },
 });

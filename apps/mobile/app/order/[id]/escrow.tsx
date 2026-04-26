@@ -66,7 +66,7 @@ export default function Escrow() {
         <Text style={styles.lockTitle}>הכסף נשמר בנאמנות</Text>
         <Text style={styles.lockSub}>
           {allPaid
-            ? 'כל המשתתפים שילמו. הכסף יועבר רק לאחר אישור מסירה.'
+            ? 'כל המשתתפים שילמו. אפשר להמשיך לתשלום באתר.'
             : `שילמו ${paidCount} מתוך ${total} משתתפים. ממתין לשאר…`}
         </Text>
         <Text style={styles.amount}>{formatAgorot(order.product_price_agorot)}</Text>
@@ -75,14 +75,22 @@ export default function Escrow() {
       <View style={{ flex: 1 }} />
 
       {isCreator ? (
-        <PrimaryBtn
-          label="המשלוח הגיע — שחרר תשלום"
-          onPress={onDelivered}
-          loading={confirm.isPending}
-          disabled={!allPaid}
-        />
+        <View style={{ gap: 10 }}>
+          <PrimaryBtn
+            label="המשך לתשלום באתר"
+            onPress={() => router.push(`/order/${order.id}/card`)}
+            disabled={!allPaid}
+          />
+          <Text style={styles.waitNote}>
+            יונפק כרטיס וירטואלי חד-פעמי לסכום ההזמנה. לאחר התשלום באתר הכרטיס יבוטל אוטומטית.
+          </Text>
+        </View>
       ) : (
-        <Text style={styles.waitNote}>רק יוצר ההזמנה יכול לסמן שההזמנה הגיעה.</Text>
+        <Text style={styles.waitNote}>
+          {allPaid
+            ? 'יוצר ההזמנה מבצע כעת את התשלום באתר.'
+            : 'ממתין לשאר המשתתפים לסיים תשלום.'}
+        </Text>
       )}
     </ScreenBase>
   );

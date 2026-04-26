@@ -1,7 +1,7 @@
 import { handleOptions } from '../_shared/cors.ts';
 import { errorJson, json, readJson } from '../_shared/json.ts';
 import { admin, authedUserId, httpError } from '../_shared/supabaseAdmin.ts';
-import { CONNECTED_ACCOUNT_ID, stripe } from '../_shared/stripe.ts';
+import { stripe } from '../_shared/stripe.ts';
 import { idempotencyKeyFrom } from '../_shared/idempotency.ts';
 
 type Body = { orderId: string; idempotency_key?: string };
@@ -69,12 +69,16 @@ Deno.serve(async (req) => {
       { apiVersion: '2024-06-20' },
     );
 
+    // VCC flow: funds capture immediately into the platform's Stripe
+    // balance. The platform then mints a virtual card with that balance
+    // when every participant has paid. The order's `escrow` status is a
+    // logical hold (we won't issue a card until paidCount === maxParticipants),
+    // not a Stripe-level uncaptured PI.
     const pi = await stripe.paymentIntents.create(
       {
         amount: participant.amount_agorot,
         currency: 'ils',
         customer: customerId,
-        capture_method: 'manual',
         transfer_group: order.stripe_transfer_group ?? `order_${order.id}`,
         metadata: {
           order_id: order.id,
@@ -82,9 +86,6 @@ Deno.serve(async (req) => {
           user_id: userId,
         },
         automatic_payment_methods: { enabled: true },
-        ...(CONNECTED_ACCOUNT_ID
-          ? { on_behalf_of: CONNECTED_ACCOUNT_ID }
-          : {}),
       },
       { idempotencyKey: `pi_${participant.id}_${idemp}` },
     );
