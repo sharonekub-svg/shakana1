@@ -30,20 +30,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           'אנו משתמשים בנתוני פעילות אנונימיים לשיפור האפליקציה.',
       },
     ],
-    [
-      '@sentry/react-native/expo',
-      {
-        organization: 'shakana',
-        project: 'shakana-mobile',
-      },
-    ],
-    [
-      '@stripe/stripe-react-native',
-      {
-        merchantIdentifier:
-          process.env.EXPO_PUBLIC_STRIPE_MERCHANT_ID ?? 'merchant.app.shakana',
-      },
-    ],
   ],
   web: {
     bundler: 'metro',
