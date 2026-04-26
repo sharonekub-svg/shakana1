@@ -1,4 +1,5 @@
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import Svg, { Path } from 'react-native-svg';
 
 import { ScreenBase } from '@/components/primitives/ScreenBase';
@@ -42,6 +43,7 @@ function Row({ label, value, code, danger, onPress }: RowProps) {
 }
 
 export default function ProfileTab() {
+  const router = useRouter();
   const { t } = useLocale();
   const user = useAuthStore((s) => s.user);
   const reset = useAuthStore((s) => s.reset);
@@ -95,20 +97,20 @@ export default function ProfileTab() {
           <View style={styles.group}>
             <Row code="ADR" label={t('common.savedAddress')} value={profile ? `${profile.street} ${profile.building}` : ''} />
             <Row code="TEL" label={t('common.phoneNumber')} value={profile?.phone ? `+972 ${profile.phone}` : ''} />
-            <Row code="PAY" label={t('common.paymentMethod')} value={t('common.add')} />
-            <Row code="ALR" label={t('common.alerts')} />
+            <Row code="PAY" label={t('common.paymentMethod')} value={t('common.add')} onPress={() => router.push('/(tabs)/profile/payment')} />
+            <Row code="ALR" label={t('common.alerts')} onPress={() => router.push('/(tabs)/profile/alerts')} />
           </View>
 
           <Text style={styles.section}>{t('common.policy')}</Text>
           <View style={styles.group}>
-            <Row code="DOC" label={t('common.terms')} onPress={() => Linking.openURL('https://shakana.app/legal/terms')} />
-            <Row code="LCK" label={t('common.privacy')} onPress={() => Linking.openURL('https://shakana.app/legal/privacy')} />
+            <Row code="DOC" label={t('common.terms')} onPress={() => router.push('/(tabs)/profile/terms')} />
+            <Row code="LCK" label={t('common.privacy')} onPress={() => router.push('/(tabs)/profile/privacy')} />
             <Row code="MAIL" label={t('common.support')} value="support@shakana.app" onPress={() => Linking.openURL('mailto:support@shakana.app')} />
             <Row code="OUT" label={t('common.signOut')} danger onPress={handleLogout} />
           </View>
 
           <View style={styles.group}>
-            <Row code="DEL" label={t('common.deleteAccount')} danger onPress={handleLogout} />
+            <Row code="DEL" label={t('common.deleteAccount')} danger onPress={() => router.push('/(tabs)/profile/delete')} />
           </View>
 
           <Text style={styles.version}>{t('tabs.profile.version')}</Text>
