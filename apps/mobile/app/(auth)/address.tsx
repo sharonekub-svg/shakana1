@@ -10,17 +10,16 @@ import { AutoField } from '@/components/primitives/AutoField';
 import { NumField } from '@/components/primitives/NumField';
 import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
-import { matchCities } from '@/lib/israeliCities';
-import { searchStreets } from '@/lib/streetSearch';
 import { useAuthStore } from '@/stores/authStore';
 import { useUpsertProfile } from '@/api/profile';
 import { useUiStore } from '@/stores/uiStore';
 import { consumePendingInvite } from '@/lib/deeplinks';
 import { useLocale } from '@/i18n/locale';
+import { searchCities, searchStreets } from '@/lib/locationAutocomplete';
 
 export default function Address() {
   const router = useRouter();
-  const { t } = useLocale();
+  const { t, language } = useLocale();
   const profile = useAuthStore((s) => s.profile);
   const setProfile = useAuthStore((s) => s.setProfile);
   const upsert = useUpsertProfile();
@@ -29,7 +28,9 @@ export default function Address() {
   const [city, setCity] = useState('');
   const [cityLocked, setCityLocked] = useState(false);
   const [street, setStreet] = useState('');
+  const [citySuggs, setCitySuggs] = useState<string[]>([]);
   const [streetSuggs, setStreetSuggs] = useState<string[]>([]);
+  const [cityLoad, setCityLoad] = useState(false);
   const [streetLoad, setStreetLoad] = useState(false);
   const [building, setBuilding] = useState('');
   const [apt, setApt] = useState('');
@@ -37,14 +38,34 @@ export default function Address() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const citySuggs = matchCities(city);
-
   const selectCity = (c: string) => {
     setCity(c);
     setCityLocked(true);
     setStreet('');
     setStreetSuggs([]);
   };
+
+  const runCitySearch = useCallback((q: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (q.trim().length < 2) {
+      setCitySuggs([]);
+      return;
+    }
+    debounceRef.current = setTimeout(async () => {
+      abortRef.current?.abort();
+      const ac = new AbortController();
+      abortRef.current = ac;
+      setCityLoad(true);
+      try {
+        const res = await searchCities(q, language, ac.signal);
+        setCitySuggs(res);
+      } catch {
+        setCitySuggs([]);
+      } finally {
+        setCityLoad(false);
+      }
+    }, 250);
+  }, [language]);
 
   const runStreetSearch = useCallback(
     (q: string) => {
@@ -59,16 +80,16 @@ export default function Address() {
         abortRef.current = ac;
         setStreetLoad(true);
         try {
-          const res = await searchStreets(q, cityLocked ? city : '', ac.signal);
+          const res = await searchStreets(q, cityLocked ? city : '', language, ac.signal);
           setStreetSuggs(res);
         } catch {
           setStreetSuggs([]);
         } finally {
           setStreetLoad(false);
         }
-      }, 400);
+      }, 350);
     },
-    [city, cityLocked],
+    [city, cityLocked, language],
   );
 
   useEffect(() => {
@@ -76,6 +97,11 @@ export default function Address() {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (cityLocked) return;
+    runCitySearch(city);
+  }, [city, cityLocked, runCitySearch]);
 
   const onStreetChange = (v: string) => {
     setStreet(v);
@@ -131,8 +157,9 @@ export default function Address() {
               setCityLocked(false);
             }}
             onSelect={selectCity}
-            placeholder="Search city..."
+            placeholder={t('auth.address.citySearch')}
             suggestions={citySuggs}
+            loading={cityLoad}
             autoFocus
           />
         ) : (
