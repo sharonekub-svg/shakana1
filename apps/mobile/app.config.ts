@@ -34,7 +34,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   web: {
     bundler: 'metro',
     output: 'static',
-    favicon: './assets/icon.png',
   },
   ios: {
     supportsTablet: false,
