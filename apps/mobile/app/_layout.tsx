@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider, focusManager, onlineManager } from '@tanstack/react-query';
-import { StripeProvider } from '@stripe/stripe-react-native';
 import { AppState, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
@@ -14,7 +13,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { initSentry, identifySentryUser, Sentry } from '@/lib/sentry';
 import { initPostHog, identify, resetAnalytics } from '@/lib/posthog';
-import { stripeConfig } from '@/lib/stripe';
+import { StripeProviderShim } from '@/components/StripeProviderShim';
 import { parseInviteToken, stashPendingInvite } from '@/lib/deeplinks';
 import { colors } from '@/theme/tokens';
 
@@ -149,13 +148,9 @@ export default Sentry.wrap(function RootLayout() {
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
-        <StripeProvider
-          publishableKey={stripeConfig.publishableKey}
-          merchantIdentifier={stripeConfig.merchantIdentifier}
-          urlScheme={stripeConfig.urlScheme}
-        >
+        <StripeProviderShim>
           <RootLayoutInner />
-        </StripeProvider>
+        </StripeProviderShim>
       </QueryClientProvider>
     </SafeAreaProvider>
   );
