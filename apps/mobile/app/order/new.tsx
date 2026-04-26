@@ -52,6 +52,8 @@ export default function NewOrder() {
   const freeShippingGapAgorot = Math.max(0, freeShippingThresholdAgorot - priceAgorot);
   const perPersonAgorot = insights?.perPersonAgorot ?? Math.ceil((priceAgorot + deliveryFeeAgorot) / participantCount);
   const valid = urlCheck.success && title.trim().length > 1 && priceAgorot > 0;
+  const sourceLabel = language === 'he' ? '\u05de\u05e7\u05d5\u05e8' : 'Source';
+  const factsLabel = language === 'he' ? '\u05e4\u05e8\u05d8\u05d9 \u05d4\u05de\u05d5\u05e6\u05e8' : 'Product facts';
 
   useEffect(() => {
     if (!sharedDraft) {
@@ -156,13 +158,37 @@ export default function NewOrder() {
             <Text style={styles.summaryTitle} numberOfLines={2}>
               {insights?.title || title || copy.product}
             </Text>
+            {insights?.brandName || insights?.sourceLabel ? (
+              <Text style={styles.summarySource}>
+                {sourceLabel}: {insights?.brandName || insights?.sourceLabel}
+              </Text>
+            ) : null}
             <Text style={styles.summaryBody}>
-              {insightsLoading ? copy.details : insights?.dealSummary ? `${copy.deal}: ${insights.dealSummary}` : copy.noDeal}
+              {insightsLoading
+                ? copy.details
+                : insights?.promotionText
+                  ? `${copy.deal}: ${insights.promotionText}`
+                  : insights?.dealSummary
+                    ? `${copy.deal}: ${insights.dealSummary}`
+                    : copy.noDeal}
             </Text>
             {insightsLoading ? <ActivityIndicator color={colors.acc} /> : null}
           </View>
           {insights?.imageUrl ? <Image source={{ uri: insights.imageUrl }} style={styles.summaryImage} /> : null}
         </View>
+
+        {insights?.productFacts?.length ? (
+          <View style={styles.factsCard}>
+            <Text style={styles.factsTitle}>{factsLabel}</Text>
+            <View style={styles.factsWrap}>
+              {insights.productFacts.slice(0, 5).map((fact) => (
+                <View key={fact} style={styles.factPill}>
+                  <Text style={styles.factText}>{fact}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
 
         <View style={styles.metricsGrid}>
           <View style={styles.metricCard}>
@@ -271,11 +297,50 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: colors.mu,
   },
+  summarySource: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+    color: colors.acc,
+  },
   summaryImage: {
     width: 84,
     height: 104,
     borderRadius: radii.md,
     backgroundColor: colors.s1,
+  },
+  factsCard: {
+    gap: 10,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.brBr,
+    borderRadius: radii.lg,
+    backgroundColor: colors.white,
+  },
+  factsTitle: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+    letterSpacing: 1.1,
+    color: colors.mu,
+    textTransform: 'uppercase',
+  },
+  factsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  factPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: radii.pill,
+    backgroundColor: colors.s1,
+    borderWidth: 1,
+    borderColor: colors.brBr,
+  },
+  factText: {
+    fontFamily: fontFamily.body,
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.tx,
   },
   metricsGrid: {
     flexDirection: 'row',

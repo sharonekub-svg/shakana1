@@ -1,4 +1,3 @@
-import * as Linking from 'expo-linking';
 import * as SecureStore from 'expo-secure-store';
 import { env } from './env';
 
@@ -7,12 +6,13 @@ const STORAGE_KEY = 'shakana.pendingSharedProduct';
 export type SharedProductDraft = {
   url: string;
   title: string;
-  source: 'zara';
+  source: 'zara' | 'hm';
   rawText?: string;
 };
 
 export type SharedProductInsights = {
   title: string;
+  brandName: string | null;
   imageUrl: string | null;
   priceAgorot: number | null;
   originalPriceAgorot: number | null;
@@ -23,25 +23,69 @@ export type SharedProductInsights = {
   neighborsNeeded: number;
   perPersonAgorot: number;
   dealSummary: string | null;
+  promotionText: string | null;
+  productFacts: string[];
+  sourceLabel: string;
   sourceUrl: string;
 };
 
-const ALLOWED_HOSTS = new Set(['zara.com', 'www.zara.com', 'm.zara.com', 'static.zara.com']);
-const TRACKER_KEYS = new Set(['gclid', 'fbclid', 'igshid', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']);
-const HOME_DELIVERY_FEE_AGOROT = 3000;
+const TRACKER_KEYS = new Set([
+  'gclid',
+  'fbclid',
+  'igshid',
+  'utm_source',
+  'utm_medium',
+  'utm_campaign',
+  'utm_term',
+  'utm_content',
+]);
+
 const STORE_PICKUP_FEE_AGOROT = 0;
-const FREE_SHIPPING_THRESHOLD_AGOROT = 19900;
 const TARGET_SHARE_AGOROT = 6000;
+const DEFAULT_HOME_DELIVERY_FEE_AGOROT = 3000;
+const DEFAULT_FREE_SHIPPING_THRESHOLD_AGOROT = 19900;
+
+type BrandConfig = {
+  source: SharedProductDraft['source'];
+  brandName: string;
+  displayName: string;
+  hostTest: (hostname: string) => boolean;
+  homeDeliveryFeeAgorot: number;
+  freeShippingThresholdAgorot: number;
+};
+
+const BRAND_CONFIGS: BrandConfig[] = [
+  {
+    source: 'zara',
+    brandName: 'Zara',
+    displayName: 'Zara',
+    hostTest: (hostname) => normalizeHost(hostname).endsWith('zara.com'),
+    homeDeliveryFeeAgorot: DEFAULT_HOME_DELIVERY_FEE_AGOROT,
+    freeShippingThresholdAgorot: DEFAULT_FREE_SHIPPING_THRESHOLD_AGOROT,
+  },
+  {
+    source: 'hm',
+    brandName: 'H&M',
+    displayName: 'H&M',
+    hostTest: (hostname) => normalizeHost(hostname).endsWith('hm.com'),
+    homeDeliveryFeeAgorot: DEFAULT_HOME_DELIVERY_FEE_AGOROT,
+    freeShippingThresholdAgorot: DEFAULT_FREE_SHIPPING_THRESHOLD_AGOROT,
+  },
+];
 
 function normalizeHost(hostname: string): string {
   return hostname.toLowerCase().replace(/^www\./, '');
+}
+
+function getBrandConfig(hostname: string): BrandConfig | null {
+  return BRAND_CONFIGS.find((config) => config.hostTest(hostname)) ?? null;
 }
 
 function safeUrl(raw: string): URL | null {
   try {
     const url = new URL(raw);
     if (url.protocol !== 'https:') return null;
-    if (!ALLOWED_HOSTS.has(normalizeHost(url.hostname))) return null;
+    if (!getBrandConfig(url.hostname)) return null;
     return url;
   } catch {
     return null;
@@ -50,16 +94,11 @@ function safeUrl(raw: string): URL | null {
 
 function stripTrackingParams(url: URL): URL {
   const cleaned = new URL(url.toString());
-  const keys = cleaned.search
-    .replace(/^\?/, '')
-    .split('&')
-    .map((pair) => pair.split('=')[0] ?? '')
-    .filter((key): key is string => key.length > 0);
-  keys.forEach((key) => {
-    if (key.startsWith('utm_') || TRACKER_KEYS.has(key)) {
-      cleaned.searchParams.delete(key);
-    }
+  const keysToDelete: string[] = [];
+  cleaned.searchParams.forEach((_, key) => {
+    if (key.startsWith('utm_') || TRACKER_KEYS.has(key)) keysToDelete.push(key);
   });
+  for (const key of keysToDelete) cleaned.searchParams.delete(key);
   cleaned.hash = '';
   return cleaned;
 }
@@ -76,7 +115,7 @@ function humanizeSlug(slug: string): string {
     .replace(/\b\d{3,}\b/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-  if (!cleaned) return 'ZARA item';
+  if (!cleaned) return 'Product item';
   return cleaned
     .split(' ')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -87,7 +126,7 @@ function inferTitleFromUrl(url: URL): string {
   const parts = url.pathname.split('/').filter(Boolean);
   const slug = parts[parts.length - 1] ?? '';
   const title = humanizeSlug(slug);
-  return title === 'Item' ? 'ZARA item' : title;
+  return title === 'Item' ? 'Product item' : title;
 }
 
 function stripTags(text: string): string {
@@ -128,10 +167,48 @@ function readFirstJsonLdObject(html: string): Record<string, unknown> | null {
         }
       }
     } catch {
-      // Ignore malformed JSON-LD and continue scanning.
+      // ignore malformed JSON-LD
     }
   }
   return null;
+}
+
+function readDescription(html: string): string | null {
+  const jsonLd = readFirstJsonLdObject(html);
+  const ldDescription = jsonLd && typeof jsonLd.description === 'string' ? jsonLd.description : null;
+  return readMeta(html, 'description', 'name') ?? readMeta(html, 'og:description') ?? ldDescription;
+}
+
+function readBrand(html: string): string | null {
+  const jsonLd = readFirstJsonLdObject(html);
+  const brand = jsonLd?.brand;
+  if (typeof brand === 'string') return brand.trim() || null;
+  if (brand && typeof brand === 'object') {
+    const name = (brand as Record<string, unknown>).name;
+    if (typeof name === 'string' && name.trim()) return name.trim();
+  }
+  return readMeta(html, 'og:site_name');
+}
+
+function chooseTitle(html: string, fallback: string): string {
+  const jsonLd = readFirstJsonLdObject(html);
+  const ogTitle = readMeta(html, 'og:title');
+  const twitterTitle = readMeta(html, 'twitter:title');
+  const ldTitle = jsonLd && typeof jsonLd.name === 'string' ? jsonLd.name : null;
+  const headTitleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+  const raw = ldTitle ?? ogTitle ?? twitterTitle ?? headTitleMatch?.[1] ?? fallback;
+  return stripTags(raw).replace(/\s+[-|]\s+(ZARA|H&M).*$/i, '').trim() || fallback;
+}
+
+function chooseImage(html: string): string | null {
+  const jsonLd = readFirstJsonLdObject(html);
+  const ldImage = jsonLd?.image;
+  if (typeof ldImage === 'string') return ldImage;
+  if (Array.isArray(ldImage)) {
+    const first = ldImage.find((item) => typeof item === 'string');
+    if (typeof first === 'string') return first;
+  }
+  return readMeta(html, 'og:image') ?? readMeta(html, 'twitter:image');
 }
 
 function parseMoneyToAgorot(raw: string | number | null | undefined): number | null {
@@ -144,27 +221,6 @@ function parseMoneyToAgorot(raw: string | number | null | undefined): number | n
   const value = Number(normalized);
   if (!Number.isFinite(value) || value <= 0) return null;
   return Math.round(value * 100);
-}
-
-function chooseTitle(html: string, fallback: string): string {
-  const jsonLd = readFirstJsonLdObject(html);
-  const ogTitle = readMeta(html, 'og:title');
-  const twitterTitle = readMeta(html, 'twitter:title');
-  const ldTitle = jsonLd && typeof jsonLd.name === 'string' ? jsonLd.name : null;
-  const headTitleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-  const raw = ldTitle ?? ogTitle ?? twitterTitle ?? headTitleMatch?.[1] ?? fallback;
-  return stripTags(raw).replace(/\s+\|\s+ZARA.*$/i, '').trim() || fallback;
-}
-
-function chooseImage(html: string): string | null {
-  const jsonLd = readFirstJsonLdObject(html);
-  const ldImage = jsonLd?.image;
-  if (typeof ldImage === 'string') return ldImage;
-  if (Array.isArray(ldImage)) {
-    const first = ldImage.find((item) => typeof item === 'string');
-    if (typeof first === 'string') return first;
-  }
-  return readMeta(html, 'og:image') ?? readMeta(html, 'twitter:image');
 }
 
 function choosePriceAgorot(html: string): number | null {
@@ -195,6 +251,70 @@ function choosePriceAgorot(html: string): number | null {
   return parseMoneyToAgorot(match?.groups?.price ?? null);
 }
 
+function chooseOriginalPriceAgorot(html: string): number | null {
+  const candidates = [
+    readMeta(html, 'product:original_price:amount'),
+    readMeta(html, 'og:original_price:amount'),
+    readMeta(html, 'price:original', 'name'),
+  ];
+  for (const candidate of candidates) {
+    const parsed = parseMoneyToAgorot(candidate);
+    if (parsed) return parsed;
+  }
+  return null;
+}
+
+function choosePromotionText(html: string): string | null {
+  const description = readDescription(html);
+  const text = stripTags(html).slice(0, 12000);
+  const normalized = [description, text].filter(Boolean).join(' ').replace(/\s+/g, ' ');
+  const promoPatterns: Array<{ pattern: RegExp; label: string }> = [
+    { pattern: /\b1\s*\+\s*1\b/i, label: '1+1' },
+    { pattern: /\bbuy\s*1\s*get\s*1\b/i, label: 'Buy 1 get 1' },
+    { pattern: /\b2\s*(?:for|x|×)\s*1\b/i, label: '2 for 1' },
+    { pattern: /קנה\s*1\s*קבל\s*1/i, label: '1+1' },
+    { pattern: /\bsale\b/i, label: 'Sale' },
+    { pattern: /מבצע/i, label: 'מבצע' },
+  ];
+  for (const entry of promoPatterns) {
+    if (entry.pattern.test(normalized)) return entry.label;
+  }
+  return null;
+}
+
+function formatAmountShort(agorot: number): string {
+  return (agorot / 100).toFixed(2).replace(/\.00$/, '');
+}
+
+function chooseProductFacts(
+  html: string,
+  brandName: string | null,
+  promotionText: string | null,
+  priceAgorot: number | null,
+  originalPriceAgorot: number | null,
+): string[] {
+  const facts = new Set<string>();
+  const jsonLd = readFirstJsonLdObject(html);
+
+  if (brandName) facts.add(brandName);
+  if (promotionText) facts.add(promotionText);
+
+  const color = jsonLd && typeof jsonLd.color === 'string' ? jsonLd.color.trim() : null;
+  const sku = jsonLd && typeof jsonLd.sku === 'string' ? jsonLd.sku.trim() : null;
+  const category = jsonLd && typeof jsonLd.category === 'string' ? jsonLd.category.trim() : null;
+  const description = readDescription(html);
+
+  if (color) facts.add(`Color: ${color}`);
+  if (sku) facts.add(`SKU: ${sku}`);
+  if (category) facts.add(category);
+  if (description) facts.add(description.replace(/\s+/g, ' ').slice(0, 120));
+  if (priceAgorot && originalPriceAgorot && originalPriceAgorot > priceAgorot) {
+    facts.add(`Before ${formatAmountShort(originalPriceAgorot)}`);
+  }
+
+  return [...facts].filter(Boolean);
+}
+
 function deriveDealSummary(priceAgorot: number | null, originalPriceAgorot: number | null): string | null {
   if (!priceAgorot || !originalPriceAgorot || originalPriceAgorot <= priceAgorot) return null;
   const discount = Math.round((1 - priceAgorot / originalPriceAgorot) * 100);
@@ -207,27 +327,38 @@ function deriveParticipants(priceAgorot: number | null, deliveryFeeAgorot: numbe
 }
 
 export function summarizeSharedProduct(draft: SharedProductDraft, html?: string | null): SharedProductInsights {
+  const brandConfig = getBrandConfig(new URL(draft.url).hostname);
   const priceAgorot = html ? choosePriceAgorot(html) : null;
-  const originalPriceAgorot = null;
-  const deliveryFeeAgorot = priceAgorot && priceAgorot >= FREE_SHIPPING_THRESHOLD_AGOROT
+  const originalPriceAgorot = html ? chooseOriginalPriceAgorot(html) : null;
+  const brandName = html ? readBrand(html) : null;
+  const promotionText = html ? choosePromotionText(html) : null;
+  const deliveryFeeAgorot = brandConfig && priceAgorot && priceAgorot >= brandConfig.freeShippingThresholdAgorot
     ? 0
-    : HOME_DELIVERY_FEE_AGOROT;
+    : (brandConfig?.homeDeliveryFeeAgorot ?? DEFAULT_HOME_DELIVERY_FEE_AGOROT);
+  const freeShippingThresholdAgorot = brandConfig?.freeShippingThresholdAgorot ?? DEFAULT_FREE_SHIPPING_THRESHOLD_AGOROT;
   const recommendedParticipants = deriveParticipants(priceAgorot, deliveryFeeAgorot);
   const neighborsNeeded = Math.max(1, recommendedParticipants - 1);
   const perPersonAgorot = Math.ceil(((priceAgorot ?? 0) + deliveryFeeAgorot) / recommendedParticipants);
+  const productFacts = html
+    ? chooseProductFacts(html, brandName ?? brandConfig?.brandName ?? null, promotionText, priceAgorot, originalPriceAgorot)
+    : [];
 
   return {
     title: html ? chooseTitle(html, draft.title) : draft.title,
+    brandName: brandName ?? brandConfig?.brandName ?? null,
     imageUrl: html ? chooseImage(html) : null,
     priceAgorot,
     originalPriceAgorot,
     deliveryFeeAgorot,
     storePickupFeeAgorot: STORE_PICKUP_FEE_AGOROT,
-    freeShippingThresholdAgorot: FREE_SHIPPING_THRESHOLD_AGOROT,
+    freeShippingThresholdAgorot,
     recommendedParticipants,
     neighborsNeeded,
     perPersonAgorot,
     dealSummary: deriveDealSummary(priceAgorot, originalPriceAgorot),
+    promotionText,
+    productFacts,
+    sourceLabel: brandConfig?.displayName ?? draft.source.toUpperCase(),
     sourceUrl: draft.url,
   };
 }
@@ -259,8 +390,8 @@ export function parseSharedProduct(input: {
   const url = safeUrl(raw);
   if (!url) return null;
 
-  const isZara = normalizeHost(url.hostname).endsWith('zara.com');
-  if (!isZara) return null;
+  const brandConfig = getBrandConfig(url.hostname);
+  if (!brandConfig) return null;
 
   const cleanUrl = stripTrackingParams(url);
   const title = (input.title ?? '').trim() || inferTitleFromUrl(cleanUrl);
@@ -268,7 +399,7 @@ export function parseSharedProduct(input: {
   return {
     url: cleanUrl.toString(),
     title,
-    source: 'zara',
+    source: brandConfig.source,
     rawText: input.text ?? undefined,
   };
 }
