@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   NativeSyntheticEvent,
   StyleSheet,
@@ -13,17 +13,19 @@ import { ScreenBase } from '@/components/primitives/ScreenBase';
 import { PrimaryBtn, TextBtn } from '@/components/primitives/Button';
 import { BackBtn } from '@/components/primitives/BackBtn';
 import { StepDots } from '@/components/primitives/StepDots';
-import { colors, radii } from '@/theme/tokens';
+import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { useSendOtp, useVerifyOtp } from '@/api/auth';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useLocale } from '@/i18n/locale';
 
 const LEN = 6;
 
 export default function Otp() {
   const { phone: phoneE164, display } = useLocalSearchParams<{ phone: string; display: string }>();
   const router = useRouter();
+  const { t } = useLocale();
   const verify = useVerifyOtp();
   const resend = useSendOtp();
   const pushToast = useUiStore((s) => s.pushToast);
@@ -57,7 +59,7 @@ export default function Otp() {
       setHydrated(true);
       router.replace('/(auth)/name');
     } catch (e) {
-      pushToast(e instanceof Error ? e.message : 'Code failed.', 'error');
+      pushToast(e instanceof Error ? e.message : t('auth.otp.verifyError'), 'error');
       setDigits(Array.from({ length: LEN }, () => ''));
       refs[0]?.current?.focus();
     }
@@ -69,90 +71,115 @@ export default function Otp() {
       setResent(true);
       setTimeout(() => setResent(false), 3000);
     } catch (e) {
-      pushToast(e instanceof Error ? e.message : 'Could not resend code.', 'error');
+      pushToast(e instanceof Error ? e.message : t('auth.otp.resendError'), 'error');
     }
   };
 
   return (
-    <ScreenBase style={{ paddingTop: 20, paddingBottom: 36 }}>
+    <ScreenBase style={styles.screen}>
       <View style={styles.header}>
         <BackBtn onPress={() => router.back()} />
         <StepDots total={4} current={0} />
       </View>
 
-      <View style={{ marginBottom: 32 }}>
-        <Text style={styles.title}>Enter code</Text>
-        <Text style={styles.subtitle}>Sent to {display ?? phoneE164}</Text>
+      <View style={styles.hero}>
+        <Text style={styles.kicker}>SHAKANA</Text>
+        <Text style={styles.title}>{t('auth.otp.title')}</Text>
+        <Text style={styles.subtitle}>{t('auth.otp.subtitle', { phone: String(display ?? phoneE164 ?? '') })}</Text>
       </View>
 
-      <View style={styles.codeRow}>
-        {digits.map((d, i) => (
-          <TextInput
-            key={i}
-            ref={(r) => {
-              refs[i]!.current = r;
-            }}
-            value={d}
-            onChangeText={(v) => update(i, v)}
-            onKeyPress={(e) => onKey(i, e)}
-            keyboardType="number-pad"
-            maxLength={1}
-            autoFocus={i === 0}
-            selectionColor={colors.acc}
-            style={[
-              styles.box,
-              {
-                borderColor: d ? colors.acc : colors.brBr,
-                backgroundColor: d ? colors.white : colors.s1,
-              },
-            ]}
-          />
-        ))}
+      <View style={styles.codeCard}>
+        <View style={styles.codeRow}>
+          {digits.map((d, i) => (
+            <TextInput
+              key={i}
+              ref={(r) => {
+                refs[i]!.current = r;
+              }}
+              value={d}
+              onChangeText={(v) => update(i, v)}
+              onKeyPress={(e) => onKey(i, e)}
+              keyboardType="number-pad"
+              maxLength={1}
+              autoFocus={i === 0}
+              selectionColor={colors.acc}
+              style={[
+                styles.box,
+                {
+                  borderColor: d ? colors.acc : colors.br,
+                  backgroundColor: d ? colors.white : colors.cardSoft,
+                },
+              ]}
+            />
+          ))}
+        </View>
+        <View style={styles.resendBlock}>
+          <Text style={styles.resendPrompt}>{t('auth.otp.needAnother')}</Text>
+          {resent ? (
+            <Text style={styles.resentOk}>{t('auth.otp.codeSent')}</Text>
+          ) : (
+            <TextBtn label={t('common.resend')} onPress={handleResend} />
+          )}
+        </View>
       </View>
 
-      <View style={styles.resendBlock}>
-        <Text style={styles.resendPrompt}>Need another code?</Text>
-        {resent ? (
-          <Text style={styles.resentOk}>Code sent.</Text>
-        ) : (
-          <TextBtn label="Resend" onPress={handleResend} />
-        )}
-      </View>
+      <View style={styles.spacer} />
 
-      <View style={{ flex: 1 }} />
-
-      <PrimaryBtn label="Verify code" onPress={submit} disabled={!full} loading={verify.isPending} />
+      <PrimaryBtn label={t('common.verifyCode')} onPress={submit} disabled={!full} loading={verify.isPending} />
     </ScreenBase>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 32 },
+  screen: {
+    paddingTop: 20,
+    paddingBottom: 36,
+    gap: 24,
+  },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  hero: {
+    gap: 10,
+  },
+  kicker: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 10,
+    letterSpacing: 2.4,
+    color: colors.acc,
+  },
   title: {
     fontFamily: fontFamily.display,
-    fontSize: 28,
+    fontSize: 30,
     color: colors.tx,
-    marginBottom: 8,
+    lineHeight: 34,
   },
-  subtitle: { fontFamily: fontFamily.body, fontSize: 15, color: colors.mu },
+  subtitle: { fontFamily: fontFamily.body, fontSize: 15, color: colors.mu, lineHeight: 24 },
+  codeCard: {
+    gap: 16,
+    padding: 18,
+    borderRadius: 28,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.br,
+    ...shadow.card,
+  },
   codeRow: {
     flexDirection: 'row',
     gap: 10,
     justifyContent: 'center',
-    marginBottom: 16,
     writingDirection: 'ltr',
   },
   box: {
     width: 46,
     height: 58,
-    borderWidth: 1.5,
-    borderRadius: radii.md,
+    borderWidth: 1,
+    borderRadius: radii.lg,
     textAlign: 'center',
     fontSize: 24,
     color: colors.tx,
-    fontFamily: fontFamily.bodySemi,
+    fontFamily: fontFamily.bodyBold,
   },
   resendBlock: { alignItems: 'center', gap: 4 },
   resendPrompt: { fontSize: 13, color: colors.mu, fontFamily: fontFamily.body },
-  resentOk: { fontSize: 13, color: colors.grn, fontFamily: fontFamily.bodySemi },
+  resentOk: { fontSize: 13, color: colors.grn, fontFamily: fontFamily.bodyBold },
+  spacer: { flex: 1 },
 });

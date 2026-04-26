@@ -1,0 +1,41 @@
+import PostHog from 'posthog-react-native';
+import { env } from './env';
+
+let client: PostHog | null = null;
+
+export async function initPostHog(): Promise<PostHog | null> {
+  if (client) return client;
+  if (!env.posthogKey) return null;
+
+  client = new PostHog(env.posthogKey, {
+    host: env.posthogHost,
+    flushAt: 20,
+    flushInterval: 10_000,
+    captureAppLifecycleEvents: true,
+    enableSessionReplay: false,
+  });
+  return client;
+}
+
+export function getPostHog(): PostHog | null {
+  return client;
+}
+
+export type ShakanaEvent =
+  | 'start_order_clicked'
+  | 'invite_sent'
+  | 'join_success'
+  | 'payment_completed'
+  | 'order_completed';
+
+export function track(event: ShakanaEvent, props?: Record<string, unknown>): void {
+  client?.capture(event, props);
+}
+
+export function identify(userId: string, traits?: Record<string, unknown>): void {
+  client?.identify(userId, traits);
+}
+
+export function resetAnalytics(): void {
+  client?.reset();
+}

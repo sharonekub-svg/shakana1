@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 
-import { colors, radii } from '@/theme/tokens';
+import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 
 type Props = {
@@ -72,7 +72,7 @@ export function AutoField({
           autoCapitalize="none"
           style={[
             styles.input,
-            { borderColor: focused ? colors.acc : colors.brBr },
+            { borderColor: focused ? colors.acc : colors.br },
             disabled && { opacity: 0.5 },
           ]}
         />
@@ -121,12 +121,12 @@ export function AutoField({
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 6, position: 'relative' },
-  label: { fontSize: 13, color: colors.mu, fontFamily: fontFamily.bodyMedium },
+  wrap: { gap: 8, position: 'relative' },
+  label: { fontSize: 13, color: colors.mu, fontFamily: fontFamily.bodyBold },
   input: {
-    backgroundColor: colors.s1,
-    borderWidth: 1.5,
-    borderRadius: radii.md,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderRadius: radii.pill,
     paddingVertical: 15,
     paddingStart: 42,
     paddingEnd: 16,
@@ -135,23 +135,25 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.body,
     writingDirection: 'rtl',
     textAlign: 'right',
-    minHeight: 52,
+    minHeight: 54,
+    ...shadow.card,
   },
   indicator: { position: 'absolute', start: 14, top: 18 },
   clearBtn: { position: 'absolute', start: 12, top: 14, padding: 4 },
-  clearX: { fontSize: 18, color: colors.mu, lineHeight: 20, fontFamily: fontFamily.bodySemi },
+  clearX: { fontSize: 18, color: colors.mu, lineHeight: 20, fontFamily: fontFamily.bodyBold },
   dropdown: {
     position: 'absolute',
-    top: 78,
+    top: 82,
     start: 0,
     end: 0,
     zIndex: 50,
     maxHeight: 220,
     backgroundColor: colors.white,
-    borderRadius: radii.md,
-    borderColor: colors.brBr,
-    borderWidth: 1.5,
+    borderRadius: radii.lg,
+    borderColor: colors.br,
+    borderWidth: 1,
     overflow: 'hidden',
+    ...shadow.card,
   },
   sugg: { paddingVertical: 13, paddingHorizontal: 16 },
   suggBorder: { borderBottomWidth: 1, borderBottomColor: colors.br },

@@ -8,7 +8,7 @@ import { BackBtn } from '@/components/primitives/BackBtn';
 import { StepDots } from '@/components/primitives/StepDots';
 import { AutoField } from '@/components/primitives/AutoField';
 import { NumField } from '@/components/primitives/NumField';
-import { colors, radii } from '@/theme/tokens';
+import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { matchCities } from '@/lib/israeliCities';
 import { searchStreets } from '@/lib/streetSearch';
@@ -16,9 +16,11 @@ import { useAuthStore } from '@/stores/authStore';
 import { useUpsertProfile } from '@/api/profile';
 import { useUiStore } from '@/stores/uiStore';
 import { consumePendingInvite } from '@/lib/deeplinks';
+import { useLocale } from '@/i18n/locale';
 
 export default function Address() {
   const router = useRouter();
+  const { t } = useLocale();
   const profile = useAuthStore((s) => s.profile);
   const setProfile = useAuthStore((s) => s.setProfile);
   const upsert = useUpsertProfile();
@@ -69,18 +71,18 @@ export default function Address() {
     [city, cityLocked],
   );
 
-  useEffect(() => () => debounceRef.current && clearTimeout(debounceRef.current), []);
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   const onStreetChange = (v: string) => {
     setStreet(v);
     runStreetSearch(v);
   };
 
-  const valid =
-    city.trim().length > 0 &&
-    street.trim().length > 0 &&
-    building.trim().length > 0 &&
-    apt.trim().length > 0;
+  const valid = city.trim().length > 0 && street.trim().length > 0 && building.trim().length > 0 && apt.trim().length > 0;
 
   const submit = async () => {
     if (!valid || !profile) return;
@@ -95,7 +97,6 @@ export default function Address() {
     try {
       await upsert.mutateAsync(updated);
       setProfile(updated);
-      // If a deep-link invite was stashed pre-login, consume it now.
       const pending = await consumePendingInvite();
       if (pending) {
         router.replace(`/join/${pending}`);
@@ -103,39 +104,40 @@ export default function Address() {
         router.replace('/(auth)/success');
       }
     } catch (e) {
-      pushToast(e instanceof Error ? e.message : 'שגיאה בשמירת הכתובת', 'error');
+      pushToast(e instanceof Error ? e.message : t('auth.address.saveError'), 'error');
     }
   };
 
   return (
-    <ScreenBase style={{ paddingTop: 20, paddingBottom: 36 }}>
+    <ScreenBase style={styles.screen}>
       <View style={styles.header}>
         <BackBtn onPress={() => router.back()} />
         <StepDots total={4} current={2} />
       </View>
 
-      <View style={{ marginBottom: 24 }}>
-        <Text style={styles.title}>כתובת הבניין שלך</Text>
-        <Text style={styles.subtitle}>כדי לחבר אותך עם השכנים הנכונים</Text>
+      <View style={styles.hero}>
+        <Text style={styles.kicker}>SHAKANA</Text>
+        <Text style={styles.title}>{t('auth.address.title')}</Text>
+        <Text style={styles.subtitle}>{t('auth.address.subtitle')}</Text>
       </View>
 
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 14 }}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 14, paddingBottom: 6 }}>
         {!cityLocked ? (
           <AutoField
-            label="עיר"
+            label={t('auth.address.city')}
             value={city}
             onChange={(v) => {
               setCity(v);
               setCityLocked(false);
             }}
             onSelect={selectCity}
-            placeholder="חפש עיר..."
+            placeholder="Search city..."
             suggestions={citySuggs}
             autoFocus
           />
         ) : (
-          <View style={{ gap: 6 }}>
-            <Text style={styles.fieldLabel}>עיר</Text>
+          <View style={{ gap: 8 }}>
+            <Text style={styles.fieldLabel}>{t('auth.address.city')}</Text>
             <View style={styles.cityChip}>
               <Text style={styles.cityChipText}>{city}</Text>
               <Pressable
@@ -146,87 +148,101 @@ export default function Address() {
                 }}
                 hitSlop={8}
               >
-                <Text style={styles.cityChange}>שנה</Text>
+                <Text style={styles.cityChange}>{t('common.change')}</Text>
               </Pressable>
             </View>
           </View>
         )}
 
         <AutoField
-          label="רחוב"
+          label={t('auth.address.street')}
           value={street}
           onChange={onStreetChange}
           onSelect={(v) => {
             setStreet(v);
             setStreetSuggs([]);
           }}
-          placeholder={cityLocked ? `חפש רחוב ב${city}...` : 'בחר עיר תחילה'}
+          placeholder={cityLocked ? t('auth.address.streetSearch', { city }) : t('auth.address.cityFirst')}
           suggestions={streetSuggs}
           loading={streetLoad}
           disabled={!cityLocked}
         />
 
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <NumField label="בניין" value={building} onChange={setBuilding} placeholder="22" />
-          <NumField label="דירה" value={apt} onChange={setApt} placeholder="4" />
-          <NumField label="קומה" value={floor} onChange={setFloor} placeholder="2" />
+        <View style={styles.row}>
+          <NumField label={t('auth.address.building')} value={building} onChange={setBuilding} placeholder="22" />
+          <NumField label={t('auth.address.apartment')} value={apt} onChange={setApt} placeholder="4" />
+          <NumField label={t('auth.address.floor')} value={floor} onChange={setFloor} placeholder="2" />
         </View>
 
         <View style={styles.privacy}>
           <Text style={styles.privacyText}>
-            כתובתך משמשת לאימות בלבד ואינה נחשפת לשכנים ללא אישורך.
+            {t('auth.address.privacy')}
           </Text>
         </View>
       </ScrollView>
 
-      <View style={{ paddingTop: 16 }}>
-        <PrimaryBtn
-          label="סיים הרשמה"
-          onPress={submit}
-          disabled={!valid}
-          loading={upsert.isPending}
-        />
+      <View style={styles.footer}>
+        <PrimaryBtn label={t('common.save')} onPress={submit} disabled={!valid} loading={upsert.isPending} />
       </View>
     </ScreenBase>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 28 },
+  screen: {
+    paddingTop: 20,
+    paddingBottom: 36,
+    gap: 22,
+  },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  hero: {
+    gap: 10,
+  },
+  kicker: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 10,
+    letterSpacing: 2.4,
+    color: colors.acc,
+  },
   title: {
     fontFamily: fontFamily.display,
-    fontSize: 26,
+    fontSize: 30,
     color: colors.tx,
-    marginBottom: 6,
+    lineHeight: 34,
   },
-  subtitle: { fontFamily: fontFamily.body, fontSize: 14, color: colors.mu },
-  fieldLabel: { fontSize: 13, color: colors.mu, fontFamily: fontFamily.bodyMedium },
+  subtitle: { fontFamily: fontFamily.body, fontSize: 15, color: colors.mu, lineHeight: 24 },
+  fieldLabel: { fontSize: 13, color: colors.mu, fontFamily: fontFamily.bodyBold },
   cityChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(74,124,89,0.09)',
-    borderColor: 'rgba(74,124,89,0.27)',
-    borderWidth: 1.5,
-    borderRadius: radii.md,
+    backgroundColor: colors.white,
+    borderColor: colors.br,
+    borderWidth: 1,
+    borderRadius: radii.pill,
     paddingVertical: 13,
     paddingHorizontal: 16,
-    minHeight: 52,
+    minHeight: 54,
+    ...shadow.card,
   },
   cityChipText: {
     flex: 1,
     fontSize: 16,
     color: colors.tx,
-    fontFamily: fontFamily.bodyMedium,
+    fontFamily: fontFamily.bodyBold,
   },
   cityChange: {
     fontSize: 13,
-    color: colors.mu,
+    color: colors.acc,
     paddingHorizontal: 6,
-    fontFamily: fontFamily.bodyMedium,
+    fontFamily: fontFamily.bodyBold,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 10,
   },
   privacy: {
     backgroundColor: colors.accLight,
-    borderRadius: radii.sm,
+    borderRadius: 24,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
@@ -235,5 +251,8 @@ const styles = StyleSheet.create({
     color: colors.acc,
     lineHeight: 20,
     fontFamily: fontFamily.body,
+  },
+  footer: {
+    paddingTop: 16,
   },
 });

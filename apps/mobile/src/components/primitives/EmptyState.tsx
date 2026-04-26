@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radii } from '@/theme/tokens';
+import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 
 type Props = {
@@ -39,29 +39,30 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 36,
-    paddingVertical: 32,
-    gap: 16,
+    paddingHorizontal: 28,
+    paddingVertical: 28,
+    gap: 18,
   },
   badgeHolder: {
-    width: 72,
-    height: 72,
-    borderRadius: radii.md,
-    backgroundColor: colors.s1,
+    width: 76,
+    height: 76,
+    borderRadius: radii.pill,
+    backgroundColor: colors.white,
     borderColor: colors.br,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    ...shadow.card,
   },
   badge: {
-    fontSize: 14,
-    letterSpacing: 2,
-    color: colors.tx,
-    fontFamily: fontFamily.bodySemi,
+    fontSize: 12,
+    letterSpacing: 2.4,
+    color: colors.acc,
+    fontFamily: fontFamily.bodyBold,
   },
   title: {
     fontFamily: fontFamily.display,
-    fontSize: 20,
+    fontSize: 22,
     color: colors.tx,
     textAlign: 'center',
     marginBottom: 6,
@@ -75,15 +76,13 @@ const styles = StyleSheet.create({
   },
   cta: {
     marginTop: 4,
-    paddingVertical: 13,
+    paddingVertical: 14,
     paddingHorizontal: 28,
-    borderRadius: radii.md,
+    borderRadius: radii.pill,
     backgroundColor: colors.acc,
-    borderWidth: 1,
-    borderColor: colors.tx,
   },
   ctaText: {
-    fontFamily: fontFamily.bodySemi,
+    fontFamily: fontFamily.bodyBold,
     color: colors.white,
     fontSize: 15,
   },
