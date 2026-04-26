@@ -13,6 +13,7 @@ import { fontFamily } from '@/theme/fonts';
 import { useAuthStore } from '@/stores/authStore';
 import { useUpsertProfile } from '@/api/profile';
 import { useUiStore } from '@/stores/uiStore';
+import { useProfileDraftStore } from '@/stores/profileDraftStore';
 import { consumePendingInvite } from '@/lib/deeplinks';
 import { useLocale } from '@/i18n/locale';
 import { searchCities, searchStreets } from '@/lib/locationAutocomplete';
@@ -21,22 +22,70 @@ export default function Address() {
   const router = useRouter();
   const { t, language } = useLocale();
   const profile = useAuthStore((s) => s.profile);
+  const user = useAuthStore((s) => s.user);
   const setProfile = useAuthStore((s) => s.setProfile);
   const upsert = useUpsertProfile();
   const pushToast = useUiStore((s) => s.pushToast);
+  const draft = useProfileDraftStore((s) => s.draft);
+  const setDraft = useProfileDraftStore((s) => s.setDraft);
+  const clearDraft = useProfileDraftStore((s) => s.clearDraft);
 
-  const [city, setCity] = useState('');
-  const [cityLocked, setCityLocked] = useState(false);
-  const [street, setStreet] = useState('');
+  const [city, setCity] = useState(() => draft?.city ?? '');
+  const [cityLocked, setCityLocked] = useState(() => !!draft?.city);
+  const [street, setStreet] = useState(() => draft?.street ?? '');
   const [citySuggs, setCitySuggs] = useState<string[]>([]);
   const [streetSuggs, setStreetSuggs] = useState<string[]>([]);
   const [cityLoad, setCityLoad] = useState(false);
   const [streetLoad, setStreetLoad] = useState(false);
-  const [building, setBuilding] = useState('');
-  const [apt, setApt] = useState('');
-  const [floor, setFloor] = useState('');
+  const [building, setBuilding] = useState(() => draft?.building ?? '');
+  const [apt, setApt] = useState(() => draft?.apt ?? '');
+  const [floor, setFloor] = useState(() => draft?.floor ?? '');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const skipPersistRef = useRef(false);
+
+  useEffect(() => {
+    if (!draft) return;
+    setCity(draft.city ?? '');
+    setCityLocked(!!draft.city);
+    setStreet(draft.street ?? '');
+    setBuilding(draft.building ?? '');
+    setApt(draft.apt ?? '');
+    setFloor(draft.floor ?? '');
+  }, [draft]);
+
+  useEffect(() => {
+    if (skipPersistRef.current) return;
+    if (!draft && !profile && !user) return;
+    const baseProfile =
+      draft ??
+      profile ??
+      (user
+        ? {
+            id: user.id,
+            first_name: '',
+            last_name: '',
+            phone: user.phone ?? '',
+            city: '',
+            street: '',
+            building: '',
+            apt: '',
+            floor: null,
+          }
+        : null);
+
+    if (!baseProfile) return;
+    if (baseProfile.first_name.trim().length === 0 || baseProfile.last_name.trim().length === 0) return;
+
+    void setDraft({
+      ...baseProfile,
+      city: city.trim(),
+      street: street.trim(),
+      building: building.trim(),
+      apt: apt.trim(),
+      floor: floor.trim() || null,
+    });
+  }, [apt, building, city, draft, floor, profile, setDraft, street, user]);
 
   const selectCity = (c: string) => {
     setCity(c);
@@ -46,9 +95,8 @@ export default function Address() {
   };
 
   const commitBestCity = () => {
-    if (citySuggs.length > 0) {
-      selectCity(citySuggs[0]);
-    }
+    const best = citySuggs[0];
+    if (best) selectCity(best);
   };
 
   const runCitySearch = useCallback((q: string) => {
@@ -117,9 +165,25 @@ export default function Address() {
   const valid = city.trim().length > 0 && street.trim().length > 0 && building.trim().length > 0 && apt.trim().length > 0;
 
   const submit = async () => {
-    if (!valid || !profile) return;
+    const baseProfile =
+      draft ??
+      profile ??
+      (user
+        ? {
+            id: user.id,
+            first_name: '',
+            last_name: '',
+            phone: user.phone ?? '',
+            city: '',
+            street: '',
+            building: '',
+            apt: '',
+            floor: null,
+          }
+        : null);
+    if (!valid || !baseProfile) return;
     const updated = {
-      ...profile,
+      ...baseProfile,
       city: city.trim(),
       street: street.trim(),
       building: building.trim(),
@@ -128,7 +192,9 @@ export default function Address() {
     };
     try {
       await upsert.mutateAsync(updated);
+      skipPersistRef.current = true;
       setProfile(updated);
+      await clearDraft();
       const pending = await consumePendingInvite();
       if (pending) {
         router.replace(`/join/${pending}`);
@@ -197,7 +263,8 @@ export default function Address() {
             setStreetSuggs([]);
           }}
           onSubmitEditing={() => {
-            if (streetSuggs.length > 0) setStreet(streetSuggs[0]);
+            const best = streetSuggs[0];
+            if (best) setStreet(best);
           }}
           placeholder={cityLocked ? t('auth.address.streetSearch', { city }) : t('auth.address.cityFirst')}
           suggestions={streetSuggs}

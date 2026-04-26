@@ -10,30 +10,35 @@ import { Field } from '@/components/primitives/Field';
 import { colors } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { useAuthStore } from '@/stores/authStore';
+import { useProfileDraftStore } from '@/stores/profileDraftStore';
 import { useLocale } from '@/i18n/locale';
 
 export default function Name() {
   const router = useRouter();
   const setProfile = useAuthStore((s) => s.setProfile);
   const user = useAuthStore((s) => s.user);
+  const draft = useProfileDraftStore((s) => s.draft);
+  const setDraft = useProfileDraftStore((s) => s.setDraft);
   const { t } = useLocale();
-  const [first, setFirst] = useState('');
-  const [last, setLast] = useState('');
+  const [first, setFirst] = useState(() => draft?.first_name ?? '');
+  const [last, setLast] = useState(() => draft?.last_name ?? '');
   const valid = first.trim().length >= 2 && last.trim().length >= 2;
 
-  const next = () => {
+  const next = async () => {
     if (!valid || !user) return;
-    setProfile({
+    const updated = {
       id: user.id,
       first_name: first.trim(),
       last_name: last.trim(),
       phone: user.phone ?? '',
-      city: '',
-      street: '',
-      building: '',
-      apt: '',
-      floor: null,
-    });
+      city: draft?.city ?? '',
+      street: draft?.street ?? '',
+      building: draft?.building ?? '',
+      apt: draft?.apt ?? '',
+      floor: draft?.floor ?? null,
+    };
+    setProfile(updated);
+    await setDraft(updated);
     router.push('/(auth)/address');
   };
 

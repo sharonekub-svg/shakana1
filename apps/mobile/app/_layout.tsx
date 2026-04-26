@@ -18,6 +18,7 @@ import { parseInviteToken, stashPendingInvite } from '@/lib/deeplinks';
 import { colors } from '@/theme/tokens';
 import { useProfile } from '@/api/profile';
 import { loadStoredLanguage, useLocaleStore } from '@/i18n/locale';
+import { useProfileDraftStore } from '@/stores/profileDraftStore';
 
 import '../global.css';
 
@@ -51,6 +52,7 @@ function RootLayoutInner() {
   const setHydrated = useAuthStore((s) => s.setHydrated);
   const session = useAuthStore((s) => s.session);
   const hydrated = useAuthStore((s) => s.hydrated);
+  const draft = useProfileDraftStore((s) => s.draft);
   const { data: profile } = useProfile(session?.user.id);
   const fontsLoaded = useAppFonts();
   const navReady = !!rootNavigationState?.key;
@@ -70,6 +72,7 @@ function RootLayoutInner() {
       useLocaleStore.setState({ language: storedLanguage });
       await ensureLanguageDirection(storedLanguage);
       await initPostHog();
+      await useProfileDraftStore.getState().loadDraft();
 
       const { data: current } = await supabase.auth.getSession();
       setSession(current.session ?? null);
@@ -150,15 +153,24 @@ function RootLayoutInner() {
       profile.street.trim().length > 0 &&
       profile.building.trim().length > 0 &&
       profile.apt.trim().length > 0;
+    const draftHasName =
+      !!draft &&
+      draft.first_name.trim().length > 0 &&
+      draft.last_name.trim().length > 0;
 
     if (!session && !inAuth) {
       router.replace('/(auth)/welcome');
     } else if (session && profileComplete && inAuth) {
       router.replace('/(tabs)/building');
-    } else if (session && !profileComplete && !inAuth) {
-      router.replace('/(auth)/name');
+    } else if (session && !profileComplete) {
+      const nextRoute = draftHasName ? '/(auth)/address' : '/(auth)/name';
+      if (!inAuth) {
+        router.replace(nextRoute);
+      } else if (segments[1] !== (draftHasName ? 'address' : 'name')) {
+        router.replace(nextRoute);
+      }
     }
-  }, [bootstrapped, hydrated, navReady, session, profile, segments, router]);
+  }, [bootstrapped, hydrated, navReady, session, profile, draft, segments, router]);
 
   useEffect(() => {
     if (!navReady || !pendingRoute.current) return;

@@ -150,7 +150,6 @@ const styles = StyleSheet.create({
     start: 0,
     end: 0,
     zIndex: 100,
-    elevation: 12,
     maxHeight: 220,
     backgroundColor: colors.white,
     borderRadius: radii.lg,
