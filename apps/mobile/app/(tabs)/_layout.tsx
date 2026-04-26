@@ -40,6 +40,7 @@ function ProfileIcon({ color, active }: IconProps) {
 
 export default function TabsLayout() {
   const { t } = useLocale();
+  const mainRoutes = new Set(['building', 'orders', 'profile']);
 
   return (
     <Tabs
@@ -60,6 +61,7 @@ export default function TabsLayout() {
         tabBarItemStyle: {
           paddingTop: 4,
         },
+        tabBarButton: mainRoutes.has(route.name) ? undefined : () => null,
         tabBarIcon: ({ color, focused }) => {
           if (route.name === 'building') return <HomeIcon color={color} active={focused} />;
           if (route.name === 'orders') return <OrdersIcon color={color} active={focused} />;
