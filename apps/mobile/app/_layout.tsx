@@ -15,6 +15,7 @@ import { initSentry, identifySentryUser, Sentry } from '@/lib/sentry';
 import { initPostHog, identify, resetAnalytics } from '@/lib/posthog';
 import { StripeProviderShim } from '@/components/StripeProviderShim';
 import { parseInviteToken, stashPendingInvite } from '@/lib/deeplinks';
+import { peekPendingSharedProduct, consumePendingSharedProduct } from '@/lib/sharedProduct';
 import { colors } from '@/theme/tokens';
 import { useProfile } from '@/api/profile';
 import { loadStoredLanguage, useLocaleStore } from '@/i18n/locale';
@@ -58,6 +59,7 @@ function RootLayoutInner() {
   const navReady = !!rootNavigationState?.key;
   const navReadyRef = useRef(navReady);
   const pendingRoute = useRef<string | null>(null);
+  const pendingShareRoute = useRef<string | null>(null);
 
   navReadyRef.current = navReady;
 
@@ -93,6 +95,15 @@ function RootLayoutInner() {
         }
       });
       authSub = data;
+
+      const pendingShare = await peekPendingSharedProduct();
+      if (pendingShare) {
+        pendingShareRoute.current = `/order/new?${new URLSearchParams({
+          url: pendingShare.url,
+          title: pendingShare.title,
+          source: pendingShare.source,
+        }).toString()}`;
+      }
 
       // Cold-start deep link → stash token for post-login claim.
       const initialUrl = await Linking.getInitialURL();
@@ -144,7 +155,9 @@ function RootLayoutInner() {
     if (!navReady || !hydrated || !bootstrapped) return;
     const inAuth = segments[0] === '(auth)';
     const inCallback = segments[0] === 'auth-callback';
+    const inShare = segments[0] === 'share';
     if (inCallback) return;
+    if (inShare) return;
     const profileComplete =
       !!profile &&
       profile.first_name.trim().length > 0 &&
@@ -178,6 +191,14 @@ function RootLayoutInner() {
     pendingRoute.current = null;
     router.replace(nextRoute);
   }, [navReady, router]);
+
+  useEffect(() => {
+    if (!navReady || !session || !pendingShareRoute.current) return;
+    const nextRoute = pendingShareRoute.current;
+    pendingShareRoute.current = null;
+    consumePendingSharedProduct().catch(() => {});
+    router.replace(nextRoute);
+  }, [navReady, router, session]);
 
   // Query focus manager ties to AppState.
   useEffect(() => {

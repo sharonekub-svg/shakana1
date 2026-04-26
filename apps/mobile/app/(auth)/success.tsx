@@ -7,6 +7,7 @@ import { ScreenBase } from '@/components/primitives/ScreenBase';
 import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { useAuthStore } from '@/stores/authStore';
+import { consumePendingSharedProduct, peekPendingSharedProduct } from '@/lib/sharedProduct';
 import { useLocale } from '@/i18n/locale';
 
 export default function Success() {
@@ -15,8 +16,27 @@ export default function Success() {
   const { t } = useLocale();
 
   useEffect(() => {
-    const t = setTimeout(() => router.replace('/(tabs)/building'), 2200);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => {
+      (async () => {
+        const shared = await peekPendingSharedProduct();
+        if (shared) {
+          await consumePendingSharedProduct().catch(() => {});
+          router.replace({
+            pathname: '/order/new',
+            params: {
+              url: shared.url,
+              title: shared.title,
+              source: shared.source,
+            },
+          });
+          return;
+        }
+        router.replace('/(tabs)/building');
+      })().catch(() => {
+        router.replace('/(tabs)/building');
+      });
+    }, 2200);
+    return () => clearTimeout(timer);
   }, [router]);
 
   return (

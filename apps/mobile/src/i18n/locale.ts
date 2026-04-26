@@ -134,7 +134,16 @@ const messages = {
         participantsLabel: 'מספר משתתפים',
         submit: 'צור הזמנה והזמן שכנים',
         error: 'שגיאה ביצירת ההזמנה',
+        sharedLabel: 'נפתח מהשיתוף',
+        sharedBody: 'הבאנו את הקישור לתוך הטופס כדי שלא תצטרך להקליד אותו שוב.',
       },
+    },
+    share: {
+      loading: 'קוראים את הפריט ששיתפת...',
+      unsupported: 'הקישור הזה אינו דף מוצר נתמך של Zara.',
+      savedForLater: 'שמרנו את הפריט. לאחר ההתחברות נחזיר אותך אליו.',
+      ready: 'פותחים את טופס ההזמנה...',
+      body: 'אנחנו מקבלים רק קישור ציבורי של Zara ששיתפת בעצמך. בלי סריקה נסתרת.',
     },
     language: {
       he: 'עברית',
@@ -283,7 +292,16 @@ const messages = {
         participantsLabel: 'Number of participants',
         submit: 'Create order and invite neighbors',
         error: 'Could not create the order',
+        sharedLabel: 'Shared from Zara',
+        sharedBody: 'We pulled the link into the form so you can finish the order without retyping it.',
       },
+    },
+    share: {
+      loading: 'Reading the shared link...',
+      unsupported: 'That link is not a supported Zara product page.',
+      savedForLater: 'Saved. Finish sign-in and we will open it again.',
+      ready: 'Opening the order form...',
+      body: 'We only accept a public Zara link that you shared yourself. No hidden scraping.',
     },
     language: {
       he: 'עברית',

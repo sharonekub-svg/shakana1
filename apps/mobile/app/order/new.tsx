@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { ScreenBase } from '@/components/primitives/ScreenBase';
 import { BackBtn } from '@/components/primitives/BackBtn';
@@ -13,14 +13,26 @@ import { productUrlSchema } from '@/utils/validation';
 import { useCreateOrder } from '@/api/orders';
 import { useUiStore } from '@/stores/uiStore';
 import { useLocale } from '@/i18n/locale';
+import { parseSharedProduct } from '@/lib/sharedProduct';
 
 const PARTICIPANT_OPTIONS = [2, 3, 4, 5, 6];
 
+type NewOrderParams = {
+  url?: string;
+  title?: string;
+  source?: string;
+};
+
 export default function NewOrder() {
   const router = useRouter();
+  const params = useLocalSearchParams<NewOrderParams>();
   const { t } = useLocale();
-  const [url, setUrl] = useState('');
-  const [title, setTitle] = useState('');
+  const sharedDraft = parseSharedProduct({
+    url: typeof params.url === 'string' ? params.url : null,
+    title: typeof params.title === 'string' ? params.title : null,
+  });
+  const [url, setUrl] = useState(() => sharedDraft?.url ?? '');
+  const [title, setTitle] = useState(() => sharedDraft?.title ?? '');
   const [price, setPrice] = useState('');
   const [maxP, setMaxP] = useState(4);
   const create = useCreateOrder();
@@ -54,6 +66,12 @@ export default function NewOrder() {
       </View>
 
       <View style={{ gap: 14 }}>
+        {sharedDraft ? (
+          <View style={styles.shareNotice}>
+            <Text style={styles.shareNoticeLabel}>{t('order.new.sharedLabel')}</Text>
+            <Text style={styles.shareNoticeBody}>{t('order.new.sharedBody')}</Text>
+          </View>
+        ) : null}
         <Field
           label={t('order.new.urlLabel')}
           value={url}
@@ -109,6 +127,24 @@ const styles = StyleSheet.create({
   },
   title: { fontFamily: fontFamily.display, fontSize: 22, color: colors.tx },
   label: { fontSize: 13, color: colors.mu, fontFamily: fontFamily.bodyMedium },
+  shareNotice: {
+    gap: 4,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.brBr,
+    backgroundColor: colors.cardSoft,
+  },
+  shareNoticeLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+    color: colors.tx,
+  },
+  shareNoticeBody: {
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    lineHeight: 20,
+    color: colors.mu,
+  },
   chips: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   chip: {
     paddingHorizontal: 18,
