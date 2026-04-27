@@ -22,7 +22,7 @@ export function useProfile(userId: string | undefined) {
 export function useUpsertProfile() {
   return useMutation({
     mutationFn: async (p: Profile) => {
-      const { error } = await supabase.from('profiles').upsert(p, { onConflict: 'id' });
+      const { error } = await supabase.from('profiles').upsert(p as never, { onConflict: 'id' });
       if (error) throw error;
       return p;
     },

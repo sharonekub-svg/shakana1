@@ -1,7 +1,7 @@
-import { Redirect, useLocalSearchParams } from 'expo-router';
+import { Redirect, type Href, useLocalSearchParams } from 'expo-router';
 
 export default function OrderNewRedirect() {
-  const params = useLocalSearchParams<Record<string, string | string[] | undefined>>();
+  const params = useLocalSearchParams();
   const query = new URLSearchParams();
 
   for (const [key, value] of Object.entries(params)) {
@@ -11,5 +11,6 @@ export default function OrderNewRedirect() {
   }
 
   const suffix = query.toString();
-  return <Redirect href={suffix ? `/(tabs)/order/new?${suffix}` : '/(tabs)/order/new'} />;
+  const href = (suffix ? `/(tabs)/order/new?${suffix}` : '/(tabs)/order/new') as Href;
+  return <Redirect href={href} />;
 }

@@ -11,7 +11,7 @@ export async function initPostHog(): Promise<PostHog | null> {
     host: env.posthogHost,
     flushAt: 20,
     flushInterval: 10_000,
-    captureAppLifecycleEvents: true,
+    captureNativeAppLifecycleEvents: true,
     enableSessionReplay: false,
   });
   return client;
@@ -29,11 +29,11 @@ export type ShakanaEvent =
   | 'order_completed';
 
 export function track(event: ShakanaEvent, props?: Record<string, unknown>): void {
-  client?.capture(event, props);
+  client?.capture(event, props as never);
 }
 
 export function identify(userId: string, traits?: Record<string, unknown>): void {
-  client?.identify(userId, traits);
+  client?.identify(userId, traits as never);
 }
 
 export function resetAnalytics(): void {

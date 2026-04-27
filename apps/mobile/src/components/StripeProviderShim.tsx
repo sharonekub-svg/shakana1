@@ -9,7 +9,7 @@ export function StripeProviderShim({ children }: { children: ReactNode }) {
       merchantIdentifier={stripeConfig.merchantIdentifier}
       urlScheme={stripeConfig.urlScheme}
     >
-      {children}
+      <>{children}</>
     </StripeProvider>
   );
 }

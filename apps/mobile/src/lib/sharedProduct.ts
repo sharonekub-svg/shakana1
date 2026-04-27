@@ -50,6 +50,7 @@ type BrandConfig = {
   brandName: string;
   displayName: string;
   hostTest: (hostname: string) => boolean;
+  productPathTest: (url: URL) => boolean;
   homeDeliveryFeeAgorot: number;
   freeShippingThresholdAgorot: number;
 };
@@ -60,6 +61,7 @@ const BRAND_CONFIGS: BrandConfig[] = [
     brandName: 'Zara',
     displayName: 'Zara',
     hostTest: (hostname) => normalizeHost(hostname).endsWith('zara.com'),
+    productPathTest: (url) => /(?:^|-)p\d{5,}(?:\.html)?$/i.test(url.pathname.split('/').pop() ?? ''),
     homeDeliveryFeeAgorot: DEFAULT_HOME_DELIVERY_FEE_AGOROT,
     freeShippingThresholdAgorot: DEFAULT_FREE_SHIPPING_THRESHOLD_AGOROT,
   },
@@ -68,6 +70,7 @@ const BRAND_CONFIGS: BrandConfig[] = [
     brandName: 'H&M',
     displayName: 'H&M',
     hostTest: (hostname) => normalizeHost(hostname).endsWith('hm.com'),
+    productPathTest: (url) => /product(?:-|_)page|\/product\//i.test(url.pathname),
     homeDeliveryFeeAgorot: DEFAULT_HOME_DELIVERY_FEE_AGOROT,
     freeShippingThresholdAgorot: DEFAULT_FREE_SHIPPING_THRESHOLD_AGOROT,
   },
@@ -83,9 +86,10 @@ function getBrandConfig(hostname: string): BrandConfig | null {
 
 function safeUrl(raw: string): URL | null {
   try {
-    const url = new URL(raw);
+    const url = new URL(cleanRawUrl(raw));
     if (url.protocol !== 'https:') return null;
-    if (!getBrandConfig(url.hostname)) return null;
+    const brand = getBrandConfig(url.hostname);
+    if (!brand || !brand.productPathTest(url)) return null;
     return url;
   } catch {
     return null;
@@ -103,9 +107,28 @@ function stripTrackingParams(url: URL): URL {
   return cleaned;
 }
 
+function cleanRawUrl(raw: string): string {
+  return raw
+    .trim()
+    .replace(/^[<("']+/, '')
+    .replace(/[>)"',.]+$/, '');
+}
+
+function getCandidateUrls(text: string): string[] {
+  const matches = text.match(/https?:\/\/[^\s<>"']+/gi) ?? [];
+  const decodedMatches = matches.flatMap((candidate) => {
+    try {
+      const url = new URL(cleanRawUrl(candidate));
+      return ['url', 'u', 'link', 'productUrl', 'redirect'].map((key) => url.searchParams.get(key)).filter(Boolean) as string[];
+    } catch {
+      return [];
+    }
+  });
+  return [...matches, ...decodedMatches].map(cleanRawUrl);
+}
+
 function extractUrl(text: string): string | null {
-  const match = text.match(/https?:\/\/[^\s<>"']+/i);
-  return match?.[0] ?? null;
+  return getCandidateUrls(text).find((candidate) => safeUrl(candidate)) ?? null;
 }
 
 function humanizeSlug(slug: string): string {
@@ -223,6 +246,15 @@ function parseMoneyToAgorot(raw: string | number | null | undefined): number | n
   return Math.round(value * 100);
 }
 
+function parseStoreMinorUnitsToAgorot(raw: string | number | null | undefined): number | null {
+  if (raw == null) return null;
+  const text = String(raw).replace(/[^\d]/g, '');
+  if (!text) return null;
+  const value = Number(text);
+  if (!Number.isFinite(value) || value <= 0) return null;
+  return value >= 1000 ? value : value * 100;
+}
+
 function choosePriceAgorot(html: string): number | null {
   const jsonLd = readFirstJsonLdObject(html);
   const offers = jsonLd?.offers;
@@ -246,6 +278,10 @@ function choosePriceAgorot(html: string): number | null {
     readMeta(html, 'twitter:data1', 'name');
   const parsedMeta = parseMoneyToAgorot(metaPrice);
   if (parsedMeta) return parsedMeta;
+
+  const structuredMinorUnitMatch = html.match(/"price"\s*:\s*"?(?<price>\d{4,7})"?/i);
+  const minorUnits = parseStoreMinorUnitsToAgorot(structuredMinorUnitMatch?.groups?.price ?? null);
+  if (minorUnits) return minorUnits;
 
   const match = html.match(/"price"\s*:\s*"?(?<price>\d+(?:[.,]\d+)?)"?/i);
   return parseMoneyToAgorot(match?.groups?.price ?? null);
@@ -384,7 +420,12 @@ export function parseSharedProduct(input: {
   url?: string | null;
   title?: string | null;
 }): SharedProductDraft | null {
-  const raw = input.url?.trim() || (input.text ? extractUrl(input.text) : null);
+  const candidates = [
+    ...(input.url ? [input.url] : []),
+    ...(input.url ? getCandidateUrls(input.url) : []),
+    ...(input.text ? getCandidateUrls(input.text) : []),
+  ];
+  const raw = candidates.find((candidate) => safeUrl(candidate)) ?? (input.text ? extractUrl(input.text) : null);
   if (!raw) return null;
 
   const url = safeUrl(raw);

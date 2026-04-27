@@ -15,6 +15,34 @@ describe('sharedProduct', () => {
     });
   });
 
+  it('extracts a Zara product url from shared text', () => {
+    const draft = parseSharedProduct({
+      text: 'I found this on Zara: https://www.zara.com/il/en/crossbody-bag-p16064110.html?utm_source=app.',
+      title: '',
+    });
+
+    expect(draft).toEqual({
+      url: 'https://www.zara.com/il/en/crossbody-bag-p16064110.html',
+      title: 'Crossbody Bag P16064110',
+      source: 'zara',
+      rawText: 'I found this on Zara: https://www.zara.com/il/en/crossbody-bag-p16064110.html?utm_source=app.',
+    });
+  });
+
+  it('finds a Zara product inside a redirect-style share url', () => {
+    const draft = parseSharedProduct({
+      url: 'https://example.com/share?url=https%3A%2F%2Fwww.zara.com%2Fil%2Fen%2Ftextured-shirt-p01234567.html%3Futm_medium%3Dshare',
+      title: 'Shared',
+    });
+
+    expect(draft).toEqual({
+      url: 'https://www.zara.com/il/en/textured-shirt-p01234567.html',
+      title: 'Shared',
+      source: 'zara',
+      rawText: undefined,
+    });
+  });
+
   it('accepts an H&M product url', () => {
     const draft = parseSharedProduct({
       url: 'https://www2.hm.com/hw_il/product-page.html?utm_source=share',
@@ -70,10 +98,36 @@ describe('sharedProduct', () => {
     );
   });
 
+  it('reads Zara minor-unit prices from embedded page data', () => {
+    const draft = {
+      url: 'https://www.zara.com/il/en/crossbody-bag-p16064110.html',
+      title: 'Bag',
+      source: 'zara' as const,
+    };
+
+    const insights = summarizeSharedProduct(draft, `
+      <html>
+        <head><meta property="og:title" content="Crossbody Bag | ZARA" /></head>
+        <body>{"price":19990,"currency":"ILS"}</body>
+      </html>
+    `);
+
+    expect(insights.priceAgorot).toBe(19990);
+    expect(insights.deliveryFeeAgorot).toBe(0);
+  });
+
   it('rejects non-supported links', () => {
     expect(
       parseSharedProduct({
         url: 'https://example.com/product/123',
+      }),
+    ).toBeNull();
+  });
+
+  it('rejects Zara links that are not product pages', () => {
+    expect(
+      parseSharedProduct({
+        url: 'https://www.zara.com/il/en/cart',
       }),
     ).toBeNull();
   });

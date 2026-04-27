@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Stack, useRootNavigationState, useRouter, useSegments } from 'expo-router';
+import { Stack, type Href, useRootNavigationState, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider, focusManager, onlineManager } from '@tanstack/react-query';
 import { AppState, Platform, StyleSheet, View } from 'react-native';
@@ -58,8 +58,8 @@ function RootLayoutInner() {
   const fontsLoaded = useAppFonts();
   const navReady = !!rootNavigationState?.key;
   const navReadyRef = useRef(navReady);
-  const pendingRoute = useRef<string | null>(null);
-  const pendingShareRoute = useRef<string | null>(null);
+  const pendingRoute = useRef<Href | null>(null);
+  const pendingShareRoute = useRef<Href | null>(null);
 
   navReadyRef.current = navReady;
 
@@ -102,7 +102,7 @@ function RootLayoutInner() {
           url: pendingShare.url,
           title: pendingShare.title,
           source: pendingShare.source,
-        }).toString()}`;
+        }).toString()}` as Href;
       }
 
       // Cold-start deep link → stash token for post-login claim.
@@ -117,7 +117,7 @@ function RootLayoutInner() {
           if (!hasSession) {
             await stashPendingInvite(t);
           }
-          const nextRoute = hasSession ? `/join/${t}` : '/(auth)/welcome';
+          const nextRoute = (hasSession ? `/join/${t}` : '/(auth)/welcome') as Href;
           if (!navReadyRef.current) {
             pendingRoute.current = nextRoute;
             return;
@@ -176,7 +176,7 @@ function RootLayoutInner() {
     } else if (session && profileComplete && inAuth) {
       router.replace('/(tabs)/building');
     } else if (session && !profileComplete) {
-      const nextRoute = draftHasName ? '/(auth)/address' : '/(auth)/name';
+      const nextRoute = (draftHasName ? '/(auth)/address' : '/(auth)/name') as Href;
       if (!inAuth) {
         router.replace(nextRoute);
       } else if (segments[1] !== (draftHasName ? 'address' : 'name')) {
@@ -189,7 +189,7 @@ function RootLayoutInner() {
     if (!navReady || !pendingRoute.current) return;
     const nextRoute = pendingRoute.current;
     pendingRoute.current = null;
-    router.replace(nextRoute);
+    router.replace(nextRoute as Href);
   }, [navReady, router]);
 
   useEffect(() => {
@@ -197,7 +197,7 @@ function RootLayoutInner() {
     const nextRoute = pendingShareRoute.current;
     pendingShareRoute.current = null;
     consumePendingSharedProduct().catch(() => {});
-    router.replace(nextRoute);
+    router.replace(nextRoute as Href);
   }, [navReady, router, session]);
 
   // Query focus manager ties to AppState.
