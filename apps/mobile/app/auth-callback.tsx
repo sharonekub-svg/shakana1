@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { ScreenBase } from '@/components/primitives/ScreenBase';
 import { supabase } from '@/lib/supabase';
@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { colors } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import type { Profile } from '@/types/domain';
+import { consumePendingInvite } from '@/lib/deeplinks';
 
 const isProfileComplete = (profile: Profile | null): boolean =>
   !!profile &&
@@ -45,19 +46,20 @@ export default function AuthCallback() {
 
       const userId = sessionData.session?.user.id;
       if (!userId) {
-        const { data: implicitSession } = await supabase.auth.getSession();
-        const implicitUserId = implicitSession.session?.user.id;
-        if (!implicitUserId) {
-          router.replace('/(auth)/welcome');
-          return;
-        }
-        const { data: profile } = await supabase.from('profiles').select('*').eq('id', implicitUserId).maybeSingle();
-        router.replace(isProfileComplete(profile) ? '/(tabs)/building' : '/(auth)/name');
+        router.replace('/(auth)/welcome');
         return;
       }
 
       const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
-      router.replace(isProfileComplete(profile) ? '/(tabs)/building' : '/(auth)/name');
+      useAuthStore.getState().setProfile(profile ?? null);
+
+      if (!isProfileComplete(profile)) {
+        router.replace('/(auth)/name');
+        return;
+      }
+
+      const pendingInvite = await consumePendingInvite();
+      router.replace((pendingInvite ? `/join/${pendingInvite}` : '/(tabs)/building') as Href);
     };
 
     run().catch((error) => {

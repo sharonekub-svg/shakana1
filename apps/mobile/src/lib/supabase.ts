@@ -5,15 +5,13 @@ import { env } from './env';
 import { secureAuthStorage } from './secureStorage';
 import type { Database } from '@/types/database';
 
-const flowType = Platform.OS === 'web' ? 'implicit' : 'pkce';
-
 export const supabase = createClient<Database>(env.supabaseUrl, env.supabaseAnonKey, {
   auth: {
     storage: secureAuthStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: Platform.OS === 'web',
-    flowType,
+    flowType: 'pkce',
   },
   global: {
     headers: { 'x-shk-client': 'mobile' },
