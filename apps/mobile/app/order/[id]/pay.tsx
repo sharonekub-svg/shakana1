@@ -1,4 +1,4 @@
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useEffect } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
@@ -22,7 +22,8 @@ export default function Pay() {
   const paymentSettings = usePaymentSettingsStore((s) => s.settings);
   const loadPayments = usePaymentSettingsStore((s) => s.load);
   const paymentsHydrated = usePaymentSettingsStore((s) => s.hydrated);
-  const hasPaymentOption = Object.values(paymentSettings).some((method) => method.enabled);
+  const readyPaymentMethods = Object.entries(paymentSettings).filter(([, method]) => method.enabled && method.link.trim().length > 0);
+  const hasPaymentOption = readyPaymentMethods.length > 0;
 
   const order = data?.order;
   const perPerson = order ? Math.ceil(order.product_price_agorot / order.max_participants) : 0;
@@ -75,7 +76,23 @@ export default function Pay() {
               <Text style={styles.warningTitle}>Payment option required</Text>
               <Text style={styles.warningBody}>Set up at least one way for people to pay before continuing.</Text>
             </View>
-          ) : null}
+          ) : (
+            <View style={styles.methodsCard}>
+              <Text style={styles.warningTitle}>Your payment options</Text>
+              {readyPaymentMethods.map(([key, method]) => (
+                <Pressable
+                  key={key}
+                  style={styles.methodRow}
+                  onPress={() => {
+                    if (/^https?:\/\//i.test(method.link)) void Linking.openURL(method.link);
+                  }}
+                >
+                  <Text style={styles.methodName}>{key.toUpperCase()}</Text>
+                  <Text style={styles.methodLink} numberOfLines={1}>{method.link}</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
 
           <View style={{ flex: 1 }} />
 
@@ -137,5 +154,30 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     color: colors.mu,
+  },
+  methodsCard: {
+    marginTop: 14,
+    backgroundColor: colors.white,
+    borderRadius: radii.md,
+    padding: 16,
+    borderColor: colors.br,
+    borderWidth: 1,
+    gap: 10,
+  },
+  methodRow: {
+    gap: 4,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.br,
+  },
+  methodName: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+    color: colors.tx,
+  },
+  methodLink: {
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    color: colors.acc,
   },
 });

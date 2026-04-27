@@ -3,7 +3,7 @@ import { create } from 'zustand';
 
 const STORAGE_KEY = 'shakana.paymentSettings';
 
-export type PaymentMethodKey = 'bit' | 'paybox' | 'venmo' | 'cash';
+export type PaymentMethodKey = 'bit' | 'paybox' | 'paypal' | 'venmo' | 'cash';
 
 export type PaymentMethodSetting = {
   enabled: boolean;
@@ -23,6 +23,7 @@ type PaymentSettingsState = {
 const DEFAULT_SETTINGS: PaymentSettings = {
   bit: { enabled: false, link: '' },
   paybox: { enabled: false, link: '' },
+  paypal: { enabled: false, link: '' },
   venmo: { enabled: false, link: '' },
   cash: { enabled: false, link: '' },
 };
@@ -39,6 +40,7 @@ function normalizeSettings(raw: Partial<PaymentSettings> | null): PaymentSetting
   return {
     bit: { ...DEFAULT_SETTINGS.bit, ...raw?.bit },
     paybox: { ...DEFAULT_SETTINGS.paybox, ...raw?.paybox },
+    paypal: { ...DEFAULT_SETTINGS.paypal, ...raw?.paypal },
     venmo: { ...DEFAULT_SETTINGS.venmo, ...raw?.venmo },
     cash: { ...DEFAULT_SETTINGS.cash, ...raw?.cash },
   };
@@ -69,5 +71,5 @@ export const usePaymentSettingsStore = create<PaymentSettingsState>((set, get) =
     set({ settings: next });
     await persist(next);
   },
-  hasPaymentOption: () => Object.values(get().settings).some((method) => method.enabled),
+  hasPaymentOption: () => Object.values(get().settings).some((method) => method.enabled && method.link.trim().length > 0),
 }));

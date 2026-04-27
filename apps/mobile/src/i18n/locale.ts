@@ -357,6 +357,77 @@ const messages = {
 type MessageTree = typeof messages.he;
 type KeyPath = string;
 
+const heOverrides: Record<string, string> = {
+  'common.continue': 'המשך',
+  'common.save': 'שמור',
+  'common.change': 'שנה',
+  'common.or': 'או',
+  'common.newOrder': 'הזמנה חדשה',
+  'common.sendCode': 'שלח קוד',
+  'common.verifyCode': 'אמת קוד',
+  'common.resend': 'שלח שוב',
+  'common.terms': 'תנאי שימוש',
+  'common.and': 'ו',
+  'common.privacy': 'פרטיות',
+  'landing.brand': 'SHAKANA',
+  'landing.title': 'קניות יחד, פשוט יותר.',
+  'landing.subtitle': 'פותחים הזמנה, מזמינים שכנים, ומנהלים הכל במקום אחד.',
+  'landing.privateSignIn': 'כניסה פרטית',
+  'landing.introBody': 'המשך עם Google או מספר טלפון כדי להיכנס ללוח ההזמנות.',
+  'landing.google': 'המשך עם Google',
+  'landing.phone': 'המשך עם טלפון',
+  'landing.legal': 'בהמשך אתה מסכים ל',
+  'tabs.home.title': 'בית',
+  'tabs.home.profile': 'פרופיל',
+  'tabs.orders.title': 'הזמנות',
+  'tabs.profile.title': 'פרופיל',
+  'auth.phone.title': 'מה מספר הטלפון שלך?',
+  'auth.phone.subtitle': 'נשלח אליך קוד חד פעמי כדי להיכנס.',
+  'auth.phone.placeholder': '050-000-0000',
+  'auth.phone.footer': 'כניסה נקייה ומהירה.',
+  'auth.phone.sendError': 'לא הצלחנו לשלוח קוד.',
+  'auth.name.title': 'איך לקרוא לך?',
+  'auth.name.subtitle': 'בחר שם שיופיע בהזמנות המשותפות.',
+  'auth.name.first': 'שם פרטי',
+  'auth.name.last': 'שם משפחה',
+  'auth.address.title': 'לאן ההזמנות יגיעו?',
+  'auth.address.subtitle': 'הוסף כתובת ברירת מחדל להזמנות משותפות.',
+  'auth.address.city': 'עיר',
+  'auth.address.citySearch': 'חפש עיר...',
+  'auth.address.street': 'רחוב',
+  'auth.address.building': 'בניין',
+  'auth.address.apartment': 'דירה',
+  'auth.address.floor': 'קומה',
+  'auth.address.cityFirst': 'בחר עיר קודם',
+  'auth.address.streetSearch': 'חפש רחובות ב{city}...',
+  'auth.address.saveError': 'לא הצלחנו לשמור כתובת.',
+  'auth.address.privacy': 'הכתובת נשמרת רק לחשבון שלך ולהזמנות משותפות.',
+  'auth.otp.title': 'הזן את הקוד',
+  'auth.otp.subtitle': 'שלחנו אותו אל {phone}.',
+  'auth.otp.needAnother': 'צריך קוד נוסף?',
+  'auth.otp.codeSent': 'הקוד נשלח.',
+  'auth.otp.verifyError': 'הקוד לא אומת.',
+  'auth.otp.resendError': 'לא הצלחנו לשלוח שוב.',
+  'auth.success.title': 'ברוך הבא{first}.',
+  'auth.success.subtitle': 'הפרופיל שלך מוכן.',
+  'auth.success.routing': 'מעבירים אותך לבית.',
+  'order.new.title': 'הזמנה חדשה',
+  'order.new.urlLabel': 'קישור למוצר',
+  'order.new.titleLabel': 'שם המוצר',
+  'order.new.priceLabel': 'מחיר',
+  'order.new.submit': 'צור הזמנה והזמן שכנים',
+  'order.new.error': 'לא הצלחנו ליצור הזמנה',
+  'share.loading': 'קוראים את הקישור...',
+  'share.unsupported': 'זה לא קישור מוצר נתמך.',
+  'share.savedForLater': 'שמרנו את המוצר לאחר ההתחברות.',
+  'share.ready': 'פותחים את טופס ההזמנה...',
+  'share.body': 'אנחנו מקבלים רק קישור מוצר ציבורי ששיתפת בעצמך.',
+  'language.label': 'שפה',
+  'language.subtitle': 'בחר איך האפליקציה תוצג.',
+  'language.he': 'עברית',
+  'common.hebrew': 'עברית',
+};
+
 type LocaleState = {
   language: Language;
   hydrated: boolean;
@@ -414,6 +485,11 @@ export async function applyLanguageDirection(language: Language): Promise<void> 
 }
 
 export function t(language: Language, key: KeyPath, vars: Record<string, string | number> = {}): string {
+  const override = language === 'he' ? heOverrides[key] : undefined;
+  if (override) {
+    return override.replace(/\{(\w+)\}/g, (_, name: string) => String(vars[name] ?? ''));
+  }
+
   const resolve = (lang: Language) => {
     const dict = messages[lang] as unknown as Record<string, unknown>;
     return key.split('.').reduce<unknown>((acc, segment) => {
@@ -423,7 +499,15 @@ export function t(language: Language, key: KeyPath, vars: Record<string, string 
   };
 
   const raw = resolve(language);
-  const fallback = typeof raw === 'string' ? raw : resolve('en');
+  const profileFallback = key.startsWith('profile.') ? (() => {
+    const nestedKey = `tabs.${key}`;
+    const dict = messages[language] as unknown as Record<string, unknown>;
+    return nestedKey.split('.').reduce<unknown>((acc, segment) => {
+      if (!acc || typeof acc !== 'object') return undefined;
+      return (acc as Record<string, unknown>)[segment];
+    }, dict);
+  })() : undefined;
+  const fallback = typeof raw === 'string' ? raw : profileFallback ?? resolve('en');
   const template = typeof fallback === 'string' ? fallback : key;
   return template.replace(/\{(\w+)\}/g, (_, name: string) => String(vars[name] ?? ''));
 }

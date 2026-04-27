@@ -28,7 +28,7 @@ export function useVerifyOtp() {
         type: 'sms',
       });
       if (error) throw error;
-      if (!data.session) throw new Error('אין סשן פעיל');
+      if (!data.session) throw new Error('No active session');
       return data.session;
     },
   });

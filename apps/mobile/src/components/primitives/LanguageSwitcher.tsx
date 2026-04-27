@@ -24,7 +24,7 @@ export function LanguageSwitcher() {
           return (
             <Pressable
               key={option.language}
-              onPress={() => setLanguage(option.language)}
+              onPress={() => void setLanguage(option.language)}
               style={[styles.pill, active && styles.pillActive]}
             >
               <Text style={[styles.pillText, active && styles.pillTextActive]}>{option.label}</Text>

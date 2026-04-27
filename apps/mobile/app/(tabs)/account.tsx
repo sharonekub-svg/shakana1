@@ -11,14 +11,6 @@ import { useAuthStore } from '@/stores/authStore';
 import { useNotificationSettingsStore } from '@/stores/notificationSettingsStore';
 import { usePaymentSettingsStore } from '@/stores/paymentSettingsStore';
 
-const quickLinks = [
-  { href: '/profile/payment', title: 'Payment', body: 'Checkout and saved payment settings', danger: false },
-  { href: '/profile/alerts', title: 'Alerts', body: 'Order updates and reminders', danger: false },
-  { href: '/profile/privacy', title: 'Privacy', body: 'How account data is handled', danger: false },
-  { href: '/profile/terms', title: 'Terms', body: 'Rules for shared orders', danger: false },
-  { href: '/profile/delete', title: 'Delete account', body: 'Remove your profile safely', danger: true },
-] as const;
-
 export default function AccountTab() {
   const router = useRouter();
   const { language, setLanguage } = useLocale();
@@ -32,7 +24,9 @@ export default function AccountTab() {
   const loadPayments = usePaymentSettingsStore((s) => s.load);
   const { data: orders = [] } = useUserOrders(user?.id);
   const openOrders = orders.filter((order) => !['completed', 'cancelled'].includes(order.status)).length;
-  const enabledPaymentCount = Object.values(paymentSettings).filter((method) => method.enabled).length;
+  const enabledPaymentCount = Object.values(paymentSettings).filter(
+    (method) => method.enabled && method.link.trim().length > 0,
+  ).length;
   const enabledNotifications = Object.values(notificationSettings).filter(Boolean).length;
   const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim();
   const address = [profile?.street, profile?.building, profile?.apt ? `Apt ${profile.apt}` : null, profile?.city]
@@ -40,20 +34,58 @@ export default function AccountTab() {
     .join(', ');
   const isHebrew = language === 'he';
   const copy = {
-    profileTitle: isHebrew ? 'Profile' : 'Profile',
-    ready: isHebrew ? 'Profile ready' : 'Profile ready',
+    profileTitle: isHebrew ? 'פרופיל' : 'Profile',
+    ready: isHebrew ? 'הפרופיל מוכן' : 'Profile ready',
     name: fullName || 'Shakana customer',
-    account: isHebrew ? 'Account' : 'Account',
-    profileBody: isHebrew ? 'Keep your account organized before checkout.' : 'Keep your account organized before checkout.',
-    address: address || (isHebrew ? 'Address not added yet' : 'Address not added yet'),
-    phone: profile?.phone || (isHebrew ? 'Phone not added yet' : 'Phone not added yet'),
-    openOrders: isHebrew ? 'Open orders' : 'Open orders',
-    details: isHebrew ? 'Details' : 'Details',
-    deliveryAddress: isHebrew ? 'Delivery address' : 'Delivery address',
-    language: isHebrew ? 'Language' : 'Language',
-    paymentReady: isHebrew ? `${enabledPaymentCount} payment options` : `${enabledPaymentCount} payment options`,
-    notificationsReady: isHebrew ? `${enabledNotifications} notification toggles on` : `${enabledNotifications} notification toggles on`,
+    account: isHebrew ? 'חשבון' : 'Account',
+    profileBody: isHebrew
+      ? 'כאן מסדרים שפה, כתובת, תשלומים והתראות לפני שמתחילים הזמנה.'
+      : 'Keep language, address, payments, and notifications ready before checkout.',
+    address: address || (isHebrew ? 'כתובת עדיין לא נוספה' : 'Address not added yet'),
+    phone: profile?.phone || (isHebrew ? 'טלפון עדיין לא נוסף' : 'Phone not added yet'),
+    phoneLabel: isHebrew ? 'טלפון' : 'Phone',
+    openOrders: isHebrew ? 'הזמנות פתוחות' : 'Open orders',
+    details: isHebrew ? 'הגדרות חשבון' : 'Account settings',
+    deliveryAddress: isHebrew ? 'כתובת משלוח' : 'Delivery address',
+    language: isHebrew ? 'שפה' : 'Language',
+    languageBody: isHebrew ? 'בחר עברית או אנגלית לכל האפליקציה.' : 'Choose English or Hebrew for the app.',
+    payments: isHebrew ? 'תשלומים' : 'Payments',
+    notifications: isHebrew ? 'התראות' : 'Notifications',
+    paymentReady: isHebrew ? `${enabledPaymentCount} אפשרויות תשלום מוכנות` : `${enabledPaymentCount} payment options ready`,
+    notificationsReady: isHebrew ? `${enabledNotifications} התראות פעילות` : `${enabledNotifications} notification toggles on`,
   };
+  const quickLinks = [
+    {
+      href: '/profile/payment',
+      title: isHebrew ? 'תשלומים' : 'Payments',
+      body: isHebrew ? 'הוסף Bit, PayBox, PayPal, Venmo או דרך תשלום אחרת' : 'Add Bit, PayBox, PayPal, Venmo, or another payment option',
+      danger: false,
+    },
+    {
+      href: '/profile/alerts',
+      title: isHebrew ? 'התראות' : 'Alerts',
+      body: isHebrew ? 'הפעל או כבה עדכוני הזמנות ותזכורות תשלום' : 'Turn order updates and payment reminders on or off',
+      danger: false,
+    },
+    {
+      href: '/profile/privacy',
+      title: isHebrew ? 'פרטיות' : 'Privacy',
+      body: isHebrew ? 'איך אנחנו משתמשים בפרטי החשבון והכתובת' : 'How account and address data is handled',
+      danger: false,
+    },
+    {
+      href: '/profile/terms',
+      title: isHebrew ? 'תנאים' : 'Terms',
+      body: isHebrew ? 'הכללים להזמנות משותפות באפליקציה' : 'Rules for shared orders',
+      danger: false,
+    },
+    {
+      href: '/profile/delete',
+      title: isHebrew ? 'מחיקת חשבון' : 'Delete account',
+      body: isHebrew ? 'מחיקה בטוחה של הפרופיל והנתונים שלך' : 'Remove your profile safely',
+      danger: true,
+    },
+  ] as const;
 
   useEffect(() => {
     if (!notificationsHydrated) void loadNotifications();
@@ -88,7 +120,7 @@ export default function AccountTab() {
 
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Phone</Text>
+            <Text style={styles.statLabel}>{copy.phoneLabel}</Text>
             <Text style={styles.statValue} numberOfLines={1}>
               {copy.phone}
             </Text>
@@ -108,7 +140,7 @@ export default function AccountTab() {
           <View style={styles.languageTop}>
             <View>
               <Text style={styles.sectionTitle}>{copy.language}</Text>
-              <Text style={styles.addressText}>Choose English or Hebrew for the app.</Text>
+              <Text style={styles.addressText}>{copy.languageBody}</Text>
             </View>
           </View>
           <View style={styles.languageButtons}>
@@ -133,11 +165,11 @@ export default function AccountTab() {
 
         <View style={styles.statsRow}>
           <Pressable style={styles.statCard} onPress={() => router.push('/profile/payment')}>
-            <Text style={styles.statLabel}>Payments</Text>
+            <Text style={styles.statLabel}>{copy.payments}</Text>
             <Text style={styles.statValue} numberOfLines={1}>{copy.paymentReady}</Text>
           </Pressable>
           <Pressable style={styles.statCard} onPress={() => router.push('/profile/alerts')}>
-            <Text style={styles.statLabel}>Notifications</Text>
+            <Text style={styles.statLabel}>{copy.notifications}</Text>
             <Text style={styles.statValue} numberOfLines={1}>{copy.notificationsReady}</Text>
           </Pressable>
         </View>

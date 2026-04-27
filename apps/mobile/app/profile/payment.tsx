@@ -29,6 +29,12 @@ const methods: Array<{
     placeholder: 'https://payboxapp.page.link/...',
   },
   {
+    key: 'paypal',
+    label: 'PayPal',
+    hint: 'PayPal.me link, email, or username.',
+    placeholder: 'https://paypal.me/username or email@example.com',
+  },
+  {
     key: 'venmo',
     label: 'Venmo',
     hint: 'Venmo username or payment link.',
@@ -46,12 +52,14 @@ function MethodRow({
   method,
   enabled,
   link,
+  detailLabel,
   onToggle,
   onLinkChange,
 }: {
   method: (typeof methods)[number];
   enabled: boolean;
   link: string;
+  detailLabel: string;
   onToggle: () => void;
   onLinkChange: (value: string) => void;
 }) {
@@ -68,7 +76,7 @@ function MethodRow({
       </Pressable>
       {enabled ? (
         <Field
-          label="Payment link or detail"
+          label={detailLabel}
           value={link}
           onChange={onLinkChange}
           placeholder={method.placeholder}
@@ -88,20 +96,21 @@ export default function PaymentSettings() {
   const hydrated = usePaymentSettingsStore((s) => s.hydrated);
   const load = usePaymentSettingsStore((s) => s.load);
   const setMethod = usePaymentSettingsStore((s) => s.setMethod);
-  const enabledCount = Object.values(settings).filter((method) => method.enabled).length;
+  const enabledCount = Object.values(settings).filter((method) => method.enabled && method.link.trim().length > 0).length;
   const copy = isHebrew
     ? {
-        title: 'Payments',
-        subtitle: 'Choose how people can pay you before they join an order.',
-        saved: `${enabledCount} payment option${enabledCount === 1 ? '' : 's'} ready`,
-        note: 'For now these details are saved on this device and shown as your preferred payment options. Real checkout can still use Stripe when needed.',
+        title: 'תשלומים',
+        subtitle: 'בחר איך אנשים יוכלו לשלם לך לפני שהם מצטרפים להזמנה.',
+        saved: `${enabledCount} אפשרויות תשלום מוכנות`,
+        note: 'הוסף קישור אמיתי, משתמש או פרטי תשלום. אפשרות תשלום נספרת כמוכנה רק אחרי שמילאת פרטים.',
       }
     : {
         title: 'Payments',
         subtitle: 'Choose how people can pay you before they join an order.',
         saved: `${enabledCount} payment option${enabledCount === 1 ? '' : 's'} ready`,
-        note: 'For now these details are saved on this device and shown as your preferred payment options. Real checkout can still use Stripe when needed.',
+        note: 'Add the real account link or username. A payment option only counts as ready after it has details filled in.',
       };
+  const detailLabel = isHebrew ? 'קישור או פרטי תשלום' : 'Payment link or detail';
 
   useEffect(() => {
     if (!hydrated) {
@@ -135,6 +144,7 @@ export default function PaymentSettings() {
               method={method}
               enabled={settings[method.key].enabled}
               link={settings[method.key].link}
+              detailLabel={detailLabel}
               onToggle={() => void setMethod(method.key, { enabled: !settings[method.key].enabled })}
               onLinkChange={(value) => void setMethod(method.key, { link: value })}
             />
