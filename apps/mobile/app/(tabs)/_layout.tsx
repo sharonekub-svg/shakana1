@@ -40,15 +40,15 @@ function ProfileIcon({ color, active }: IconProps) {
 
 export default function TabsLayout() {
   const { t } = useLocale();
-  const mainRoutes = new Set(['building', 'orders', 'account']);
 
   return (
     <Tabs
-      screenOptions={({ route }) => ({
+      screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.navy,
         tabBarInactiveTintColor: colors.mu,
         tabBarLabelStyle: { fontFamily: fontFamily.bodyBold, fontSize: 10 },
+        tabBarItemStyle: { flex: 1, paddingTop: 4 },
         tabBarStyle: {
           borderTopColor: colors.br,
           borderTopWidth: 1,
@@ -56,23 +56,32 @@ export default function TabsLayout() {
           paddingTop: 8,
           paddingBottom: 10,
           height: 82,
+          flexDirection: 'row',
           ...shadow.card,
         },
-        tabBarItemStyle: {
-          paddingTop: 4,
-        },
-        tabBarButton: mainRoutes.has(route.name) ? undefined : () => null,
-        tabBarIcon: ({ color, focused }) => {
-          if (route.name === 'building') return <HomeIcon color={color} active={focused} />;
-          if (route.name === 'orders') return <OrdersIcon color={color} active={focused} />;
-          if (route.name === 'account') return <ProfileIcon color={color} active={focused} />;
-          return <ProfileIcon color={color} active={focused} />;
-        },
-      })}
+      }}
     >
-      <Tabs.Screen name="building" options={{ title: t('tabs.home.title') }} />
-      <Tabs.Screen name="orders" options={{ title: t('tabs.orders.title') }} />
-      <Tabs.Screen name="account" options={{ title: t('tabs.profile.title') }} />
+      <Tabs.Screen
+        name="building"
+        options={{
+          title: t('tabs.home.title'),
+          tabBarIcon: ({ color, focused }) => <HomeIcon color={color} active={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="orders"
+        options={{
+          title: t('tabs.orders.title'),
+          tabBarIcon: ({ color, focused }) => <OrdersIcon color={color} active={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="account"
+        options={{
+          title: t('tabs.profile.title'),
+          tabBarIcon: ({ color, focused }) => <ProfileIcon color={color} active={focused} />,
+        }}
+      />
     </Tabs>
   );
 }
