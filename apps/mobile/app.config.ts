@@ -2,6 +2,7 @@ import type { ExpoConfig, ConfigContext } from 'expo/config';
 
 const SCHEME = process.env.EXPO_PUBLIC_APP_SCHEME ?? 'shakana';
 const UNIVERSAL = process.env.EXPO_PUBLIC_UNIVERSAL_LINK_HOST ?? 'shakana.app';
+const BRAND_BLUE = '#9ECAF2';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -15,7 +16,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   splash: {
     image: './assets/splash.png',
     resizeMode: 'contain',
-    backgroundColor: '#faf8f4',
+    backgroundColor: BRAND_BLUE,
   },
   assetBundlePatterns: ['**/*'],
   plugins: [
@@ -55,7 +56,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     versionCode: 1,
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
-      backgroundColor: '#faf8f4',
+      backgroundColor: BRAND_BLUE,
     },
     intentFilters: [
       {
