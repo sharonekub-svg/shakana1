@@ -35,7 +35,7 @@ export const IL_CITIES: readonly string[] = [
   'נהריה',
   'נס ציונה',
   'נצרת',
-  'נצרת עילית',
+  'נוף הגליל',
   'נתיבות',
   'נתניה',
   'עכו',
@@ -52,19 +52,33 @@ export const IL_CITIES: readonly string[] = [
   'ראש העין',
   'ראשון לציון',
   'רחובות',
-  'רמות השבים',
   'רמלה',
   'רמת גן',
   'רמת השרון',
   'רעננה',
   'שדרות',
   'תל אביב',
+  'Tel Aviv',
+  'Jerusalem',
+  'Haifa',
+  'Ramat Gan',
+  'Givatayim',
+  'Bnei Brak',
+  'Petah Tikva',
+  'Rishon LeZion',
+  'Holon',
+  'Bat Yam',
+  'Netanya',
+  'Herzliya',
+  'Ra’anana',
+  'Kfar Saba',
+  'Ashdod',
+  'Ashkelon',
+  'Beer Sheva',
 ] as const;
 
 export function matchCities(query: string, limit = 7): string[] {
-  const q = query.trim();
+  const q = query.trim().toLocaleLowerCase();
   if (!q) return [];
-  return IL_CITIES.filter(
-    (c) => c.includes(q) || c.toLowerCase().includes(q.toLowerCase()),
-  ).slice(0, limit);
+  return IL_CITIES.filter((city) => city.toLocaleLowerCase().includes(q)).slice(0, limit);
 }

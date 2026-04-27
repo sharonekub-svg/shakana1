@@ -23,6 +23,7 @@ type Props = {
   loading?: boolean;
   autoFocus?: boolean;
   disabled?: boolean;
+  direction?: 'rtl' | 'ltr';
 };
 
 export function AutoField({
@@ -36,6 +37,7 @@ export function AutoField({
   loading,
   autoFocus,
   disabled,
+  direction = 'rtl',
 }: Props) {
   const [open, setOpen] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -76,6 +78,7 @@ export function AutoField({
           style={[
             styles.input,
             { borderColor: focused ? colors.acc : colors.br },
+            direction === 'ltr' && { textAlign: 'left', writingDirection: 'ltr' },
             disabled && { opacity: 0.5 },
           ]}
         />

@@ -103,14 +103,15 @@ export default function PaymentSettings() {
         subtitle: 'בחר איך אנשים יוכלו לשלם לך לפני שהם מצטרפים להזמנה.',
         saved: `${enabledCount} אפשרויות תשלום מוכנות`,
         note: 'הוסף קישור אמיתי, משתמש או פרטי תשלום. אפשרות תשלום נספרת כמוכנה רק אחרי שמילאת פרטים.',
+        detailLabel: 'קישור או פרטי תשלום',
       }
     : {
         title: 'Payments',
         subtitle: 'Choose how people can pay you before they join an order.',
         saved: `${enabledCount} payment option${enabledCount === 1 ? '' : 's'} ready`,
         note: 'Add the real account link or username. A payment option only counts as ready after it has details filled in.',
+        detailLabel: 'Payment link or detail',
       };
-  const detailLabel = isHebrew ? 'קישור או פרטי תשלום' : 'Payment link or detail';
 
   useEffect(() => {
     if (!hydrated) {
@@ -144,7 +145,7 @@ export default function PaymentSettings() {
               method={method}
               enabled={settings[method.key].enabled}
               link={settings[method.key].link}
-              detailLabel={detailLabel}
+              detailLabel={copy.detailLabel}
               onToggle={() => void setMethod(method.key, { enabled: !settings[method.key].enabled })}
               onLinkChange={(value) => void setMethod(method.key, { link: value })}
             />

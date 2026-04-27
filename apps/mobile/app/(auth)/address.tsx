@@ -234,6 +234,7 @@ export default function Address() {
             suggestions={citySuggs}
             loading={cityLoad}
             autoFocus
+            direction={language === 'en' ? 'ltr' : 'rtl'}
           />
         ) : (
           <View style={{ gap: 8 }}>
@@ -270,6 +271,7 @@ export default function Address() {
           suggestions={streetSuggs}
           loading={streetLoad}
           disabled={!cityLocked}
+          direction={language === 'en' ? 'ltr' : 'rtl'}
         />
 
         <View style={styles.row}>

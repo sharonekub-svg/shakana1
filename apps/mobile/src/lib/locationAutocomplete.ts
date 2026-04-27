@@ -24,6 +24,38 @@ type NominatimResult = {
 type SearchKind = 'city' | 'street';
 
 const cache = new Map<string, string[]>();
+const COMMON_STREETS: readonly string[] = [
+  'הרצל',
+  'ז׳בוטינסקי',
+  'ויצמן',
+  'בן גוריון',
+  'ביאליק',
+  'רוטשילד',
+  'דיזנגוף',
+  'אלנבי',
+  'אבן גבירול',
+  'המלך ג׳ורג׳',
+  'ארלוזורוב',
+  'דרך נמיר',
+  'יגאל אלון',
+  'העצמאות',
+  'הנשיא',
+  'ירושלים',
+  'הרב קוק',
+  'החלוץ',
+  'הגפן',
+  'הזית',
+  'Herzl',
+  'Jabotinsky',
+  'Weizmann',
+  'Ben Gurion',
+  'Bialik',
+  'Rothschild',
+  'Dizengoff',
+  'Allenby',
+  'Ibn Gabirol',
+  'King George',
+];
 
 function normalize(value: string): string {
   return value
@@ -69,15 +101,13 @@ function buildUrl(kind: SearchKind, query: string, language: 'he' | 'en', city?:
     countrycodes: 'il',
     limit: '12',
     'accept-language': language,
-    layer: 'address',
   });
 
   if (kind === 'city') {
-    params.set('q', query);
+    params.set('q', `${query}, Israel`);
+    params.set('layer', 'address');
   } else {
-    params.set('street', query);
-    if (city) params.set('city', city);
-    params.set('country', 'Israel');
+    params.set('q', city ? `${query}, ${city}, Israel` : `${query}, Israel`);
   }
 
   return `https://nominatim.openstreetmap.org/search?${params.toString()}`;
@@ -118,16 +148,15 @@ async function searchRemote(
   const cached = cache.get(cacheKey);
   if (cached) return cached;
 
-  const fallback = kind === 'city'
-    ? IL_CITIES.filter((value) => normalize(value).includes(normalize(trimmed))).slice(0, 8)
-    : [];
+  const localPool = kind === 'city' ? IL_CITIES : COMMON_STREETS;
+  const fallback = sortByQuery(
+    trimmed,
+    localPool.filter((value) => normalize(value).includes(normalize(trimmed))),
+  ).slice(0, 8);
 
   try {
     const res = await fetch(buildUrl(kind, trimmed, language, city), {
-      headers: {
-        'Accept-Language': language,
-        'User-Agent': 'Shakana/1.0 (autocomplete)',
-      },
+      headers: { 'Accept-Language': language },
       signal,
     });
     if (!res.ok) return fallback;
@@ -157,4 +186,3 @@ export async function searchStreets(
 export function rankCities(query: string, candidates: string[]): string[] {
   return sortByQuery(query, unique(candidates));
 }
-
