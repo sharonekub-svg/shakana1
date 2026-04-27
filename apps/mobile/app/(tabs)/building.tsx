@@ -201,7 +201,7 @@ export default function BuildingTab() {
                 note={store.note}
                 image={store.image}
                 tone={store.tone}
-                onPress={() => router.push('/order/new')}
+                onPress={() => router.push(store.id === 'zara' ? '/order/new?store=zara' : '/order/new')}
               />
             ))}
           </ScrollView>

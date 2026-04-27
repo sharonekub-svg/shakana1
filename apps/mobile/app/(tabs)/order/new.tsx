@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as Clipboard from 'expo-clipboard';
 
 import { ScreenBase } from '@/components/primitives/ScreenBase';
 import { BackBtn } from '@/components/primitives/BackBtn';
@@ -24,23 +25,32 @@ type NewOrderParams = {
   url?: string;
   title?: string;
   source?: string;
+  store?: string;
 };
+
+const ZARA_START_URL = 'https://www.zara.com/il/';
 
 export default function NewOrder() {
   const router = useRouter();
   const params = useLocalSearchParams<NewOrderParams>();
   const { t, language } = useLocale();
-  const sharedDraft = parseSharedProduct({
+  const initialDraft = parseSharedProduct({
     url: typeof params.url === 'string' ? params.url : null,
     title: typeof params.title === 'string' ? params.title : null,
   });
-  const [url, setUrl] = useState(() => sharedDraft?.url ?? '');
-  const [title, setTitle] = useState(() => sharedDraft?.title ?? '');
+  const isZaraStart = params.store === 'zara' || initialDraft?.source === 'zara';
+  const [url, setUrl] = useState(() => initialDraft?.url ?? '');
+  const [title, setTitle] = useState(() => initialDraft?.title ?? '');
   const [price, setPrice] = useState('');
   const [insights, setInsights] = useState<SharedProductInsights | null>(null);
-  const [insightsLoading, setInsightsLoading] = useState(Boolean(sharedDraft));
+  const [insightsLoading, setInsightsLoading] = useState(Boolean(initialDraft));
+  const [linkMessage, setLinkMessage] = useState('');
   const create = useCreateOrder();
   const pushToast = useUiStore((s) => s.pushToast);
+  const currentDraft = parseSharedProduct({
+    url,
+    title: title || initialDraft?.title || null,
+  });
 
   const urlCheck = productUrlSchema.safeParse(url);
   const parsedPriceAgorot = Math.floor(Number(price) * 100);
@@ -56,7 +66,7 @@ export default function NewOrder() {
   const factsLabel = language === 'he' ? '\u05e4\u05e8\u05d8\u05d9 \u05d4\u05de\u05d5\u05e6\u05e8' : 'Product facts';
 
   useEffect(() => {
-    if (!sharedDraft) {
+    if (!currentDraft) {
       setInsights(null);
       setInsightsLoading(false);
       return;
@@ -65,7 +75,7 @@ export default function NewOrder() {
     let active = true;
     setInsightsLoading(true);
 
-    void loadSharedProductInsights(sharedDraft)
+    void loadSharedProductInsights(currentDraft)
       .then((next) => {
         if (!active) return;
         setInsights(next);
@@ -90,7 +100,24 @@ export default function NewOrder() {
     };
     // We only want to re-run when the shared URL itself changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sharedDraft?.url]);
+  }, [currentDraft?.url]);
+
+  const openZara = async () => {
+    await Linking.openURL(ZARA_START_URL);
+    setLinkMessage('After you find the product, copy the page link and come back here.');
+  };
+
+  const useCopiedLink = async () => {
+    const copied = await Clipboard.getStringAsync();
+    const draft = parseSharedProduct({ url: copied, text: copied });
+    if (!draft) {
+      setLinkMessage('No Zara or H&M product link found in the copied text.');
+      return;
+    }
+    setUrl(draft.url);
+    setTitle((prev) => prev || draft.title);
+    setLinkMessage('Product link added. We are reading the details now.');
+  };
 
   const submit = async () => {
     if (!valid || create.isPending) return;
@@ -146,7 +173,26 @@ export default function NewOrder() {
       </View>
 
       <View style={{ gap: 14 }}>
-        {sharedDraft ? (
+        {isZaraStart ? (
+          <View style={styles.storeGuideCard}>
+            <Text style={styles.storeGuideKicker}>ZARA</Text>
+            <Text style={styles.storeGuideTitle}>Find the product, then bring the link back.</Text>
+            <Text style={styles.storeGuideBody}>
+              Open Zara from here. When you are on the exact product page, use the browser share menu or address bar to copy the link, then return and tap Use copied link.
+            </Text>
+            <View style={styles.storeGuideActions}>
+              <Pressable style={styles.storeGuidePrimary} onPress={openZara}>
+                <Text style={styles.storeGuidePrimaryText}>Open Zara</Text>
+              </Pressable>
+              <Pressable style={styles.storeGuideSecondary} onPress={useCopiedLink}>
+                <Text style={styles.storeGuideSecondaryText}>Use copied link</Text>
+              </Pressable>
+            </View>
+            {linkMessage ? <Text style={styles.storeGuideNote}>{linkMessage}</Text> : null}
+          </View>
+        ) : null}
+
+        {initialDraft ? (
           <View style={styles.shareNotice}>
             <Text style={styles.shareNoticeLabel}>{t('order.new.sharedLabel')}</Text>
             <Text style={styles.shareNoticeBody}>{t('order.new.sharedBody')}</Text>
@@ -268,6 +314,71 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
     color: colors.mu,
+  },
+  storeGuideCard: {
+    gap: 10,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.brBr,
+    borderRadius: radii.lg,
+    backgroundColor: colors.white,
+    ...shadow.card,
+  },
+  storeGuideKicker: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 11,
+    letterSpacing: 1.4,
+    color: colors.acc,
+  },
+  storeGuideTitle: {
+    fontFamily: fontFamily.display,
+    fontSize: 21,
+    lineHeight: 25,
+    color: colors.tx,
+  },
+  storeGuideBody: {
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    lineHeight: 20,
+    color: colors.mu,
+  },
+  storeGuideActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  storeGuidePrimary: {
+    flex: 1,
+    minHeight: 46,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.navy,
+  },
+  storeGuidePrimaryText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
+    color: colors.white,
+  },
+  storeGuideSecondary: {
+    flex: 1,
+    minHeight: 46,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.brBr,
+    backgroundColor: colors.cardSoft,
+  },
+  storeGuideSecondaryText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
+    color: colors.tx,
+  },
+  storeGuideNote: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.acc,
   },
   summaryCard: {
     flexDirection: 'row',
