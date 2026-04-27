@@ -22,7 +22,7 @@ export default function InviteSheet() {
   useEffect(() => {
     if (!id) return;
     gen.mutateAsync(String(id)).then((r) => setToken(r.token)).catch((e) => {
-      pushToast(e instanceof Error ? e.message : 'לא ניתן להפיק קישור', 'error');
+      pushToast(e instanceof Error ? e.message : 'Could not create invite link.', 'error');
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -38,26 +38,28 @@ export default function InviteSheet() {
       });
       trackInviteSent(String(id));
     } catch (e) {
-      pushToast(e instanceof Error ? e.message : 'שיתוף נכשל', 'error');
+      pushToast(e instanceof Error ? e.message : 'Sharing failed.', 'error');
     }
   };
 
   const onCopy = async () => {
     if (!universal) return;
     await Clipboard.setStringAsync(universal);
-    pushToast('הקישור הועתק', 'success');
+    pushToast('Invite link copied.', 'success');
   };
 
   return (
     <ScreenBase style={{ paddingTop: 20, paddingBottom: 36 }}>
       <View style={styles.header}>
         <BackBtn onPress={() => router.back()} />
-        <Text style={styles.headerTitle}>הזמנת שכנים</Text>
+        <Text style={styles.headerTitle}>Invite neighbors</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <View style={{ gap: 16 }}>
-        <Text style={styles.lead}>שלח את הקישור לשכנים שלך — הם יצטרפו להזמנה ויחלקו את העלות.</Text>
+        <Text style={styles.lead}>
+          Send this link to another account. After they sign in and finish their address, they will join the same order.
+        </Text>
 
         <Pressable onPress={onCopy} style={styles.linkCard} accessibilityRole="button">
           {gen.isPending || !token ? (
@@ -67,17 +69,17 @@ export default function InviteSheet() {
               {universal}
             </Text>
           )}
-          <Text style={styles.tap}>הקש להעתקה</Text>
+          <Text style={styles.tap}>Tap to copy</Text>
         </Pressable>
 
-        <Text style={styles.deepNote}>לפתיחה ישירה באפליקציה: {appLink}</Text>
+        <Text style={styles.deepNote}>Direct app link: {appLink || 'creating...'}</Text>
       </View>
 
       <View style={{ flex: 1 }} />
 
       <View style={{ gap: 10 }}>
-        <PrimaryBtn label="שתף קישור" onPress={onShare} disabled={!token} />
-        <SecondaryBtn label="סיום" onPress={() => router.back()} />
+        <PrimaryBtn label="Share link" onPress={onShare} disabled={!token} />
+        <SecondaryBtn label="Done" onPress={() => router.back()} />
       </View>
     </ScreenBase>
   );

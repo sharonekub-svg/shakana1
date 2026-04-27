@@ -29,7 +29,7 @@ export default function JoinByToken() {
         const res = await claim.mutateAsync(String(token));
         router.replace(`/order/${res.orderId}`);
       } catch (e) {
-        pushToast(e instanceof Error ? e.message : 'הקישור אינו תקף יותר', 'error');
+        pushToast(e instanceof Error ? e.message : 'This invite link is no longer valid.', 'error');
         router.replace('/(tabs)/orders');
       }
     })();
@@ -39,7 +39,7 @@ export default function JoinByToken() {
   return (
     <ScreenBase style={{ alignItems: 'center', justifyContent: 'center', gap: 16 }}>
       <ActivityIndicator color={colors.acc} />
-      <Text style={styles.text}>מצרף אותך להזמנה…</Text>
+      <Text style={styles.text}>Joining the order...</Text>
     </ScreenBase>
   );
 }

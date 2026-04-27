@@ -14,7 +14,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { initSentry, identifySentryUser, Sentry } from '@/lib/sentry';
 import { initPostHog, identify, resetAnalytics } from '@/lib/posthog';
 import { StripeProviderShim } from '@/components/StripeProviderShim';
-import { parseInviteToken, stashPendingInvite } from '@/lib/deeplinks';
+import { consumePendingInvite, parseInviteToken, stashPendingInvite } from '@/lib/deeplinks';
 import { peekPendingSharedProduct, consumePendingSharedProduct } from '@/lib/sharedProduct';
 import { colors } from '@/theme/tokens';
 import { useProfile } from '@/api/profile';
@@ -50,6 +50,7 @@ function RootLayoutInner() {
   const rootNavigationState = useRootNavigationState();
   const [bootstrapped, setBootstrapped] = useState(false);
   const setSession = useAuthStore((s) => s.setSession);
+  const setProfile = useAuthStore((s) => s.setProfile);
   const setHydrated = useAuthStore((s) => s.setHydrated);
   const session = useAuthStore((s) => s.session);
   const hydrated = useAuthStore((s) => s.hydrated);
@@ -174,7 +175,9 @@ function RootLayoutInner() {
     if (!session && !inAuth) {
       router.replace('/(auth)/welcome');
     } else if (session && profileComplete && inAuth) {
-      router.replace('/(tabs)/building');
+      void consumePendingInvite().then((pending) => {
+        router.replace((pending ? `/join/${pending}` : '/(tabs)/building') as Href);
+      });
     } else if (session && !profileComplete) {
       const nextRoute = (draftHasName ? '/(auth)/address' : '/(auth)/name') as Href;
       if (!inAuth) {
@@ -184,6 +187,10 @@ function RootLayoutInner() {
       }
     }
   }, [bootstrapped, hydrated, navReady, session, profile, draft, segments, router]);
+
+  useEffect(() => {
+    setProfile(profile ?? null);
+  }, [profile, setProfile]);
 
   useEffect(() => {
     if (!navReady || !pendingRoute.current) return;
