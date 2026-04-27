@@ -232,7 +232,6 @@ function RootLayoutInner() {
       >
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="order/new" options={{ presentation: 'modal' }} />
         <Stack.Screen name="join/[token]" />
       </Stack>
       {showSplash ? <View pointerEvents="none" style={styles.splashOverlay} /> : null}
