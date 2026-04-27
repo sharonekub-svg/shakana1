@@ -40,10 +40,11 @@ function ProfileIcon({ color, active }: IconProps) {
 
 export default function TabsLayout() {
   const { t } = useLocale();
+  const mainRoutes = new Set(['building', 'orders', 'account']);
 
   return (
     <Tabs
-      screenOptions={{
+      screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.navy,
         tabBarInactiveTintColor: colors.mu,
@@ -59,27 +60,30 @@ export default function TabsLayout() {
           flexDirection: 'row',
           ...shadow.card,
         },
-      }}
+        tabBarButton: mainRoutes.has(route.name) ? undefined : () => null,
+        tabBarIcon: ({ color, focused }) => {
+          if (route.name === 'building') return <HomeIcon color={color} active={focused} />;
+          if (route.name === 'orders') return <OrdersIcon color={color} active={focused} />;
+          return <ProfileIcon color={color} active={focused} />;
+        },
+      })}
     >
       <Tabs.Screen
         name="building"
         options={{
           title: t('tabs.home.title'),
-          tabBarIcon: ({ color, focused }) => <HomeIcon color={color} active={focused} />,
         }}
       />
       <Tabs.Screen
         name="orders"
         options={{
           title: t('tabs.orders.title'),
-          tabBarIcon: ({ color, focused }) => <OrdersIcon color={color} active={focused} />,
         }}
       />
       <Tabs.Screen
         name="account"
         options={{
           title: t('tabs.profile.title'),
-          tabBarIcon: ({ color, focused }) => <ProfileIcon color={color} active={focused} />,
         }}
       />
     </Tabs>

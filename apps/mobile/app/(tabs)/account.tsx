@@ -28,17 +28,13 @@ export default function AccountTab() {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>{t('account')}</Text>
         <Text style={styles.cardBody}>
-          {t('savedAddress')} {t('and')} {t('phoneNumber')}. {t('paymentMethod')} {t('alerts')}. 
+          {t('savedAddress')} {t('and')} {t('phoneNumber')}. {t('paymentMethod')} {t('alerts')}.
         </Text>
       </View>
 
       <View style={styles.links}>
         {quickLinks.map((item) => (
-          <Pressable
-            key={item.labelKey}
-            style={styles.link}
-            onPress={() => router.push(item.href)}
-          >
+          <Pressable key={item.labelKey} style={styles.link} onPress={() => router.push(item.href)}>
             <Text style={styles.linkLabel}>{t(`profile.${item.labelKey}` as never)}</Text>
             <Text style={styles.linkArrow}>›</Text>
           </Pressable>
