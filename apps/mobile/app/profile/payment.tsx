@@ -1,79 +1,164 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { ScreenBase } from '@/components/primitives/ScreenBase';
 import { BackBtn } from '@/components/primitives/BackBtn';
-import { PrimaryBtn } from '@/components/primitives/Button';
+import { Field } from '@/components/primitives/Field';
 import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
-import { useAuthStore } from '@/stores/authStore';
-import { useUserOrders } from '@/api/orders';
-import { formatAgorot } from '@/utils/format';
 import { useLocale } from '@/i18n/locale';
+import { type PaymentMethodKey, usePaymentSettingsStore } from '@/stores/paymentSettingsStore';
+
+const methods: Array<{
+  key: PaymentMethodKey;
+  label: string;
+  hint: string;
+  placeholder: string;
+}> = [
+  {
+    key: 'bit',
+    label: 'Bit',
+    hint: 'Israeli phone payment link or phone number.',
+    placeholder: 'https://bitpay.page.link/... or 050...',
+  },
+  {
+    key: 'paybox',
+    label: 'PayBox',
+    hint: 'PayBox link, group link, or phone number.',
+    placeholder: 'https://payboxapp.page.link/...',
+  },
+  {
+    key: 'venmo',
+    label: 'Venmo',
+    hint: 'Venmo username or payment link.',
+    placeholder: '@username or https://venmo.com/...',
+  },
+  {
+    key: 'cash',
+    label: 'Cash / Other',
+    hint: 'Use this for cash, bank transfer note, or another method.',
+    placeholder: 'Cash on pickup / bank transfer details',
+  },
+];
+
+function MethodRow({
+  method,
+  enabled,
+  link,
+  onToggle,
+  onLinkChange,
+}: {
+  method: (typeof methods)[number];
+  enabled: boolean;
+  link: string;
+  onToggle: () => void;
+  onLinkChange: (value: string) => void;
+}) {
+  return (
+    <View style={styles.methodCard}>
+      <Pressable onPress={onToggle} style={styles.methodTop} accessibilityRole="button">
+        <View style={styles.methodCopy}>
+          <Text style={styles.methodTitle}>{method.label}</Text>
+          <Text style={styles.methodHint}>{method.hint}</Text>
+        </View>
+        <View style={[styles.switch, enabled && styles.switchOn]}>
+          <Text style={[styles.switchLabel, enabled && styles.switchLabelOn]}>{enabled ? 'ON' : 'OFF'}</Text>
+        </View>
+      </Pressable>
+      {enabled ? (
+        <Field
+          label="Payment link or detail"
+          value={link}
+          onChange={onLinkChange}
+          placeholder={method.placeholder}
+          autoCapitalize="none"
+          ltr
+        />
+      ) : null}
+    </View>
+  );
+}
 
 export default function PaymentSettings() {
   const router = useRouter();
-  const { t, language } = useLocale();
+  const { language } = useLocale();
   const isHebrew = language === 'he';
-  const user = useAuthStore((s) => s.user);
-  const { data: orders = [] } = useUserOrders(user?.id);
-  const pendingOrders = orders.filter((order) => !['completed', 'cancelled'].includes(order.status));
-  const nextOrder = pendingOrders[0] ?? null;
+  const settings = usePaymentSettingsStore((s) => s.settings);
+  const hydrated = usePaymentSettingsStore((s) => s.hydrated);
+  const load = usePaymentSettingsStore((s) => s.load);
+  const setMethod = usePaymentSettingsStore((s) => s.setMethod);
+  const enabledCount = Object.values(settings).filter((method) => method.enabled).length;
+  const copy = isHebrew
+    ? {
+        title: 'Payments',
+        subtitle: 'Choose how people can pay you before they join an order.',
+        saved: `${enabledCount} payment option${enabledCount === 1 ? '' : 's'} ready`,
+        note: 'For now these details are saved on this device and shown as your preferred payment options. Real checkout can still use Stripe when needed.',
+      }
+    : {
+        title: 'Payments',
+        subtitle: 'Choose how people can pay you before they join an order.',
+        saved: `${enabledCount} payment option${enabledCount === 1 ? '' : 's'} ready`,
+        note: 'For now these details are saved on this device and shown as your preferred payment options. Real checkout can still use Stripe when needed.',
+      };
+
+  useEffect(() => {
+    if (!hydrated) {
+      void load();
+    }
+  }, [hydrated, load]);
 
   return (
-    <ScreenBase style={styles.screen}>
-      <View style={styles.header}>
-        <BackBtn onPress={() => router.back()} />
-        <View>
-          <Text style={styles.kicker}>SHAKANA</Text>
-          <Text style={styles.title}>{t('profile.paymentTitle')}</Text>
-          <Text style={styles.subtitle}>
-            {isHebrew
-              ? 'זה משפיע רק על התשלום של החשבון הזה, ולא שומר כרטיס בתוך הפרופיל.'
-              : 'This affects checkout for this account only. It does not store a card inside the profile.'}
-          </Text>
+    <ScreenBase padded={false}>
+      <ScrollView contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <BackBtn onPress={() => router.back()} />
+          <View style={styles.headerCopy}>
+            <Text style={styles.kicker}>SHAKANA</Text>
+            <Text style={styles.title}>{copy.title}</Text>
+            <Text style={styles.subtitle}>{copy.subtitle}</Text>
+          </View>
         </View>
-      </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>{t('profile.paymentHead')}</Text>
-        <Text style={styles.cardBody}>{t('profile.paymentBody')}</Text>
-        <Text style={styles.cardNote}>{t('profile.paymentSecurity')}</Text>
-      </View>
-
-      {nextOrder ? (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t('profile.paymentNextOrder')}</Text>
-          <Text style={styles.cardBody}>{nextOrder.product_title ?? nextOrder.product_url}</Text>
-          <Text style={styles.cardNote}>
-            {formatAgorot(nextOrder.product_price_agorot)} ג€¢ {nextOrder.max_participants} {t('tabs.orders.seats')}
-          </Text>
-          <Pressable style={styles.secondaryBtn} onPress={() => router.push(`/order/${nextOrder.id}/pay`)}>
-            <Text style={styles.secondaryBtnText}>{t('profile.paymentContinue')}</Text>
-          </Pressable>
+        <View style={styles.summaryCard}>
+          <Text style={styles.cardTitle}>{copy.saved}</Text>
+          <Text style={styles.cardBody}>{copy.note}</Text>
         </View>
-      ) : (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t('profile.paymentNoOrder')}</Text>
-          <Text style={styles.cardBody}>{t('profile.paymentNoOrderBody')}</Text>
-        </View>
-      )}
 
-      <PrimaryBtn label={t('common.newOrder')} onPress={() => router.push('/order/new')} />
+        {!hydrated ? (
+          <ActivityIndicator color={colors.acc} />
+        ) : (
+          methods.map((method) => (
+            <MethodRow
+              key={method.key}
+              method={method}
+              enabled={settings[method.key].enabled}
+              link={settings[method.key].link}
+              onToggle={() => void setMethod(method.key, { enabled: !settings[method.key].enabled })}
+              onLinkChange={(value) => void setMethod(method.key, { link: value })}
+            />
+          ))
+        )}
+      </ScrollView>
     </ScreenBase>
   );
 }
 
 const styles = StyleSheet.create({
   screen: {
+    gap: 14,
+    paddingHorizontal: 18,
     paddingTop: 20,
-    paddingBottom: 36,
-    gap: 18,
+    paddingBottom: 110,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
+  },
+  headerCopy: {
+    flex: 1,
   },
   kicker: {
     fontFamily: fontFamily.bodyBold,
@@ -89,18 +174,17 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     marginTop: 8,
-    maxWidth: 320,
     fontFamily: fontFamily.body,
     fontSize: 13,
     lineHeight: 20,
     color: colors.mu,
   },
-  card: {
-    gap: 10,
+  summaryCard: {
+    gap: 8,
     padding: 16,
     borderWidth: 1,
-    borderColor: colors.br,
-    borderRadius: 28,
+    borderColor: colors.brBr,
+    borderRadius: radii.lg,
     backgroundColor: colors.white,
     ...shadow.card,
   },
@@ -111,28 +195,58 @@ const styles = StyleSheet.create({
   },
   cardBody: {
     fontFamily: fontFamily.body,
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 13,
+    lineHeight: 20,
     color: colors.mu,
   },
-  cardNote: {
+  methodCard: {
+    gap: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.brBr,
+    borderRadius: radii.lg,
+    backgroundColor: colors.white,
+  },
+  methodTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  methodCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  methodTitle: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 15,
+    color: colors.tx,
+  },
+  methodHint: {
     fontFamily: fontFamily.body,
     fontSize: 12,
     lineHeight: 18,
-    color: colors.mu2,
+    color: colors.mu,
   },
-  secondaryBtn: {
-    minHeight: 48,
+  switch: {
+    width: 58,
+    height: 34,
     borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: colors.tx,
-    backgroundColor: colors.white,
+    borderColor: colors.br,
+    backgroundColor: colors.cardSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  secondaryBtnText: {
+  switchOn: {
+    backgroundColor: colors.tx,
+    borderColor: colors.tx,
+  },
+  switchLabel: {
     fontFamily: fontFamily.bodyBold,
-    fontSize: 14,
+    fontSize: 11,
     color: colors.tx,
+  },
+  switchLabelOn: {
+    color: colors.white,
   },
 });

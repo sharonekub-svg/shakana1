@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
@@ -7,6 +8,8 @@ import { fontFamily } from '@/theme/fonts';
 import { useLocale } from '@/i18n/locale';
 import { useUserOrders } from '@/api/orders';
 import { useAuthStore } from '@/stores/authStore';
+import { useNotificationSettingsStore } from '@/stores/notificationSettingsStore';
+import { usePaymentSettingsStore } from '@/stores/paymentSettingsStore';
 
 const quickLinks = [
   { href: '/profile/payment', title: 'Payment', body: 'Checkout and saved payment settings', danger: false },
@@ -18,11 +21,19 @@ const quickLinks = [
 
 export default function AccountTab() {
   const router = useRouter();
-  const { language } = useLocale();
+  const { language, setLanguage } = useLocale();
   const user = useAuthStore((s) => s.user);
   const profile = useAuthStore((s) => s.profile);
+  const notificationSettings = useNotificationSettingsStore((s) => s.settings);
+  const notificationsHydrated = useNotificationSettingsStore((s) => s.hydrated);
+  const loadNotifications = useNotificationSettingsStore((s) => s.load);
+  const paymentSettings = usePaymentSettingsStore((s) => s.settings);
+  const paymentsHydrated = usePaymentSettingsStore((s) => s.hydrated);
+  const loadPayments = usePaymentSettingsStore((s) => s.load);
   const { data: orders = [] } = useUserOrders(user?.id);
   const openOrders = orders.filter((order) => !['completed', 'cancelled'].includes(order.status)).length;
+  const enabledPaymentCount = Object.values(paymentSettings).filter((method) => method.enabled).length;
+  const enabledNotifications = Object.values(notificationSettings).filter(Boolean).length;
   const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim();
   const address = [profile?.street, profile?.building, profile?.apt ? `Apt ${profile.apt}` : null, profile?.city]
     .filter(Boolean)
@@ -39,7 +50,15 @@ export default function AccountTab() {
     openOrders: isHebrew ? 'Open orders' : 'Open orders',
     details: isHebrew ? 'Details' : 'Details',
     deliveryAddress: isHebrew ? 'Delivery address' : 'Delivery address',
+    language: isHebrew ? 'Language' : 'Language',
+    paymentReady: isHebrew ? `${enabledPaymentCount} payment options` : `${enabledPaymentCount} payment options`,
+    notificationsReady: isHebrew ? `${enabledNotifications} notification toggles on` : `${enabledNotifications} notification toggles on`,
   };
+
+  useEffect(() => {
+    if (!notificationsHydrated) void loadNotifications();
+    if (!paymentsHydrated) void loadPayments();
+  }, [loadNotifications, loadPayments, notificationsHydrated, paymentsHydrated]);
 
   return (
     <ScreenBase padded={false}>
@@ -83,6 +102,44 @@ export default function AccountTab() {
         <View style={styles.addressCard}>
           <Text style={styles.sectionTitle}>{copy.deliveryAddress}</Text>
           <Text style={styles.addressText}>{copy.address}</Text>
+        </View>
+
+        <View style={styles.languageCard}>
+          <View style={styles.languageTop}>
+            <View>
+              <Text style={styles.sectionTitle}>{copy.language}</Text>
+              <Text style={styles.addressText}>Choose English or Hebrew for the app.</Text>
+            </View>
+          </View>
+          <View style={styles.languageButtons}>
+            <Pressable
+              style={[styles.languageButton, language === 'en' && styles.languageButtonActive]}
+              onPress={() => void setLanguage('en')}
+            >
+              <Text style={[styles.languageButtonText, language === 'en' && styles.languageButtonTextActive]}>
+                English
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.languageButton, language === 'he' && styles.languageButtonActive]}
+              onPress={() => void setLanguage('he')}
+            >
+              <Text style={[styles.languageButtonText, language === 'he' && styles.languageButtonTextActive]}>
+                עברית
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+
+        <View style={styles.statsRow}>
+          <Pressable style={styles.statCard} onPress={() => router.push('/profile/payment')}>
+            <Text style={styles.statLabel}>Payments</Text>
+            <Text style={styles.statValue} numberOfLines={1}>{copy.paymentReady}</Text>
+          </Pressable>
+          <Pressable style={styles.statCard} onPress={() => router.push('/profile/alerts')}>
+            <Text style={styles.statLabel}>Notifications</Text>
+            <Text style={styles.statValue} numberOfLines={1}>{copy.notificationsReady}</Text>
+          </Pressable>
         </View>
 
         <View style={styles.links}>
@@ -231,6 +288,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: colors.mu,
+  },
+  languageCard: {
+    gap: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.brBr,
+    borderRadius: radii.lg,
+    backgroundColor: colors.white,
+  },
+  languageTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  languageButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  languageButton: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.brBr,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.cardSoft,
+  },
+  languageButtonActive: {
+    borderColor: colors.navy,
+    backgroundColor: colors.navy,
+  },
+  languageButtonText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
+    color: colors.tx,
+  },
+  languageButtonTextActive: {
+    color: colors.white,
   },
   links: {
     gap: 10,

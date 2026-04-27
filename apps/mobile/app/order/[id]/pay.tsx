@@ -11,6 +11,7 @@ import { usePayForOrder } from '@/api/payments';
 import { useOrder } from '@/api/orders';
 import { formatAgorot } from '@/utils/format';
 import { useUiStore } from '@/stores/uiStore';
+import { usePaymentSettingsStore } from '@/stores/paymentSettingsStore';
 
 export default function Pay() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -18,6 +19,10 @@ export default function Pay() {
   const { data } = useOrder(id);
   const pay = usePayForOrder(String(id));
   const pushToast = useUiStore((s) => s.pushToast);
+  const paymentSettings = usePaymentSettingsStore((s) => s.settings);
+  const loadPayments = usePaymentSettingsStore((s) => s.load);
+  const paymentsHydrated = usePaymentSettingsStore((s) => s.hydrated);
+  const hasPaymentOption = Object.values(paymentSettings).some((method) => method.enabled);
 
   const order = data?.order;
   const perPerson = order ? Math.ceil(order.product_price_agorot / order.max_participants) : 0;
@@ -26,7 +31,16 @@ export default function Pay() {
     if (pay.isSuccess) router.replace(`/order/${id}/escrow`);
   }, [pay.isSuccess, id, router]);
 
+  useEffect(() => {
+    if (!paymentsHydrated) void loadPayments();
+  }, [loadPayments, paymentsHydrated]);
+
   const go = async () => {
+    if (!hasPaymentOption) {
+      pushToast('Add Bit, PayBox, Venmo, or another payment option first.', 'error');
+      router.push('/profile/payment');
+      return;
+    }
     try {
       await pay.mutateAsync();
     } catch (e) {
@@ -52,13 +66,24 @@ export default function Pay() {
             <Text style={styles.lead}>Your share</Text>
             <Text style={styles.amount}>{formatAgorot(perPerson)}</Text>
             <Text style={styles.note}>
-              The total is reserved until the rest of the group completes the order.
+              Add a payment option like Bit, PayBox, Venmo, or cash before confirming.
             </Text>
           </View>
 
+          {!hasPaymentOption ? (
+            <View style={styles.warningCard}>
+              <Text style={styles.warningTitle}>Payment option required</Text>
+              <Text style={styles.warningBody}>Set up at least one way for people to pay before continuing.</Text>
+            </View>
+          ) : null}
+
           <View style={{ flex: 1 }} />
 
-          <PrimaryBtn label="Confirm payment" onPress={go} loading={pay.isPending} />
+          <PrimaryBtn
+            label={hasPaymentOption ? 'Confirm payment' : 'Add payment option'}
+            onPress={go}
+            loading={pay.isPending}
+          />
         </View>
       )}
     </ScreenBase>
@@ -92,5 +117,25 @@ const styles = StyleSheet.create({
     maxWidth: 260,
     marginTop: 4,
     lineHeight: 20,
+  },
+  warningCard: {
+    marginTop: 14,
+    backgroundColor: colors.cardSoft,
+    borderRadius: radii.md,
+    padding: 16,
+    borderColor: colors.br,
+    borderWidth: 1,
+    gap: 6,
+  },
+  warningTitle: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+    color: colors.tx,
+  },
+  warningBody: {
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.mu,
   },
 });
