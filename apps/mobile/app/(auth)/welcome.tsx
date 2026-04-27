@@ -10,6 +10,7 @@ import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { useGoogleSignIn } from '@/api/auth';
 import { useLocale } from '@/i18n/locale';
+import { useUiStore } from '@/stores/uiStore';
 
 const TERMS_URL = 'https://shakana.app/legal/terms';
 const PRIVACY_URL = 'https://shakana.app/legal/privacy';
@@ -28,6 +29,7 @@ function GoogleGlyph() {
 export default function Welcome() {
   const router = useRouter();
   const googleMut = useGoogleSignIn();
+  const pushToast = useUiStore((s) => s.pushToast);
   const { language, t } = useLocale();
   const isHebrew = language === 'he';
   const copy = isHebrew
@@ -36,12 +38,16 @@ export default function Welcome() {
         authBody: 'אותו כפתור עובד גם למשתמש חדש וגם למשתמש קיים. אם תחזור עם אותו Gmail, נחזיר אותך לאותו חשבון.',
         google: 'המשך עם Gmail',
         phone: 'המשך עם טלפון',
+        openingGoogle: 'פותחים את Google...',
+        googleError: 'לא הצלחנו לפתוח את Google. נסה שוב או המשך עם טלפון.',
       }
     : {
         authTitle: 'Log in or sign up',
         authBody: 'One flow works for new and returning users. If you come back with the same Gmail, Shakana remembers the same account.',
         google: 'Continue with Gmail',
         phone: 'Continue with phone',
+        openingGoogle: 'Opening Google...',
+        googleError: 'Could not open Google sign-in. Try again or continue with phone.',
       };
 
   return (
@@ -65,7 +71,17 @@ export default function Welcome() {
 
       <View style={styles.ctaBlock}>
         <LanguageSwitcher />
-        <SecondaryBtn label={copy.google} leading={<GoogleGlyph />} onPress={() => googleMut.mutate()} />
+        <SecondaryBtn
+          label={googleMut.isPending ? copy.openingGoogle : copy.google}
+          leading={<GoogleGlyph />}
+          onPress={() => {
+            googleMut.mutate(undefined, {
+              onError: (error) => {
+                pushToast(error instanceof Error ? error.message : copy.googleError, 'error');
+              },
+            });
+          }}
+        />
         <View style={styles.divider}>
           <View style={styles.divLine} />
           <Text style={styles.divText}>{t('common.or')}</Text>
