@@ -2,8 +2,8 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
 /**
- * Supabase auth storage adapter backed by hardware-encrypted secure storage.
- * On web we fall back to localStorage (dev only — production is mobile).
+ * Supabase auth storage adapter.
+ * Mobile uses encrypted secure storage; web uses localStorage so the same browser remembers the session.
  */
 export const secureAuthStorage = {
   getItem: async (key: string): Promise<string | null> => {

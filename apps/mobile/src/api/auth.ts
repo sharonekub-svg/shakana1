@@ -41,11 +41,22 @@ export function useGoogleSignIn() {
         Platform.OS === 'web'
           ? `${window.location.origin}/auth-callback`
           : Linking.createURL('auth-callback');
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo },
+        options: {
+          redirectTo,
+          skipBrowserRedirect: true,
+        },
       });
       if (error) throw error;
+      if (!data.url) throw new Error('Could not start Google sign-in');
+
+      if (Platform.OS === 'web') {
+        window.location.assign(data.url);
+        return;
+      }
+
+      await Linking.openURL(data.url);
     },
   });
 }

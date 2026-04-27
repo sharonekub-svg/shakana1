@@ -28,7 +28,21 @@ function GoogleGlyph() {
 export default function Welcome() {
   const router = useRouter();
   const googleMut = useGoogleSignIn();
-  const { t } = useLocale();
+  const { language, t } = useLocale();
+  const isHebrew = language === 'he';
+  const copy = isHebrew
+    ? {
+        authTitle: 'כניסה או הרשמה',
+        authBody: 'אותו כפתור עובד גם למשתמש חדש וגם למשתמש קיים. אם תחזור עם אותו Gmail, נחזיר אותך לאותו חשבון.',
+        google: 'המשך עם Gmail',
+        phone: 'המשך עם טלפון',
+      }
+    : {
+        authTitle: 'Log in or sign up',
+        authBody: 'One flow works for new and returning users. If you come back with the same Gmail, Shakana remembers the same account.',
+        google: 'Continue with Gmail',
+        phone: 'Continue with phone',
+      };
 
   return (
     <ScreenBase style={styles.screen}>
@@ -44,20 +58,20 @@ export default function Welcome() {
       <View style={styles.card}>
         <View style={styles.cardRow}>
           <View style={styles.dot} />
-          <Text style={styles.cardText}>{t('landing.privateSignIn')}</Text>
+          <Text style={styles.cardText}>{copy.authTitle}</Text>
         </View>
-        <Text style={styles.cardBody}>{t('landing.introBody')}</Text>
+        <Text style={styles.cardBody}>{copy.authBody}</Text>
       </View>
 
       <View style={styles.ctaBlock}>
         <LanguageSwitcher />
-        <SecondaryBtn label={t('landing.google')} leading={<GoogleGlyph />} onPress={() => googleMut.mutate()} />
+        <SecondaryBtn label={copy.google} leading={<GoogleGlyph />} onPress={() => googleMut.mutate()} />
         <View style={styles.divider}>
           <View style={styles.divLine} />
           <Text style={styles.divText}>{t('common.or')}</Text>
           <View style={styles.divLine} />
         </View>
-        <PrimaryBtn label={t('landing.phone')} onPress={() => router.push('/(auth)/phone')} />
+        <PrimaryBtn label={copy.phone} onPress={() => router.push('/(auth)/phone')} />
         <Text style={styles.legal}>
           {t('landing.legal')}
           <Text style={styles.link} onPress={() => Linking.openURL(TERMS_URL)}>
