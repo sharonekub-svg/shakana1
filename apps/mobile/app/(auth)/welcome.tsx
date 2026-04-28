@@ -53,7 +53,7 @@ export default function Welcome() {
   return (
     <ScreenBase style={styles.screen}>
       <View style={styles.hero}>
-        <ShakanaMark size={92} />
+        <ShakanaMark size={156} />
         <View style={styles.heroCopy}>
           <Text style={styles.kicker}>{t('landing.brand')}</Text>
           <Text style={styles.title}>{t('landing.title')}</Text>
