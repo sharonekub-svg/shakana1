@@ -1,5 +1,5 @@
-import * as SecureStore from 'expo-secure-store';
 import { env } from './env';
+import { getStoredValue, removeStoredValue, setStoredValue } from './secureStorage';
 
 const STORAGE_KEY = 'shakana.pendingSharedProduct';
 
@@ -447,7 +447,7 @@ export function parseSharedProduct(input: {
 
 export async function stashPendingSharedProduct(draft: SharedProductDraft): Promise<void> {
   try {
-    await SecureStore.setItemAsync(STORAGE_KEY, JSON.stringify(draft));
+    await setStoredValue(STORAGE_KEY, JSON.stringify(draft));
   } catch {
     // Ignore storage failures; the share can still continue in-memory.
   }
@@ -455,9 +455,9 @@ export async function stashPendingSharedProduct(draft: SharedProductDraft): Prom
 
 export async function consumePendingSharedProduct(): Promise<SharedProductDraft | null> {
   try {
-    const raw = await SecureStore.getItemAsync(STORAGE_KEY);
+    const raw = await getStoredValue(STORAGE_KEY);
     if (!raw) return null;
-    await SecureStore.deleteItemAsync(STORAGE_KEY);
+    await removeStoredValue(STORAGE_KEY);
     return JSON.parse(raw) as SharedProductDraft;
   } catch {
     return null;
@@ -466,7 +466,7 @@ export async function consumePendingSharedProduct(): Promise<SharedProductDraft 
 
 export async function peekPendingSharedProduct(): Promise<SharedProductDraft | null> {
   try {
-    const raw = await SecureStore.getItemAsync(STORAGE_KEY);
+    const raw = await getStoredValue(STORAGE_KEY);
     if (!raw) return null;
     return JSON.parse(raw) as SharedProductDraft;
   } catch {

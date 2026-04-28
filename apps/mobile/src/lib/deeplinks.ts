@@ -1,6 +1,6 @@
 import * as Linking from 'expo-linking';
-import * as SecureStore from 'expo-secure-store';
 import { env } from './env';
+import { getStoredValue, removeStoredValue, setStoredValue } from './secureStorage';
 
 const PENDING_KEY = 'shk_pending_invite_token';
 
@@ -38,11 +38,11 @@ export function buildAppInviteUrl(token: string): string {
  * It's claimed after successful onboarding.
  */
 export async function stashPendingInvite(token: string): Promise<void> {
-  await SecureStore.setItemAsync(PENDING_KEY, token);
+  await setStoredValue(PENDING_KEY, token);
 }
 
 export async function consumePendingInvite(): Promise<string | null> {
-  const v = await SecureStore.getItemAsync(PENDING_KEY);
-  if (v) await SecureStore.deleteItemAsync(PENDING_KEY);
+  const v = await getStoredValue(PENDING_KEY);
+  if (v) await removeStoredValue(PENDING_KEY);
   return v;
 }
