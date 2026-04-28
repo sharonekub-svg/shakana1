@@ -2,6 +2,7 @@ export type OrderStatus =
   | 'draft'
   | 'open'
   | 'paying'
+  | 'locked'
   | 'escrow'
   | 'delivered'
   | 'completed'
@@ -37,6 +38,14 @@ export type Order = {
   product_image: string | null;
   product_price_agorot: number;
   max_participants: number;
+  store_key?: string | null;
+  store_label?: string | null;
+  estimated_shipping_agorot?: number;
+  free_shipping_threshold_agorot?: number;
+  closes_at?: string | null;
+  edit_locks_at?: string | null;
+  locked_at?: string | null;
+  founder_checkout_url?: string | null;
   status: OrderStatus;
   stripe_payment_intent_id: string | null;
   stripe_transfer_group: string | null;

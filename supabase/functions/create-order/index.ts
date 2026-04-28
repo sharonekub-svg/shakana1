@@ -7,6 +7,11 @@ type Body = {
   productTitle: string;
   productPriceAgorot: number;
   productImage?: string;
+  storeKey: string;
+  storeLabel: string;
+  estimatedShippingAgorot: number;
+  freeShippingThresholdAgorot: number;
+  timerMinutes: number;
   maxParticipants: number;
   pickupResponsibleUserId: string;
   preferredPickupLocation: string;
@@ -38,6 +43,18 @@ Deno.serve(async (req) => {
     ) {
       throw httpError(400, 'invalid_participants');
     }
+    if (!Number.isInteger(body.timerMinutes) || body.timerMinutes < 5 || body.timerMinutes > 180) {
+      throw httpError(400, 'invalid_timer');
+    }
+    if (!Number.isInteger(body.estimatedShippingAgorot) || body.estimatedShippingAgorot < 0) {
+      throw httpError(400, 'invalid_shipping');
+    }
+    if (!Number.isInteger(body.freeShippingThresholdAgorot) || body.freeShippingThresholdAgorot < 0) {
+      throw httpError(400, 'invalid_free_shipping_threshold');
+    }
+    const storeKey = (body.storeKey || 'manual').trim().slice(0, 40);
+    const storeLabel = (body.storeLabel || storeKey).trim().slice(0, 80);
+    if (storeLabel.length < 2) throw httpError(400, 'invalid_store');
     if (body.pickupResponsibleUserId !== userId) {
       throw httpError(400, 'pickup_manager_must_be_creator_initially');
     }
@@ -55,6 +72,8 @@ Deno.serve(async (req) => {
     const pickupName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim();
 
     const transferGroup = `order_${crypto.randomUUID()}`;
+    const closesAt = new Date(Date.now() + body.timerMinutes * 60_000);
+    const editLocksAt = new Date(closesAt.getTime() - 15_000);
 
     const { data: order, error: insErr } = await admin
       .from('orders')
@@ -65,6 +84,13 @@ Deno.serve(async (req) => {
         product_title: body.productTitle.trim(),
         product_image: body.productImage ?? null,
         product_price_agorot: body.productPriceAgorot,
+        store_key: storeKey,
+        store_label: storeLabel,
+        estimated_shipping_agorot: body.estimatedShippingAgorot,
+        free_shipping_threshold_agorot: body.freeShippingThresholdAgorot,
+        closes_at: closesAt.toISOString(),
+        edit_locks_at: editLocksAt.toISOString(),
+        founder_checkout_url: body.productUrl,
         max_participants: body.maxParticipants,
         stripe_transfer_group: transferGroup,
         pickup_responsible_user_id: userId,
@@ -77,7 +103,7 @@ Deno.serve(async (req) => {
     if (insErr) throw insErr;
 
     // Creator is always the first participant.
-    const amount = Math.ceil(body.productPriceAgorot / body.maxParticipants);
+    const amount = Math.ceil((body.productPriceAgorot + body.estimatedShippingAgorot) / body.maxParticipants);
     const { error: partErr } = await admin.from('participants').insert({
       order_id: order.id,
       user_id: userId,

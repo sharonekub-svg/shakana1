@@ -6,7 +6,8 @@ const STORAGE_KEY = 'shakana.pendingSharedProduct';
 export type SharedProductDraft = {
   url: string;
   title: string;
-  source: 'zara' | 'hm';
+  source: 'zara' | 'hm' | 'manual';
+  storeLabel: string;
   rawText?: string;
 };
 
@@ -27,6 +28,7 @@ export type SharedProductInsights = {
   productFacts: string[];
   sourceLabel: string;
   sourceUrl: string;
+  amountMissingForFreeShippingAgorot: number | null;
 };
 
 const TRACKER_KEYS = new Set([
@@ -41,7 +43,6 @@ const TRACKER_KEYS = new Set([
 ]);
 
 const STORE_PICKUP_FEE_AGOROT = 0;
-const TARGET_SHARE_AGOROT = 6000;
 const DEFAULT_HOME_DELIVERY_FEE_AGOROT = 3000;
 const DEFAULT_FREE_SHIPPING_THRESHOLD_AGOROT = 19900;
 
@@ -84,16 +85,22 @@ function getBrandConfig(hostname: string): BrandConfig | null {
   return BRAND_CONFIGS.find((config) => config.hostTest(hostname)) ?? null;
 }
 
-function safeUrl(raw: string): URL | null {
+function parseCleanUrl(raw: string): URL | null {
   try {
     const url = new URL(cleanRawUrl(raw));
     if (url.protocol !== 'https:') return null;
-    const brand = getBrandConfig(url.hostname);
-    if (!brand || !brand.productPathTest(url)) return null;
     return url;
   } catch {
     return null;
   }
+}
+
+function safeProductUrl(raw: string): URL | null {
+  const url = parseCleanUrl(raw);
+  if (!url) return null;
+  const brand = getBrandConfig(url.hostname);
+  if (!brand) return url;
+  return brand.productPathTest(url) ? url : null;
 }
 
 function stripTrackingParams(url: URL): URL {
@@ -128,7 +135,15 @@ function getCandidateUrls(text: string): string[] {
 }
 
 function extractUrl(text: string): string | null {
-  return getCandidateUrls(text).find((candidate) => safeUrl(candidate)) ?? null;
+  const candidates = getCandidateUrls(text);
+  return (
+    candidates.find((candidate) => {
+      const url = safeProductUrl(candidate);
+      return url && getBrandConfig(url.hostname);
+    }) ??
+    candidates.find((candidate) => safeProductUrl(candidate)) ??
+    null
+  );
 }
 
 function humanizeSlug(slug: string): string {
@@ -357,11 +372,6 @@ function deriveDealSummary(priceAgorot: number | null, originalPriceAgorot: numb
   return `${discount}% off`;
 }
 
-function deriveParticipants(priceAgorot: number | null, deliveryFeeAgorot: number): number {
-  const total = (priceAgorot ?? 0) + deliveryFeeAgorot;
-  return Math.max(2, Math.min(5, Math.ceil(total / TARGET_SHARE_AGOROT)));
-}
-
 export function summarizeSharedProduct(draft: SharedProductDraft, html?: string | null): SharedProductInsights {
   const brandConfig = getBrandConfig(new URL(draft.url).hostname);
   const priceAgorot = html ? choosePriceAgorot(html) : null;
@@ -372,8 +382,9 @@ export function summarizeSharedProduct(draft: SharedProductDraft, html?: string 
     ? 0
     : (brandConfig?.homeDeliveryFeeAgorot ?? DEFAULT_HOME_DELIVERY_FEE_AGOROT);
   const freeShippingThresholdAgorot = brandConfig?.freeShippingThresholdAgorot ?? DEFAULT_FREE_SHIPPING_THRESHOLD_AGOROT;
-  const recommendedParticipants = deriveParticipants(priceAgorot, deliveryFeeAgorot);
-  const neighborsNeeded = Math.max(1, recommendedParticipants - 1);
+  const amountMissingForFreeShippingAgorot = priceAgorot == null ? null : Math.max(0, freeShippingThresholdAgorot - priceAgorot);
+  const recommendedParticipants = 3;
+  const neighborsNeeded = 2;
   const perPersonAgorot = Math.ceil(((priceAgorot ?? 0) + deliveryFeeAgorot) / recommendedParticipants);
   const productFacts = html
     ? chooseProductFacts(html, brandName ?? brandConfig?.brandName ?? null, promotionText, priceAgorot, originalPriceAgorot)
@@ -394,8 +405,9 @@ export function summarizeSharedProduct(draft: SharedProductDraft, html?: string 
     dealSummary: deriveDealSummary(priceAgorot, originalPriceAgorot),
     promotionText,
     productFacts,
-    sourceLabel: brandConfig?.displayName ?? draft.source.toUpperCase(),
+    sourceLabel: brandConfig?.displayName ?? draft.storeLabel,
     sourceUrl: draft.url,
+    amountMissingForFreeShippingAgorot,
   };
 }
 
@@ -419,28 +431,35 @@ export function parseSharedProduct(input: {
   text?: string | null;
   url?: string | null;
   title?: string | null;
+  manualStoreLabel?: string | null;
 }): SharedProductDraft | null {
   const candidates = [
     ...(input.url ? [input.url] : []),
     ...(input.url ? getCandidateUrls(input.url) : []),
     ...(input.text ? getCandidateUrls(input.text) : []),
   ];
-  const raw = candidates.find((candidate) => safeUrl(candidate)) ?? (input.text ? extractUrl(input.text) : null);
+  const raw =
+    candidates.find((candidate) => {
+      const url = safeProductUrl(candidate);
+      return url && getBrandConfig(url.hostname);
+    }) ??
+    candidates.find((candidate) => safeProductUrl(candidate)) ??
+    (input.text ? extractUrl(input.text) : null);
   if (!raw) return null;
 
-  const url = safeUrl(raw);
+  const url = safeProductUrl(raw);
   if (!url) return null;
 
   const brandConfig = getBrandConfig(url.hostname);
-  if (!brandConfig) return null;
-
   const cleanUrl = stripTrackingParams(url);
   const title = (input.title ?? '').trim() || inferTitleFromUrl(cleanUrl);
+  const manualStoreLabel = (input.manualStoreLabel ?? '').trim();
 
   return {
     url: cleanUrl.toString(),
     title,
-    source: brandConfig.source,
+    source: brandConfig?.source ?? 'manual',
+    storeLabel: brandConfig?.displayName ?? (manualStoreLabel || normalizeHost(cleanUrl.hostname)),
     rawText: input.text ?? undefined,
   };
 }
@@ -479,6 +498,7 @@ export function buildShareRoute(draft: SharedProductDraft): string {
     url: draft.url,
     title: draft.title,
     source: draft.source,
+    storeLabel: draft.storeLabel,
   });
   return `/share?${params.toString()}`;
 }
@@ -488,6 +508,7 @@ export function buildAppShareUrl(draft: SharedProductDraft): string {
     url: draft.url,
     title: draft.title,
     source: draft.source,
+    storeLabel: draft.storeLabel,
   });
   return `${env.appScheme}://share?${params.toString()}`;
 }

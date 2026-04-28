@@ -11,6 +11,7 @@ describe('sharedProduct', () => {
       url: 'https://www.zara.com/il/he/product-name-p123456.html',
       title: 'Product Name P123456',
       source: 'zara',
+      storeLabel: 'Zara',
       rawText: undefined,
     });
   });
@@ -25,6 +26,7 @@ describe('sharedProduct', () => {
       url: 'https://www.zara.com/il/en/crossbody-bag-p16064110.html',
       title: 'Crossbody Bag P16064110',
       source: 'zara',
+      storeLabel: 'Zara',
       rawText: 'I found this on Zara: https://www.zara.com/il/en/crossbody-bag-p16064110.html?utm_source=app.',
     });
   });
@@ -39,6 +41,7 @@ describe('sharedProduct', () => {
       url: 'https://www.zara.com/il/en/textured-shirt-p01234567.html',
       title: 'Shared',
       source: 'zara',
+      storeLabel: 'Zara',
       rawText: undefined,
     });
   });
@@ -53,6 +56,7 @@ describe('sharedProduct', () => {
       url: 'https://www2.hm.com/hw_il/product-page.html',
       title: 'Product Page',
       source: 'hm',
+      storeLabel: 'H&M',
       rawText: undefined,
     });
   });
@@ -62,6 +66,7 @@ describe('sharedProduct', () => {
       url: 'https://www2.hm.com/hw_il/product-page.html',
       title: 'Shirt',
       source: 'hm' as const,
+      storeLabel: 'H&M',
     };
 
     const html = `
@@ -103,6 +108,7 @@ describe('sharedProduct', () => {
       url: 'https://www.zara.com/il/en/crossbody-bag-p16064110.html',
       title: 'Bag',
       source: 'zara' as const,
+      storeLabel: 'Zara',
     };
 
     const insights = summarizeSharedProduct(draft, `
@@ -116,12 +122,19 @@ describe('sharedProduct', () => {
     expect(insights.deliveryFeeAgorot).toBe(0);
   });
 
-  it('rejects non-supported links', () => {
+  it('keeps unknown stores for manual product entry', () => {
     expect(
       parseSharedProduct({
         url: 'https://example.com/product/123',
+        manualStoreLabel: 'Example',
       }),
-    ).toBeNull();
+    ).toEqual({
+      url: 'https://example.com/product/123',
+      title: 'Product item',
+      source: 'manual',
+      storeLabel: 'Example',
+      rawText: undefined,
+    });
   });
 
   it('rejects Zara links that are not product pages', () => {

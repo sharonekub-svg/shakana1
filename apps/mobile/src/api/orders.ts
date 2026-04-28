@@ -14,6 +14,11 @@ type CreateOrderInput = {
   productTitle: string;
   productPriceAgorot: number;
   productImage?: string;
+  storeKey: string;
+  storeLabel: string;
+  estimatedShippingAgorot: number;
+  freeShippingThresholdAgorot: number;
+  timerMinutes: number;
   maxParticipants: number;
   pickupResponsibleUserId: string;
   preferredPickupLocation: string;
@@ -116,6 +121,18 @@ export function useConfirmDelivery() {
     onSuccess: (_d, orderId) => {
       qc.invalidateQueries({ queryKey: ['order', orderId] });
       track('order_completed', { orderId });
+    },
+  });
+}
+
+export function useCloseOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (orderId: string) => invokeFn<{ order: Order; changed: boolean }>('close-order', { orderId }),
+    onSuccess: (_d, orderId) => {
+      qc.invalidateQueries({ queryKey: ['order', orderId] });
+      qc.invalidateQueries({ queryKey: ['userOrders'] });
+      track('order_timer_locked', { orderId });
     },
   });
 }

@@ -34,11 +34,17 @@ export default function NewOrder() {
   const initialDraft = parseSharedProduct({
     url: typeof params.url === 'string' ? params.url : null,
     title: typeof params.title === 'string' ? params.title : null,
+    manualStoreLabel: typeof params.store === 'string' ? params.store : null,
   });
   const isZaraStart = params.store === 'zara' || initialDraft?.source === 'zara';
   const [url, setUrl] = useState(() => initialDraft?.url ?? '');
+  const [storeLabel, setStoreLabel] = useState(() => initialDraft?.storeLabel ?? '');
   const [title, setTitle] = useState(() => initialDraft?.title ?? '');
   const [price, setPrice] = useState('');
+  const [participants, setParticipants] = useState('3');
+  const [timerMinutes, setTimerMinutes] = useState('30');
+  const [shipping, setShipping] = useState('30');
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState('199');
   const [insights, setInsights] = useState<SharedProductInsights | null>(null);
   const [insightsLoading, setInsightsLoading] = useState(Boolean(initialDraft));
   const [linkMessage, setLinkMessage] = useState('');
@@ -50,17 +56,31 @@ export default function NewOrder() {
     .filter(Boolean)
     .join(', ');
   const [pickupLocation, setPickupLocation] = useState(defaultPickupLocation);
-  const currentDraft = parseSharedProduct({ url, title: title || initialDraft?.title || null });
+  const currentDraft = parseSharedProduct({
+    url,
+    title: title || initialDraft?.title || null,
+    manualStoreLabel: storeLabel,
+  });
 
   const urlCheck = productUrlSchema.safeParse(url);
   const parsedPriceAgorot = Math.floor(Number(price) * 100);
   const priceAgorot = Number.isFinite(parsedPriceAgorot) && parsedPriceAgorot > 0 ? parsedPriceAgorot : insights?.priceAgorot ?? 0;
-  const participantCount = insights?.recommendedParticipants ?? 3;
-  const neighborsNeeded = insights?.neighborsNeeded ?? Math.max(1, participantCount - 1);
-  const deliveryFeeAgorot = insights?.deliveryFeeAgorot ?? 3000;
-  const freeShippingGapAgorot = Math.max(0, (insights?.freeShippingThresholdAgorot ?? 19900) - priceAgorot);
-  const perPersonAgorot = insights?.perPersonAgorot ?? Math.ceil((priceAgorot + deliveryFeeAgorot) / participantCount);
-  const valid = urlCheck.success && title.trim().length > 1 && priceAgorot > 0 && pickupLocation.trim().length > 2 && Boolean(user?.id);
+  const participantCount = Math.max(2, Math.min(12, Math.floor(Number(participants)) || 3));
+  const timerMinutesNumber = Math.max(5, Math.min(180, Math.floor(Number(timerMinutes)) || 30));
+  const deliveryFeeAgorot = Math.max(0, Math.floor(Number(shipping) * 100) || insights?.deliveryFeeAgorot || 0);
+  const freeShippingThresholdAgorot =
+    Math.max(0, Math.floor(Number(freeShippingThreshold) * 100) || insights?.freeShippingThresholdAgorot || 0);
+  const sharedOrderTotalAgorot = priceAgorot * participantCount;
+  const freeShippingGapAgorot = Math.max(0, freeShippingThresholdAgorot - sharedOrderTotalAgorot);
+  const shippingSavedAgorot = Math.max(0, deliveryFeeAgorot * Math.max(0, participantCount - 1));
+  const perPersonAgorot = Math.ceil((priceAgorot + deliveryFeeAgorot / participantCount));
+  const valid =
+    urlCheck.success &&
+    storeLabel.trim().length > 1 &&
+    title.trim().length > 1 &&
+    priceAgorot > 0 &&
+    pickupLocation.trim().length > 2 &&
+    Boolean(user?.id);
 
   useEffect(() => {
     if (!pickupLocation.trim() && defaultPickupLocation) {
@@ -82,9 +102,14 @@ export default function NewOrder() {
       .then((next) => {
         if (!active) return;
         setInsights(next);
+        setStoreLabel((prev) => prev || next.sourceLabel);
         if (!title.trim()) setTitle(next.title);
         if (!price.trim() && next.priceAgorot) {
           setPrice((next.priceAgorot / 100).toFixed(2).replace(/\.00$/, ''));
+        }
+        if (next.deliveryFeeAgorot) setShipping((next.deliveryFeeAgorot / 100).toFixed(2).replace(/\.00$/, ''));
+        if (next.freeShippingThresholdAgorot) {
+          setFreeShippingThreshold((next.freeShippingThresholdAgorot / 100).toFixed(2).replace(/\.00$/, ''));
         }
       })
       .catch(() => {
@@ -114,6 +139,7 @@ export default function NewOrder() {
       return;
     }
     setUrl(draft.url);
+    setStoreLabel(draft.storeLabel);
     setTitle((prev) => prev || draft.title);
     setLinkMessage('Product link added.');
   };
@@ -125,6 +151,12 @@ export default function NewOrder() {
         productUrl: url.trim(),
         productTitle: title.trim(),
         productPriceAgorot: priceAgorot,
+        productImage: insights?.imageUrl ?? undefined,
+        storeKey: currentDraft?.source ?? 'manual',
+        storeLabel: storeLabel.trim(),
+        estimatedShippingAgorot: deliveryFeeAgorot,
+        freeShippingThresholdAgorot,
+        timerMinutes: timerMinutesNumber,
         maxParticipants: participantCount,
         pickupResponsibleUserId: user!.id,
         preferredPickupLocation: pickupLocation.trim(),
@@ -173,8 +205,18 @@ export default function NewOrder() {
             keyboardType="url"
             autoCapitalize="none"
           />
+          <Field label="Store" value={storeLabel} onChange={setStoreLabel} placeholder="Zara, H&M, Amazon..." />
           <Field label={t('order.new.titleLabel')} value={title} onChange={setTitle} placeholder="Zara shirt" />
           <NumField label={t('order.new.priceLabel')} value={price} onChange={setPrice} placeholder="199" />
+          <NumField label="Timer minutes" value={timerMinutes} onChange={setTimerMinutes} placeholder="30" />
+          <NumField label="Max participants" value={participants} onChange={setParticipants} placeholder="3" />
+          <NumField label="Estimated shipping" value={shipping} onChange={setShipping} placeholder="30" />
+          <NumField
+            label="Free shipping from"
+            value={freeShippingThreshold}
+            onChange={setFreeShippingThreshold}
+            placeholder="199"
+          />
         </View>
 
         <View style={styles.productCard}>
@@ -196,21 +238,29 @@ export default function NewOrder() {
         </View>
 
         <View style={styles.planCard}>
-          <Text style={styles.planTitle}>Simple order plan</Text>
+          <Text style={styles.planTitle}>Timer-based order plan</Text>
           <View style={styles.planRow}>
-            <Text style={styles.planLabel}>Shipping</Text>
+            <Text style={styles.planLabel}>Timer closes in</Text>
+            <Text style={styles.planValue}>{timerMinutesNumber} min</Text>
+          </View>
+          <View style={styles.planRow}>
+            <Text style={styles.planLabel}>Estimated shipping</Text>
             <Text style={styles.planValue}>{formatAgorot(deliveryFeeAgorot)}</Text>
           </View>
           <View style={styles.planRow}>
-            <Text style={styles.planLabel}>Neighbors needed</Text>
-            <Text style={styles.planValue}>{neighborsNeeded}</Text>
+            <Text style={styles.planLabel}>Participants</Text>
+            <Text style={styles.planValue}>up to {participantCount}</Text>
+          </View>
+          <View style={styles.planRow}>
+            <Text style={styles.planLabel}>Shipping saved together</Text>
+            <Text style={styles.planValue}>{formatAgorot(shippingSavedAgorot)}</Text>
           </View>
           <View style={styles.planRow}>
             <Text style={styles.planLabel}>Approx. each</Text>
             <Text style={styles.planValue}>{formatAgorot(perPersonAgorot)}</Text>
           </View>
           <View style={styles.planRow}>
-            <Text style={styles.planLabel}>Missing for free shipping</Text>
+            <Text style={styles.planLabel}>Shared order missing for free shipping</Text>
             <Text style={styles.planValue}>{formatAgorot(freeShippingGapAgorot)}</Text>
           </View>
         </View>

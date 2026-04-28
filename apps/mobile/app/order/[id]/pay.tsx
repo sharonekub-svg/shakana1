@@ -12,11 +12,13 @@ import { useOrder } from '@/api/orders';
 import { formatAgorot } from '@/utils/format';
 import { useUiStore } from '@/stores/uiStore';
 import { usePaymentSettingsStore } from '@/stores/paymentSettingsStore';
+import { useAuthStore } from '@/stores/authStore';
 
 export default function Pay() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { data } = useOrder(id);
+  const userId = useAuthStore((s) => s.user?.id);
   const pay = usePayForOrder(String(id));
   const pushToast = useUiStore((s) => s.pushToast);
   const paymentSettings = usePaymentSettingsStore((s) => s.settings);
@@ -26,7 +28,8 @@ export default function Pay() {
   const hasPaymentOption = readyPaymentMethods.length > 0;
 
   const order = data?.order;
-  const perPerson = order ? Math.ceil(order.product_price_agorot / order.max_participants) : 0;
+  const me = data?.participants.find((p) => p.user_id === userId);
+  const perPerson = me?.amount_agorot ?? (order ? Math.ceil(order.product_price_agorot / order.max_participants) : 0);
 
   useEffect(() => {
     if (pay.isSuccess) router.replace(`/order/${id}/escrow`);
