@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 
@@ -33,10 +33,14 @@ const readWebHashParams = (): URLSearchParams | null => {
 export default function AuthCallback() {
   const router = useRouter();
   const params = useLocalSearchParams<{ code?: string; error?: string; error_description?: string }>();
+  const hasHandledCallback = useRef(false);
   const [message, setMessage] = useState('Finishing sign in...');
 
   useEffect(() => {
     const run = async () => {
+      if (hasHandledCallback.current) return;
+      hasHandledCallback.current = true;
+
       const hashParams = readWebHashParams();
       const callbackError = getFirstParam(params.error) ?? hashParams?.get('error') ?? undefined;
       const callbackErrorDescription =
@@ -49,10 +53,20 @@ export default function AuthCallback() {
 
       const code = getFirstParam(params.code);
       if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        const existingSession = await supabase.auth.getSession();
+        const { error } = existingSession.data.session
+          ? { error: null }
+          : await supabase.auth.exchangeCodeForSession(code);
         if (error) {
-          setMessage(error.message);
-          return;
+          const fallbackSession = await supabase.auth.getSession();
+          if (!fallbackSession.data.session) {
+            setMessage(
+              error.message.includes('code verifier')
+                ? 'Sign-in expired. Please go back and continue with Gmail again in this same browser.'
+                : error.message,
+            );
+            return;
+          }
         }
       }
 
