@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { ScreenBase } from '@/components/primitives/ScreenBase';
@@ -19,6 +19,17 @@ const isProfileComplete = (profile: Profile | null): boolean =>
   profile.building.trim().length > 0 &&
   profile.apt.trim().length > 0;
 
+const getFirstParam = (value: string | string[] | undefined): string | undefined =>
+  Array.isArray(value) ? value[0] : value;
+
+const readWebHashParams = (): URLSearchParams | null => {
+  if (Platform.OS !== 'web' || typeof window === 'undefined' || !window.location.hash) {
+    return null;
+  }
+
+  return new URLSearchParams(window.location.hash.replace(/^#/, ''));
+};
+
 export default function AuthCallback() {
   const router = useRouter();
   const params = useLocalSearchParams<{ code?: string; error?: string; error_description?: string }>();
@@ -26,14 +37,32 @@ export default function AuthCallback() {
 
   useEffect(() => {
     const run = async () => {
-      if (params.error) {
-        setMessage(params.error_description ?? params.error);
+      const hashParams = readWebHashParams();
+      const callbackError = getFirstParam(params.error) ?? hashParams?.get('error') ?? undefined;
+      const callbackErrorDescription =
+        getFirstParam(params.error_description) ?? hashParams?.get('error_description') ?? undefined;
+
+      if (callbackError) {
+        setMessage(callbackErrorDescription ?? callbackError);
         return;
       }
 
-      const code = Array.isArray(params.code) ? params.code[0] : params.code;
+      const code = getFirstParam(params.code);
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          setMessage(error.message);
+          return;
+        }
+      }
+
+      const accessToken = hashParams?.get('access_token');
+      const refreshToken = hashParams?.get('refresh_token');
+      if (!code && accessToken && refreshToken) {
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
         if (error) {
           setMessage(error.message);
           return;

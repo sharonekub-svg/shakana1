@@ -55,7 +55,8 @@ function RootLayoutInner() {
   const session = useAuthStore((s) => s.session);
   const hydrated = useAuthStore((s) => s.hydrated);
   const draft = useProfileDraftStore((s) => s.draft);
-  const { data: profile } = useProfile(session?.user.id);
+  const profileQuery = useProfile(session?.user.id);
+  const profile = profileQuery.data;
   const fontsLoaded = useAppFonts();
   const navReady = !!rootNavigationState?.key;
   const navReadyRef = useRef(navReady);
@@ -159,6 +160,7 @@ function RootLayoutInner() {
     const inShare = segments[0] === 'share';
     if (inCallback) return;
     if (inShare) return;
+    if (session && !profileQuery.isFetched && !profileQuery.isError) return;
     const profileComplete =
       !!profile &&
       profile.first_name.trim().length > 0 &&
@@ -186,7 +188,7 @@ function RootLayoutInner() {
         router.replace(nextRoute);
       }
     }
-  }, [bootstrapped, hydrated, navReady, session, profile, draft, segments, router]);
+  }, [bootstrapped, hydrated, navReady, session, profile, profileQuery.isFetched, profileQuery.isError, draft, segments, router]);
 
   useEffect(() => {
     setProfile(profile ?? null);
@@ -239,7 +241,11 @@ function RootLayoutInner() {
       >
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="auth-callback" />
         <Stack.Screen name="join/[token]" />
+        <Stack.Screen name="order" />
+        <Stack.Screen name="profile" />
+        <Stack.Screen name="share" />
       </Stack>
       {showSplash ? <View pointerEvents="none" style={styles.splashOverlay} /> : null}
     </View>
