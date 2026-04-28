@@ -1,8 +1,7 @@
-import { Image, ImageStyle, StyleSheet, View, ViewStyle } from 'react-native';
+import { StyleSheet, Text, View, ViewStyle } from 'react-native';
 
 import { colors, radii, shadow } from '@/theme/tokens';
-
-const logo = require('../../../assets/icon.png');
+import { fontFamily } from '@/theme/fonts';
 
 export function ShakanaMark({ size = 88, style }: { size?: number; style?: ViewStyle }) {
   return (
@@ -12,12 +11,14 @@ export function ShakanaMark({ size = 88, style }: { size?: number; style?: ViewS
         {
           width: size,
           height: size,
-          borderRadius: Math.min(radii.xxl, size * 0.22),
+          borderRadius: Math.min(radii.xxl, size * 0.14),
         },
         style,
       ]}
     >
-      <Image source={logo} style={styles.logo as ImageStyle} resizeMode="cover" />
+      <Text style={[styles.wordmark, { fontSize: size * 0.18, letterSpacing: -size * 0.01 }]}>
+        shakana
+      </Text>
     </View>
   );
 }
@@ -27,13 +28,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#9ECAF2',
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
-    borderWidth: 1.5,
-    borderColor: colors.tx,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(15, 13, 26, 0.08)',
     ...shadow.card,
   },
-  logo: {
-    width: '100%',
-    height: '100%',
+  wordmark: {
+    fontFamily: fontFamily.body,
+    color: '#031A36',
+    includeFontPadding: false,
+    textAlign: 'center',
+    textTransform: 'lowercase',
   },
 });
