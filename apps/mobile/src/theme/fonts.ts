@@ -6,6 +6,9 @@ import {
   Rubik_700Bold,
   Rubik_900Black,
 } from '@expo-google-fonts/rubik';
+import { Platform } from 'react-native';
+
+const webFont = 'Trebuchet MS, Verdana, sans-serif';
 
 export function useAppFonts(): boolean {
   const [rubikLoaded] = useRubik({
@@ -19,9 +22,9 @@ export function useAppFonts(): boolean {
 }
 
 export const fontFamily = {
-  display: 'Rubik_900Black',
-  body: 'Rubik_400Regular',
-  bodyMedium: 'Rubik_500Medium',
-  bodySemi: 'Rubik_600SemiBold',
-  bodyBold: 'Rubik_700Bold',
+  display: Platform.OS === 'web' ? webFont : 'Rubik_900Black',
+  body: Platform.OS === 'web' ? webFont : 'Rubik_400Regular',
+  bodyMedium: Platform.OS === 'web' ? webFont : 'Rubik_500Medium',
+  bodySemi: Platform.OS === 'web' ? webFont : 'Rubik_600SemiBold',
+  bodyBold: Platform.OS === 'web' ? webFont : 'Rubik_700Bold',
 } as const;
