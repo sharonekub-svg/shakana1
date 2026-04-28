@@ -13,6 +13,7 @@ import { fontFamily } from '@/theme/fonts';
 import { productUrlSchema } from '@/utils/validation';
 import { useCreateOrder } from '@/api/orders';
 import { useUiStore } from '@/stores/uiStore';
+import { useAuthStore } from '@/stores/authStore';
 import { useLocale } from '@/i18n/locale';
 import { loadSharedProductInsights, parseSharedProduct, type SharedProductInsights } from '@/lib/sharedProduct';
 import { formatAgorot } from '@/utils/format';
@@ -43,6 +44,12 @@ export default function NewOrder() {
   const [linkMessage, setLinkMessage] = useState('');
   const create = useCreateOrder();
   const pushToast = useUiStore((s) => s.pushToast);
+  const user = useAuthStore((s) => s.user);
+  const profile = useAuthStore((s) => s.profile);
+  const defaultPickupLocation = [profile?.street, profile?.building, profile?.city]
+    .filter(Boolean)
+    .join(', ');
+  const [pickupLocation, setPickupLocation] = useState(defaultPickupLocation);
   const currentDraft = parseSharedProduct({ url, title: title || initialDraft?.title || null });
 
   const urlCheck = productUrlSchema.safeParse(url);
@@ -53,7 +60,13 @@ export default function NewOrder() {
   const deliveryFeeAgorot = insights?.deliveryFeeAgorot ?? 3000;
   const freeShippingGapAgorot = Math.max(0, (insights?.freeShippingThresholdAgorot ?? 19900) - priceAgorot);
   const perPersonAgorot = insights?.perPersonAgorot ?? Math.ceil((priceAgorot + deliveryFeeAgorot) / participantCount);
-  const valid = urlCheck.success && title.trim().length > 1 && priceAgorot > 0;
+  const valid = urlCheck.success && title.trim().length > 1 && priceAgorot > 0 && pickupLocation.trim().length > 2 && Boolean(user?.id);
+
+  useEffect(() => {
+    if (!pickupLocation.trim() && defaultPickupLocation) {
+      setPickupLocation(defaultPickupLocation);
+    }
+  }, [defaultPickupLocation, pickupLocation]);
 
   useEffect(() => {
     if (!currentDraft) {
@@ -113,6 +126,8 @@ export default function NewOrder() {
         productTitle: title.trim(),
         productPriceAgorot: priceAgorot,
         maxParticipants: participantCount,
+        pickupResponsibleUserId: user!.id,
+        preferredPickupLocation: pickupLocation.trim(),
       });
       router.replace(`/order/${order.id}`);
     } catch (e) {
@@ -198,6 +213,24 @@ export default function NewOrder() {
             <Text style={styles.planLabel}>Missing for free shipping</Text>
             <Text style={styles.planValue}>{formatAgorot(freeShippingGapAgorot)}</Text>
           </View>
+        </View>
+
+        <View style={styles.pickupCard}>
+          <Text style={styles.kicker}>Pickup</Text>
+          <Text style={styles.pickupTitle}>Pickup manager: you</Text>
+          <Text style={styles.pickupBody}>
+            Choose the preferred pickup point before creating the order. Everyone will see it, and it can be
+            updated later by the order creator or pickup manager.
+          </Text>
+          <Field
+            label="Preferred pickup location"
+            value={pickupLocation}
+            onChange={setPickupLocation}
+            placeholder="Building lobby, Zara pickup point, or your apartment"
+          />
+          <Text style={styles.uncertainText}>
+            Pickup location may vary depending on the store/shipping provider
+          </Text>
         </View>
 
         <PrimaryBtn label={t('order.new.submit')} onPress={submit} disabled={!valid} loading={create.isPending} />
@@ -358,5 +391,31 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodyBold,
     fontSize: 14,
     color: colors.tx,
+  },
+  pickupCard: {
+    gap: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.brBr,
+    borderRadius: radii.lg,
+    backgroundColor: colors.white,
+    ...shadow.card,
+  },
+  pickupTitle: {
+    fontFamily: fontFamily.display,
+    fontSize: 20,
+    color: colors.tx,
+  },
+  pickupBody: {
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    lineHeight: 20,
+    color: colors.mu,
+  },
+  uncertainText: {
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.acc,
   },
 });

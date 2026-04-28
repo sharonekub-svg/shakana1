@@ -9,6 +9,13 @@ export type OrderStatus =
 
 export type ParticipantStatus = 'invited' | 'joined' | 'paid' | 'refunded';
 
+export type ShippingStatus =
+  | 'not_shipped'
+  | 'shipped'
+  | 'ready_for_pickup'
+  | 'picked_up'
+  | 'ready_for_distribution';
+
 export type Profile = {
   id: string;
   first_name: string;
@@ -33,6 +40,15 @@ export type Order = {
   status: OrderStatus;
   stripe_payment_intent_id: string | null;
   stripe_transfer_group: string | null;
+  pickup_responsible_user_id?: string | null;
+  pickup_responsible_name?: string | null;
+  preferred_pickup_location?: string | null;
+  pickup_location_note?: string | null;
+  shipping_status?: ShippingStatus;
+  shipped_at?: string | null;
+  ready_for_pickup_at?: string | null;
+  picked_up_at?: string | null;
+  ready_for_distribution_at?: string | null;
   created_at: string;
   updated_at: string;
   delivery_confirmed_at: string | null;
@@ -47,6 +63,8 @@ export type Participant = {
   amount_agorot: number;
   joined_at: string;
   paid_at: string | null;
+  delivered_to_user_at?: string | null;
+  received_confirmed_at?: string | null;
   stripe_payment_intent_id: string | null;
 };
 

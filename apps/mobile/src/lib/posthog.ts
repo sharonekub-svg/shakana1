@@ -26,6 +26,7 @@ export type ShakanaEvent =
   | 'invite_sent'
   | 'join_success'
   | 'payment_completed'
+  | 'delivery_status_updated'
   | 'order_completed';
 
 export function track(event: ShakanaEvent, props?: Record<string, unknown>): void {

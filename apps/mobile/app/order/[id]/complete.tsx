@@ -7,7 +7,6 @@ import { BackBtn } from '@/components/primitives/BackBtn';
 import { colors, radii } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { useOrder } from '@/api/orders';
-import { buildZaraCartUrl } from '@/lib/zara';
 import { formatAgorot } from '@/utils/format';
 import { useUiStore } from '@/stores/uiStore';
 
@@ -40,14 +39,11 @@ export default function Complete() {
     );
   }
 
-  const isZara = (data.order.product_url ?? '').includes('zara.com');
-  const zaraUrl = buildZaraCartUrl(data.order.id, data.items);
-
-  const openZara = async () => {
+  const openProduct = async () => {
     try {
-      await Linking.openURL(zaraUrl);
+      await Linking.openURL(data.order.product_url);
     } catch {
-      pushToast('Could not open Zara.', 'error');
+      pushToast('Could not open the product page.', 'error');
     }
   };
 
@@ -64,7 +60,7 @@ export default function Complete() {
           <Check />
         </View>
         <Text style={styles.title}>Order complete.</Text>
-        <Text style={styles.sub}>The basket has been closed and the route is ready.</Text>
+        <Text style={styles.sub}>Everyone confirmed receipt. The order is closed and Stripe can finish the payment.</Text>
       </View>
 
       <View style={styles.receipt}>
@@ -79,13 +75,13 @@ export default function Complete() {
         </View>
       </View>
 
-      {isZara ? (
+      {data.order.product_url ? (
         <Pressable
-          onPress={openZara}
+          onPress={openProduct}
           style={({ pressed }) => [styles.zaraBtn, pressed && { opacity: 0.92 }]}
           accessibilityRole="button"
         >
-          <Text style={styles.zaraLabel}>Open Zara cart</Text>
+          <Text style={styles.zaraLabel}>Open original product page</Text>
         </Pressable>
       ) : null}
     </ScreenBase>

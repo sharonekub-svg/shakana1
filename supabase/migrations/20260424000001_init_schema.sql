@@ -83,7 +83,7 @@ create table if not exists public.participants (
 create index if not exists participants_order_idx on public.participants(order_id);
 create index if not exists participants_user_idx on public.participants(user_id);
 
--- ── Order items: for reconstructing ZARA / Amazon cart after release ────
+-- ── Order items: user-provided product details for the shared basket ────
 create table if not exists public.order_items (
   id uuid primary key default gen_random_uuid(),
   order_id uuid not null references public.orders(id) on delete cascade,

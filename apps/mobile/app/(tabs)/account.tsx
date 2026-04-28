@@ -23,20 +23,27 @@ export default function AccountTab() {
   const paymentsHydrated = usePaymentSettingsStore((s) => s.hydrated);
   const loadPayments = usePaymentSettingsStore((s) => s.load);
   const { data: orders = [] } = useUserOrders(user?.id);
+
+  const isHebrew = language === 'he';
   const openOrders = orders.filter((order) => !['completed', 'cancelled'].includes(order.status)).length;
   const enabledPaymentCount = Object.values(paymentSettings).filter(
     (method) => method.enabled && method.link.trim().length > 0,
   ).length;
   const enabledNotifications = Object.values(notificationSettings).filter(Boolean).length;
   const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim();
-  const address = [profile?.street, profile?.building, profile?.apt ? `Apt ${profile.apt}` : null, profile?.city]
+  const address = [
+    profile?.street,
+    profile?.building,
+    profile?.apt ? `${isHebrew ? 'דירה' : 'Apt'} ${profile.apt}` : null,
+    profile?.city,
+  ]
     .filter(Boolean)
     .join(', ');
-  const isHebrew = language === 'he';
+
   const copy = {
     profileTitle: isHebrew ? 'פרופיל' : 'Profile',
     ready: isHebrew ? 'הפרופיל מוכן' : 'Profile ready',
-    name: fullName || 'Shakana customer',
+    name: fullName || (isHebrew ? 'לקוח Shakana' : 'Shakana customer'),
     account: isHebrew ? 'חשבון' : 'Account',
     profileBody: isHebrew
       ? 'כאן מסדרים שפה, כתובת, תשלומים והתראות לפני שמתחילים הזמנה.'
@@ -54,17 +61,22 @@ export default function AccountTab() {
     paymentReady: isHebrew ? `${enabledPaymentCount} אפשרויות תשלום מוכנות` : `${enabledPaymentCount} payment options ready`,
     notificationsReady: isHebrew ? `${enabledNotifications} התראות פעילות` : `${enabledNotifications} notification toggles on`,
   };
+
   const quickLinks = [
     {
       href: '/profile/payment',
       title: isHebrew ? 'תשלומים' : 'Payments',
-      body: isHebrew ? 'הוסף Bit, PayBox, PayPal, Venmo או דרך תשלום אחרת' : 'Add Bit, PayBox, PayPal, Venmo, or another payment option',
+      body: isHebrew
+        ? 'הוסף Bit, PayBox, PayPal, Venmo או דרך תשלום אחרת'
+        : 'Add Bit, PayBox, PayPal, Venmo, or another payment option',
       danger: false,
     },
     {
       href: '/profile/alerts',
       title: isHebrew ? 'התראות' : 'Alerts',
-      body: isHebrew ? 'הפעל או כבה עדכוני הזמנות ותזכורות תשלום' : 'Turn order updates and payment reminders on or off',
+      body: isHebrew
+        ? 'הפעל או כבה עדכוני הזמנות ותזכורות תשלום'
+        : 'Turn order updates and payment reminders on or off',
       danger: false,
     },
     {
@@ -137,12 +149,8 @@ export default function AccountTab() {
         </View>
 
         <View style={styles.languageCard}>
-          <View style={styles.languageTop}>
-            <View>
-              <Text style={styles.sectionTitle}>{copy.language}</Text>
-              <Text style={styles.addressText}>{copy.languageBody}</Text>
-            </View>
-          </View>
+          <Text style={styles.sectionTitle}>{copy.language}</Text>
+          <Text style={styles.addressText}>{copy.languageBody}</Text>
           <View style={styles.languageButtons}>
             <Pressable
               style={[styles.languageButton, language === 'en' && styles.languageButtonActive]}
@@ -166,11 +174,15 @@ export default function AccountTab() {
         <View style={styles.statsRow}>
           <Pressable style={styles.statCard} onPress={() => router.push('/profile/payment')}>
             <Text style={styles.statLabel}>{copy.payments}</Text>
-            <Text style={styles.statValue} numberOfLines={1}>{copy.paymentReady}</Text>
+            <Text style={styles.statValue} numberOfLines={1}>
+              {copy.paymentReady}
+            </Text>
           </Pressable>
           <Pressable style={styles.statCard} onPress={() => router.push('/profile/alerts')}>
             <Text style={styles.statLabel}>{copy.notifications}</Text>
-            <Text style={styles.statValue} numberOfLines={1}>{copy.notificationsReady}</Text>
+            <Text style={styles.statValue} numberOfLines={1}>
+              {copy.notificationsReady}
+            </Text>
           </Pressable>
         </View>
 
@@ -328,11 +340,6 @@ const styles = StyleSheet.create({
     borderColor: colors.brBr,
     borderRadius: radii.lg,
     backgroundColor: colors.white,
-  },
-  languageTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
   },
   languageButtons: {
     flexDirection: 'row',

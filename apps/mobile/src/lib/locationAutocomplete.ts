@@ -162,7 +162,7 @@ async function searchRemote(
     if (!res.ok) return fallback;
     const data = (await res.json()) as NominatimResult[];
     const result = extractCandidates(kind, trimmed, data);
-    const merged = unique([...result, ...fallback]);
+    const merged = result.length > 0 ? result : fallback;
     cache.set(cacheKey, merged);
     return merged;
   } catch {

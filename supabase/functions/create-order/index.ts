@@ -8,6 +8,8 @@ type Body = {
   productPriceAgorot: number;
   productImage?: string;
   maxParticipants: number;
+  pickupResponsibleUserId: string;
+  preferredPickupLocation: string;
   idempotency_key?: string;
 };
 
@@ -36,13 +38,21 @@ Deno.serve(async (req) => {
     ) {
       throw httpError(400, 'invalid_participants');
     }
+    if (body.pickupResponsibleUserId !== userId) {
+      throw httpError(400, 'pickup_manager_must_be_creator_initially');
+    }
+    const pickupLocation = body.preferredPickupLocation?.trim() ?? '';
+    if (pickupLocation.length < 3 || pickupLocation.length > 160) {
+      throw httpError(400, 'invalid_pickup_location');
+    }
 
     const { data: profile, error: profErr } = await admin
       .from('profiles')
-      .select('building_id')
+      .select('building_id, first_name, last_name')
       .eq('id', userId)
       .maybeSingle();
     if (profErr) throw profErr;
+    const pickupName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim();
 
     const transferGroup = `order_${crypto.randomUUID()}`;
 
@@ -57,6 +67,9 @@ Deno.serve(async (req) => {
         product_price_agorot: body.productPriceAgorot,
         max_participants: body.maxParticipants,
         stripe_transfer_group: transferGroup,
+        pickup_responsible_user_id: userId,
+        pickup_responsible_name: pickupName || 'Order creator',
+        preferred_pickup_location: pickupLocation,
         status: 'open',
       })
       .select('*')

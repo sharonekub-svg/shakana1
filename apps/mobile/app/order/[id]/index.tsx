@@ -114,6 +114,17 @@ export default function OrderShell() {
           />
         </View>
 
+        <View style={styles.pickupCard}>
+          <Text style={styles.kicker}>Pickup plan</Text>
+          <Text style={styles.pickupTitle}>{order.pickup_responsible_name || 'Pickup manager assigned'}</Text>
+          <Text style={styles.pickupBody}>
+            Preferred location: {order.preferred_pickup_location || 'Will be added by the order creator'}
+          </Text>
+          <Text style={styles.pickupNote}>
+            {order.pickup_location_note || 'Pickup location may vary depending on the store/shipping provider'}
+          </Text>
+        </View>
+
         <View style={{ gap: 10 }}>
           <PrimaryBtn
             label={me?.status === 'paid' ? 'Already paid' : 'Pay now'}
@@ -176,4 +187,22 @@ const styles = StyleSheet.create({
   slotMe: { borderColor: colors.acc, backgroundColor: colors.accLight },
   slotText: { fontFamily: fontFamily.bodySemi, fontSize: 14, color: colors.tx },
   slotEmpty: { fontFamily: fontFamily.body, fontSize: 14, color: colors.mu },
+  pickupCard: {
+    gap: 8,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.brBr,
+    borderRadius: radii.lg,
+    backgroundColor: colors.white,
+  },
+  kicker: {
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 11,
+    letterSpacing: 1.2,
+    color: colors.acc,
+    textTransform: 'uppercase',
+  },
+  pickupTitle: { fontFamily: fontFamily.display, fontSize: 20, color: colors.tx },
+  pickupBody: { fontFamily: fontFamily.body, fontSize: 13, color: colors.mu, lineHeight: 20 },
+  pickupNote: { fontFamily: fontFamily.bodySemi, fontSize: 12, color: colors.acc, lineHeight: 18 },
 });

@@ -15,6 +15,8 @@ type CreateOrderInput = {
   productPriceAgorot: number;
   productImage?: string;
   maxParticipants: number;
+  pickupResponsibleUserId: string;
+  preferredPickupLocation: string;
 };
 
 export function useCreateOrder() {
@@ -106,7 +108,7 @@ export function useConfirmDelivery() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (orderId: string) => {
-      return invokeFn<{ ok: true }>('confirm-delivery', {
+      return invokeFn<{ ok: true; completed: boolean }>('confirm-delivery', {
         orderId,
         idempotency_key: newIdempotencyKey(),
       });
@@ -114,6 +116,33 @@ export function useConfirmDelivery() {
     onSuccess: (_d, orderId) => {
       qc.invalidateQueries({ queryKey: ['order', orderId] });
       track('order_completed', { orderId });
+    },
+  });
+}
+
+export type DeliveryAction =
+  | 'update_pickup'
+  | 'mark_shipped'
+  | 'mark_ready_for_pickup'
+  | 'mark_picked_up'
+  | 'mark_ready_for_distribution'
+  | 'mark_delivered_to_user';
+
+type UpdateDeliveryInput = {
+  orderId: string;
+  action: DeliveryAction;
+  participantId?: string;
+  pickupResponsibleUserId?: string;
+  preferredPickupLocation?: string;
+};
+
+export function useUpdateDelivery() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: UpdateDeliveryInput) => invokeFn<{ ok: true }>('update-delivery', input),
+    onSuccess: (_d, input) => {
+      qc.invalidateQueries({ queryKey: ['order', input.orderId] });
+      track('delivery_status_updated', { orderId: input.orderId, action: input.action });
     },
   });
 }
