@@ -70,6 +70,11 @@ export default function OrderShell() {
         editsOpen: 'העריכות עדיין פתוחות.',
         participants: 'משתתפים',
         finderSummary: 'סיכום איתור מוצר',
+        importantCosts: 'עלויות חשובות',
+        productCost: 'מחיר המוצר',
+        shippingFee: 'דמי משלוח',
+        freeShippingMinimum: 'סכום למשלוח חינם',
+        costCardNote: 'אלה שלושת המספרים הכי חשובים להזמנה הזאת.',
         whatItIs: 'מה המוצר',
         notDetected: 'שם המוצר לא זוהה',
         whereFrom: 'מאיפה זה מגיע',
@@ -128,6 +133,11 @@ export default function OrderShell() {
         editsOpen: 'Edits are still open.',
         participants: 'Participants',
         finderSummary: 'Product finder summary',
+        importantCosts: 'Important costs',
+        productCost: 'Product price',
+        shippingFee: 'Delivery fee',
+        freeShippingMinimum: 'Free delivery minimum',
+        costCardNote: 'These are the three most important numbers for this order.',
         whatItIs: 'What it is',
         notDetected: 'Product name was not detected',
         whereFrom: 'Where it comes from',
@@ -306,6 +316,25 @@ export default function OrderShell() {
               {order.store_label ?? copy.store} | {formatAgorot(order.product_price_agorot)}
             </Text>
           </View>
+        </View>
+
+        <View style={styles.costCard}>
+          <Text style={styles.costKicker}>{copy.importantCosts}</Text>
+          <View style={styles.costGrid}>
+            <View style={styles.costItem}>
+              <Text style={styles.costLabel}>{copy.productCost}</Text>
+              <Text style={styles.costValue}>{formatAgorot(order.product_price_agorot)}</Text>
+            </View>
+            <View style={styles.costItem}>
+              <Text style={styles.costLabel}>{copy.shippingFee}</Text>
+              <Text style={styles.costValue}>{formatAgorot(estimatedShipping)}</Text>
+            </View>
+            <View style={styles.costItem}>
+              <Text style={styles.costLabel}>{copy.freeShippingMinimum}</Text>
+              <Text style={styles.costValue}>{formatAgorot(freeShippingThreshold)}</Text>
+            </View>
+          </View>
+          <Text style={styles.costNote}>{copy.costCardNote}</Text>
         </View>
 
         <View style={styles.timerCard}>
@@ -498,6 +527,48 @@ const styles = StyleSheet.create({
     borderColor: colors.brBr,
     borderRadius: radii.lg,
     backgroundColor: colors.white,
+  },
+  costCard: {
+    gap: 12,
+    padding: 16,
+    borderRadius: radii.lg,
+    backgroundColor: colors.navy,
+  },
+  costKicker: {
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 11,
+    letterSpacing: 1.2,
+    color: colors.s1,
+    textTransform: 'uppercase',
+  },
+  costGrid: {
+    gap: 10,
+  },
+  costItem: {
+    gap: 6,
+    padding: 14,
+    borderRadius: radii.md,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+  },
+  costLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 11,
+    letterSpacing: 0.8,
+    color: 'rgba(255,255,255,0.7)',
+    textTransform: 'uppercase',
+  },
+  costValue: {
+    fontFamily: fontFamily.display,
+    fontSize: 24,
+    color: colors.white,
+  },
+  costNote: {
+    fontFamily: fontFamily.body,
+    fontSize: 12,
+    lineHeight: 18,
+    color: 'rgba(255,255,255,0.78)',
   },
   kicker: {
     fontFamily: fontFamily.bodySemi,

@@ -124,6 +124,10 @@ export default function NewOrder() {
         whatItIs: 'מה המוצר',
         whereFrom: 'מאיפה זה מגיע',
         productCost: 'מחיר המוצר',
+        importantCosts: 'עלויות חשובות',
+        shippingFee: 'דמי משלוח',
+        freeShippingMinimum: 'סכום למשלוח חינם',
+        costCardNote: 'אלה שלושת המספרים הכי חשובים להזמנה: מחיר מוצר, משלוח, וסף משלוח חינם.',
         freeDeliveryFrom: 'משלוח חינם מ',
         missingFreeDelivery: 'חסר למשלוח חינם',
         neighborsToShare: 'שכנים לשיתוף הקישור',
@@ -201,6 +205,10 @@ export default function NewOrder() {
         whatItIs: 'What it is',
         whereFrom: 'Where it comes from',
         productCost: 'Product cost',
+        importantCosts: 'Important costs',
+        shippingFee: 'Delivery fee',
+        freeShippingMinimum: 'Free delivery minimum',
+        costCardNote: 'These are the three most important numbers: product price, delivery fee, and free delivery minimum.',
         freeDeliveryFrom: 'Free delivery from',
         missingFreeDelivery: 'Missing for free delivery',
         neighborsToShare: 'Neighbors to share link',
@@ -518,6 +526,25 @@ export default function NewOrder() {
           {insights?.imageUrl ? <Image source={{ uri: insights.imageUrl }} style={styles.productImage} /> : null}
         </View>
 
+        <View style={styles.costCard}>
+          <Text style={styles.kicker}>{copy.importantCosts}</Text>
+          <View style={styles.costGrid}>
+            <View style={styles.costItem}>
+              <Text style={styles.costLabel}>{copy.productCost}</Text>
+              <Text style={styles.costValue}>{productCostLabel}</Text>
+            </View>
+            <View style={styles.costItem}>
+              <Text style={styles.costLabel}>{copy.shippingFee}</Text>
+              <Text style={styles.costValue}>{formatAgorot(deliveryFeeAgorot)}</Text>
+            </View>
+            <View style={styles.costItem}>
+              <Text style={styles.costLabel}>{copy.freeShippingMinimum}</Text>
+              <Text style={styles.costValue}>{freeShippingThresholdLabel}</Text>
+            </View>
+          </View>
+          <Text style={styles.costNote}>{copy.costCardNote}</Text>
+        </View>
+
         <View style={styles.finderCard}>
           <Text style={styles.kicker}>{copy.finderResult}</Text>
           <Text style={styles.finderTitle}>{copy.finderTitle}</Text>
@@ -795,6 +822,42 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     backgroundColor: colors.white,
     ...shadow.card,
+  },
+  costCard: {
+    gap: 12,
+    padding: 16,
+    borderRadius: radii.lg,
+    backgroundColor: colors.navy,
+    ...shadow.cta,
+  },
+  costGrid: {
+    gap: 10,
+  },
+  costItem: {
+    gap: 6,
+    padding: 14,
+    borderRadius: radii.md,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+  },
+  costLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 11,
+    letterSpacing: 0.8,
+    color: 'rgba(255,255,255,0.7)',
+    textTransform: 'uppercase',
+  },
+  costValue: {
+    fontFamily: fontFamily.display,
+    fontSize: 24,
+    color: colors.white,
+  },
+  costNote: {
+    fontFamily: fontFamily.body,
+    fontSize: 12,
+    lineHeight: 18,
+    color: 'rgba(255,255,255,0.78)',
   },
   finderTitle: {
     fontFamily: fontFamily.display,
