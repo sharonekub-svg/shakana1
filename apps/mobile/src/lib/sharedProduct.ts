@@ -35,6 +35,19 @@ const TRACKER_KEYS = new Set([
   'gclid',
   'fbclid',
   'igshid',
+  '_encoding',
+  'content-id',
+  'dib',
+  'dib_tag',
+  'keywords',
+  'pd_rd_r',
+  'pd_rd_w',
+  'pd_rd_wg',
+  'qid',
+  'ref',
+  's',
+  'sbo',
+  'sr',
   'utm_source',
   'utm_medium',
   'utm_campaign',
@@ -57,6 +70,15 @@ type BrandConfig = {
 };
 
 const BRAND_CONFIGS: BrandConfig[] = [
+  {
+    source: 'amazon',
+    brandName: 'Amazon',
+    displayName: 'Amazon',
+    hostTest: (hostname) => /(?:^|\.)amazon\./i.test(normalizeHost(hostname)),
+    productPathTest: (url) => /\/dp\/[A-Z0-9]{10}(?:\/|$)/i.test(url.pathname),
+    homeDeliveryFeeAgorot: DEFAULT_HOME_DELIVERY_FEE_AGOROT,
+    freeShippingThresholdAgorot: DEFAULT_FREE_SHIPPING_THRESHOLD_AGOROT,
+  },
   {
     source: 'zara',
     brandName: 'Zara',
@@ -91,6 +113,7 @@ function labelFromHostname(hostname: string): string {
   const brandPart = parts.length > 2 ? parts[parts.length - 3] : parts[0];
   const raw = brandPart || host;
   const known: Record<string, string> = {
+    amazon: 'Amazon',
     hm: 'H&M',
     zara: 'Zara',
   };
@@ -133,6 +156,20 @@ function likelyProductUrl(raw: string): URL | null {
 
 function stripTrackingParams(url: URL): URL {
   const cleaned = new URL(url.toString());
+  const brand = getBrandConfig(cleaned.hostname);
+  if (brand?.source === 'amazon') {
+    const asin = cleaned.pathname.match(/\/dp\/([A-Z0-9]{10})/i)?.[1];
+    if (asin) {
+      const parts = cleaned.pathname.split('/').filter(Boolean);
+      const dpIndex = parts.findIndex((part) => part.toLowerCase() === 'dp');
+      const titleParts = dpIndex > 0 ? parts.slice(0, dpIndex) : [];
+      cleaned.pathname = `/${titleParts.join('/')}/dp/${asin}`;
+    }
+    cleaned.search = '';
+    cleaned.hash = '';
+    return cleaned;
+  }
+
   const keysToDelete: string[] = [];
   cleaned.searchParams.forEach((_, key) => {
     if (key.startsWith('utm_') || TRACKER_KEYS.has(key)) keysToDelete.push(key);
@@ -175,21 +212,42 @@ function extractUrl(text: string): string | null {
 }
 
 function humanizeSlug(slug: string): string {
-  const cleaned = slug
+  const decoded = (() => {
+    try {
+      return decodeURIComponent(slug);
+    } catch {
+      return slug;
+    }
+  })();
+  const cleaned = decoded
     .replace(/\.(html?|aspx?)$/i, '')
     .replace(/[-_]+/g, ' ')
     .replace(/\b\d{3,}\b/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
   if (!cleaned) return 'Product item';
-  return cleaned
+  const title = cleaned
     .split(' ')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .map((word) => (/^[A-Z0-9]{2,}$/.test(word) ? word : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()))
     .join(' ');
+  return polishInferredTitle(title);
+}
+
+function polishInferredTitle(title: string): string {
+  return title
+    .replace(/\bASUS\s+Strix\b/i, 'ASUS ROG Strix')
+    .replace(/\bAsus\b/g, 'ASUS')
+    .replace(/\bRog\b/g, 'ROG')
+    .trim();
 }
 
 function inferTitleFromUrl(url: URL): string {
   const parts = url.pathname.split('/').filter(Boolean);
+  const amazonDpIndex = parts.findIndex((part) => part.toLowerCase() === 'dp');
+  if (amazonDpIndex > 0) {
+    const titleSlug = parts[amazonDpIndex - 1] ?? '';
+    return humanizeSlug(titleSlug);
+  }
   const slug = parts[parts.length - 1] ?? '';
   const title = humanizeSlug(slug);
   return title === 'Item' ? 'Product item' : title;
@@ -265,9 +323,10 @@ function chooseTitle(html: string, fallback: string): string {
   const raw = ldTitle ?? ogTitle ?? twitterTitle ?? headTitleMatch?.[1] ?? fallback;
   const stripped = stripTags(raw)
     .replace(/\s+\|\s+[^|]+$/i, '')
-    .replace(/\s+-\s+(ZARA|H&M).*$/i, '')
+    .replace(/\s+-\s+(Amazon|ZARA|H&M).*$/i, '')
+    .replace(/^Amazon\.[a-z.]+:\s*/i, '')
     .trim();
-  return stripped || fallback;
+  return polishInferredTitle(stripped || fallback);
 }
 
 function chooseImage(html: string): string | null {
@@ -285,9 +344,11 @@ function parseMoneyToAgorot(raw: string | number | null | undefined): number | n
   if (raw == null) return null;
   const text = String(raw).replace(/[^\d.,-]/g, '');
   if (!text) return null;
-  const normalized = text.includes(',') && text.includes('.')
-    ? text.replace(/,/g, '')
-    : text.replace(',', '.');
+  const normalized = (() => {
+    if (text.includes(',') && text.includes('.')) return text.replace(/,/g, '');
+    if (text.includes(',') && /^\d{1,3}(?:,\d{3})+(?:\.\d+)?$/.test(text)) return text.replace(/,/g, '');
+    return text.replace(',', '.');
+  })();
   const value = Number(normalized);
   if (!Number.isFinite(value) || value <= 0) return null;
   return Math.round(value * 100);
@@ -326,12 +387,39 @@ function choosePriceAgorot(html: string): number | null {
   const parsedMeta = parseMoneyToAgorot(metaPrice);
   if (parsedMeta) return parsedMeta;
 
+  const amazonPricePatterns = [
+    /class=["'][^"']*a-offscreen[^"']*["'][^>]*>\s*(?<price>[$₪€£]?\s?\d[\d,.]*)\s*</i,
+    /id=["']priceblock_[^"']+["'][^>]*>\s*(?<price>[$₪€£]?\s?\d[\d,.]*)\s*</i,
+    /"displayPrice"\s*:\s*"(?<price>[^"]*\d[^"]*)"/i,
+  ];
+  for (const pattern of amazonPricePatterns) {
+    const parsed = parseMoneyToAgorot(html.match(pattern)?.groups?.price ?? null);
+    if (parsed) return parsed;
+  }
+
   const structuredMinorUnitMatch = html.match(/"price"\s*:\s*"?(?<price>\d{4,7})"?/i);
   const minorUnits = parseStoreMinorUnitsToAgorot(structuredMinorUnitMatch?.groups?.price ?? null);
   if (minorUnits) return minorUnits;
 
   const match = html.match(/"price"\s*:\s*"?(?<price>\d+(?:[.,]\d+)?)"?/i);
   return parseMoneyToAgorot(match?.groups?.price ?? null);
+}
+
+function chooseDeliveryFeeAgorot(html: string, fallbackAgorot: number): number {
+  const text = stripTags(html).replace(/\s+/g, ' ').slice(0, 20000);
+  if (/\bfree\s+(?:delivery|shipping)\b/i.test(text) || /משלוח\s+חינם/i.test(text)) return 0;
+
+  const shippingPatterns = [
+    /(?:shipping|delivery)[^$₪€£]{0,80}(?<price>[$₪€£]\s?\d[\d,.]*)/i,
+    /(?<price>[$₪€£]\s?\d[\d,.]*)[^.]{0,80}(?:shipping|delivery)/i,
+    /משלוח[^₪]{0,80}(?<price>₪\s?\d[\d,.]*)/i,
+  ];
+  for (const pattern of shippingPatterns) {
+    const parsed = parseMoneyToAgorot(text.match(pattern)?.groups?.price ?? null);
+    if (parsed != null) return parsed;
+  }
+
+  return fallbackAgorot;
 }
 
 function chooseOriginalPriceAgorot(html: string): number | null {
@@ -410,9 +498,10 @@ export function summarizeSharedProduct(draft: SharedProductDraft, html?: string 
   const originalPriceAgorot = html ? chooseOriginalPriceAgorot(html) : null;
   const brandName = html ? readBrand(html) : null;
   const promotionText = html ? choosePromotionText(html) : null;
-  const deliveryFeeAgorot = brandConfig && priceAgorot && priceAgorot >= brandConfig.freeShippingThresholdAgorot
+  const fallbackDeliveryFeeAgorot = brandConfig && priceAgorot && priceAgorot >= brandConfig.freeShippingThresholdAgorot
     ? 0
     : (brandConfig?.homeDeliveryFeeAgorot ?? DEFAULT_HOME_DELIVERY_FEE_AGOROT);
+  const deliveryFeeAgorot = html ? chooseDeliveryFeeAgorot(html, fallbackDeliveryFeeAgorot) : fallbackDeliveryFeeAgorot;
   const freeShippingThresholdAgorot = brandConfig?.freeShippingThresholdAgorot ?? DEFAULT_FREE_SHIPPING_THRESHOLD_AGOROT;
   const amountMissingForFreeShippingAgorot = priceAgorot == null ? null : Math.max(0, freeShippingThresholdAgorot - priceAgorot);
   const recommendedParticipants = 3;

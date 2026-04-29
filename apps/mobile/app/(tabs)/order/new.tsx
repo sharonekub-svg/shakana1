@@ -87,6 +87,11 @@ export default function NewOrder() {
         addThreshold: 'הוסף סכום למשלוח חינם',
         unknownThreshold: 'לא ידוע עד שמוסיפים סכום',
         noDeal: 'לא זוהה מבצע כרגע',
+        linkNotWorking: 'הלינק לא עובד?',
+        closeHelp: 'סגור עזרה',
+        linkHelpTitle: 'אפשר להמשיך גם בלי זיהוי אוטומטי',
+        linkHelpBody:
+          'אם Amazon או חנות אחרת חסמה מחיר, תמונה או משלוח, מלא את שם המוצר, המחיר, החנות והמשלוח בשדות למעלה. ההזמנה והשיתוף עדיין יעבדו רגיל.',
         findProductTitle: 'מצא מוצר, העתק קישור וחזור לכאן.',
         findProductBody:
           'זה המסלול הבטוח והפשוט: Shakana פותחת את החנות, אתה בוחר את הפריט המדויק, מעתיק את הקישור של דף המוצר, ואז Shakana קוראת מידע ציבורי ומשאירה שדות ידניים אם החנות חוסמת פרטים.',
@@ -136,7 +141,7 @@ export default function NewOrder() {
         hideCart: 'הסתר סל',
         oneItem: 'פריט אחד',
         shoppingCart: 'סל קניות',
-        manualProduct: 'מוצר ידני',
+        manualProduct: 'מוצר שלא זוהה אוטומטית',
         chooseStore: 'בחר חנות',
         productPrice: 'מחיר מוצר',
         shippingEstimate: 'משלוח משוער',
@@ -159,6 +164,11 @@ export default function NewOrder() {
         addThreshold: 'Add store threshold',
         unknownThreshold: 'Unknown until threshold is added',
         noDeal: 'No deal detected yet',
+        linkNotWorking: 'Link not working?',
+        closeHelp: 'Close help',
+        linkHelpTitle: 'You can continue without automatic detection',
+        linkHelpBody:
+          'If Amazon or another store blocks price, image, or shipping details, fill in product name, price, store, and shipping in the fields above. The order and invite link will still work.',
         findProductTitle: 'Find a product, copy the URL, then come back.',
         findProductBody:
           'This is the safe practical flow: Shakana opens the store, you choose the exact item, copy the product page link, then Shakana reads public product data and keeps manual fields ready if the store blocks details.',
@@ -241,6 +251,7 @@ export default function NewOrder() {
   const [freeShippingThreshold, setFreeShippingThreshold] = useState('199');
   const [category, setCategory] = useState(DEFAULT_CATEGORY);
   const [cartOpen, setCartOpen] = useState(false);
+  const [linkHelpOpen, setLinkHelpOpen] = useState(false);
   const [insights, setInsights] = useState<SharedProductInsights | null>(null);
   const [insightsLoading, setInsightsLoading] = useState(Boolean(initialDraft));
   const [linkMessage, setLinkMessage] = useState('');
@@ -541,6 +552,15 @@ export default function NewOrder() {
             <Text style={styles.dealText}>{dealLabel}</Text>
           </View>
           <Text style={styles.finderNote}>{copy.finderNote}</Text>
+          <Pressable style={styles.linkHelpButton} onPress={() => setLinkHelpOpen((open) => !open)}>
+            <Text style={styles.linkHelpButtonText}>{linkHelpOpen ? copy.closeHelp : copy.linkNotWorking}</Text>
+          </Pressable>
+          {linkHelpOpen ? (
+            <View style={styles.linkHelpCard}>
+              <Text style={styles.linkHelpTitle}>{copy.linkHelpTitle}</Text>
+              <Text style={styles.linkHelpBody}>{copy.linkHelpBody}</Text>
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.planCard}>
@@ -822,6 +842,37 @@ const styles = StyleSheet.create({
     color: colors.acc,
   },
   finderNote: {
+    fontFamily: fontFamily.body,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.mu,
+  },
+  linkHelpButton: {
+    minHeight: 44,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.navy,
+  },
+  linkHelpButtonText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
+    color: colors.white,
+  },
+  linkHelpCard: {
+    gap: 6,
+    padding: 12,
+    borderRadius: radii.md,
+    backgroundColor: colors.cardSoft,
+    borderWidth: 1,
+    borderColor: colors.br,
+  },
+  linkHelpTitle: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+    color: colors.tx,
+  },
+  linkHelpBody: {
     fontFamily: fontFamily.body,
     fontSize: 12,
     lineHeight: 18,

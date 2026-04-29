@@ -180,6 +180,50 @@ describe('sharedProduct', () => {
     expect(insights.promotionText).toBe('Buy 1 get 1');
   });
 
+  it('cleans Amazon links and infers the product name from the title slug', () => {
+    const draft = parseSharedProduct({
+      url: 'https://www.amazon.com/-/he/%D7%9E%D7%97%D7%A9%D7%91-%D7%A0%D7%99%D7%99%D7%93-%D7%92%D7%99%D7%99%D7%9E%D7%99%D7%A0%D7%92-ASUS-Strix/dp/B0DZZWMB2L/ref=sr_1_1?_encoding=UTF8&keywords=gaming&qid=1777482031&sr=8-1&th=1',
+    });
+
+    expect(draft).toEqual({
+      url: 'https://www.amazon.com/-/he/%D7%9E%D7%97%D7%A9%D7%91-%D7%A0%D7%99%D7%99%D7%93-%D7%92%D7%99%D7%99%D7%9E%D7%99%D7%A0%D7%92-ASUS-Strix/dp/B0DZZWMB2L',
+      title: 'מחשב נייד גיימינג ASUS ROG Strix',
+      source: 'amazon',
+      storeLabel: 'Amazon',
+      rawText: undefined,
+    });
+  });
+
+  it('reads Amazon-style title, price, delivery, and promotion hints', () => {
+    const draft = {
+      url: 'https://www.amazon.com/-/he/%D7%9E%D7%97%D7%A9%D7%91-%D7%A0%D7%99%D7%99%D7%93-%D7%92%D7%99%D7%99%D7%9E%D7%99%D7%A0%D7%92-ASUS-Strix/dp/B0DZZWMB2L',
+      title: 'מחשב נייד גיימינג ASUS Strix',
+      source: 'amazon' as const,
+      storeLabel: 'Amazon',
+    };
+
+    const insights = summarizeSharedProduct(draft, `
+      <html>
+        <head>
+          <meta property="og:title" content="ASUS ROG Strix Gaming Laptop - Amazon.com" />
+          <meta property="og:image" content="https://example.com/rog.jpg" />
+          <meta name="description" content="Limited time sale on gaming laptops" />
+        </head>
+        <body>
+          <span class="a-offscreen">$1,249.99</span>
+          <div>FREE delivery Thursday</div>
+        </body>
+      </html>
+    `);
+
+    expect(insights.sourceLabel).toBe('Amazon');
+    expect(insights.title).toBe('ASUS ROG Strix Gaming Laptop');
+    expect(insights.imageUrl).toBe('https://example.com/rog.jpg');
+    expect(insights.priceAgorot).toBe(124999);
+    expect(insights.deliveryFeeAgorot).toBe(0);
+    expect(insights.promotionText).toBe('Sale');
+  });
+
   it('rejects Zara links that are not product pages', () => {
     expect(
       parseSharedProduct({

@@ -17,5 +17,5 @@ export const env = {
   posthogKey: process.env.EXPO_PUBLIC_POSTHOG_KEY ?? '',
   posthogHost: process.env.EXPO_PUBLIC_POSTHOG_HOST ?? 'https://eu.i.posthog.com',
   appScheme: process.env.EXPO_PUBLIC_APP_SCHEME ?? 'shakana',
-  universalHost: process.env.EXPO_PUBLIC_UNIVERSAL_LINK_HOST ?? 'shakana.app',
+  universalHost: process.env.EXPO_PUBLIC_UNIVERSAL_LINK_HOST ?? 'shakana1.vercel.app',
 } as const;

@@ -13,14 +13,16 @@ import { track } from '@/lib/posthog';
 import { useLocale } from '@/i18n/locale';
 
 function OrdersMark() {
+  const blue = '#2563EB';
+  const blueLight = '#DBEAFE';
   return (
     <Svg width={46} height={46} viewBox="0 0 46 46" fill="none">
-      <Rect x="2" y="2" width="42" height="42" rx="16" fill={colors.navy} />
+      <Rect x="2" y="2" width="42" height="42" rx="16" fill={blue} />
       <Path d="M14 18h18l-2 11H17l-3-15h-4" stroke={colors.white} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M19 14c1.2-3 6.8-3 8 0" stroke={colors.s1} strokeWidth={2.2} strokeLinecap="round" />
-      <Circle cx="19" cy="34" r="2.2" fill={colors.s1} />
-      <Circle cx="29" cy="34" r="2.2" fill={colors.s1} />
-      <Path d="M18 23h10" stroke={colors.s1} strokeWidth={2} strokeLinecap="round" />
+      <Path d="M19 14c1.2-3 6.8-3 8 0" stroke={blueLight} strokeWidth={2.2} strokeLinecap="round" />
+      <Circle cx="19" cy="34" r="2.2" fill={blueLight} />
+      <Circle cx="29" cy="34" r="2.2" fill={blueLight} />
+      <Path d="M18 23h10" stroke={blueLight} strokeWidth={2} strokeLinecap="round" />
     </Svg>
   );
 }
@@ -116,9 +118,9 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.navy,
+    backgroundColor: '#DBEAFE',
     borderWidth: 1,
-    borderColor: colors.tx,
+    borderColor: '#93C5FD',
     ...shadow.cta,
   },
   kicker: {
