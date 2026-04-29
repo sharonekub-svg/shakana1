@@ -174,6 +174,9 @@ describe('sharedProduct', () => {
     expect(insights.title).toBe('Linen Shirt Blue');
     expect(insights.imageUrl).toBe('https://example.com/linen.jpg');
     expect(insights.priceAgorot).toBe(14990);
+    expect(insights.freeShippingThresholdAgorot).toBe(19900);
+    expect(insights.amountMissingForFreeShippingAgorot).toBe(4910);
+    expect(insights.neighborsNeeded).toBe(2);
     expect(insights.promotionText).toBe('Buy 1 get 1');
   });
 

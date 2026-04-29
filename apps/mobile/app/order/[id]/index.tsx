@@ -112,6 +112,7 @@ export default function OrderShell() {
   const freeShippingGap = Math.max(0, freeShippingThreshold - sharedOrderTotal);
   const shippingSaved = Math.max(0, estimatedShipping * Math.max(0, participantCount - 1));
   const perPerson = Math.ceil((order.product_price_agorot + estimatedShipping / Math.max(1, participantCount || order.max_participants)));
+  const neighborsToInvite = Math.max(0, order.max_participants - participantCount);
   const closesAtMs = order.closes_at ? new Date(order.closes_at).getTime() : null;
   const editLocksAtMs = order.edit_locks_at ? new Date(order.edit_locks_at).getTime() : null;
   const remainingMs = closesAtMs ? Math.max(0, closesAtMs - now) : null;
@@ -210,13 +211,17 @@ export default function OrderShell() {
         </View>
 
         <View style={styles.pickupCard}>
-          <Text style={styles.kicker}>Smart suggestions</Text>
+          <Text style={styles.kicker}>Product finder summary</Text>
+          <Text style={styles.pickupBody}>What it is: {order.product_title ?? 'Product name was not detected'}</Text>
+          <Text style={styles.pickupBody}>Where it comes from: {order.store_label ?? 'Store detected from link'}</Text>
           <Text style={styles.pickupBody}>Product price detected: {formatAgorot(order.product_price_agorot)}</Text>
           <Text style={styles.pickupBody}>Estimated shipping: {formatAgorot(estimatedShipping)}</Text>
+          <Text style={styles.pickupBody}>Whole order needs for free delivery: {formatAgorot(freeShippingThreshold)}</Text>
           <Text style={styles.pickupBody}>Approx. each right now: {formatAgorot(perPerson)}</Text>
           <Text style={styles.pickupBody}>Shipping saved together: {formatAgorot(shippingSaved)}</Text>
           <Text style={styles.pickupBody}>Missing for free shipping by participants: {formatAgorot(freeShippingGap)}</Text>
           <Text style={styles.pickupBody}>Missing for free shipping by cart total: {formatAgorot(cartFreeShippingGap)}</Text>
+          <Text style={styles.pickupBody}>Neighbors who can still join from share link: {neighborsToInvite}</Text>
           <Text style={styles.pickupNote}>
             Deal detection checks public product text for 1+1, sale, and similar promotions. If the store blocks details,
             users can still add them manually.

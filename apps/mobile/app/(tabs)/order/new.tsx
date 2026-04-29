@@ -90,6 +90,15 @@ export default function NewOrder() {
   const freeShippingGapAgorot = Math.max(0, freeShippingThresholdAgorot - sharedOrderTotalAgorot);
   const shippingSavedAgorot = Math.max(0, deliveryFeeAgorot * Math.max(0, participantCount - 1));
   const perPersonAgorot = Math.ceil((priceAgorot + deliveryFeeAgorot / participantCount));
+  const neighborsToInvite = Math.max(0, participantCount - 1);
+  const sourceLabel = insights?.sourceLabel || storeLabel || currentDraft?.storeLabel || 'Detected after link paste';
+  const productName = insights?.title || title || currentDraft?.title || 'Waiting for product link';
+  const productCostLabel = priceAgorot > 0 ? formatAgorot(priceAgorot) : 'Add price manually';
+  const freeShippingThresholdLabel =
+    freeShippingThresholdAgorot > 0 ? formatAgorot(freeShippingThresholdAgorot) : 'Add store threshold';
+  const freeShippingGapLabel =
+    freeShippingThresholdAgorot > 0 ? formatAgorot(freeShippingGapAgorot) : 'Unknown until threshold is added';
+  const dealLabel = insights?.promotionText || insights?.dealSummary || 'No deal detected yet';
   const valid =
     urlCheck.success &&
     storeLabel.trim().length > 1 &&
@@ -316,6 +325,44 @@ export default function NewOrder() {
             {insightsLoading ? <ActivityIndicator color={colors.acc} /> : null}
           </View>
           {insights?.imageUrl ? <Image source={{ uri: insights.imageUrl }} style={styles.productImage} /> : null}
+        </View>
+
+        <View style={styles.finderCard}>
+          <Text style={styles.kicker}>Product finder result</Text>
+          <Text style={styles.finderTitle}>What Shakana found from the link</Text>
+          <View style={styles.finderGrid}>
+            <View style={styles.finderCell}>
+              <Text style={styles.finderLabel}>What it is</Text>
+              <Text style={styles.finderValue}>{productName}</Text>
+            </View>
+            <View style={styles.finderCell}>
+              <Text style={styles.finderLabel}>Where it comes from</Text>
+              <Text style={styles.finderValue}>{sourceLabel}</Text>
+            </View>
+            <View style={styles.finderCell}>
+              <Text style={styles.finderLabel}>Product cost</Text>
+              <Text style={styles.finderValue}>{productCostLabel}</Text>
+            </View>
+            <View style={styles.finderCell}>
+              <Text style={styles.finderLabel}>Free delivery from</Text>
+              <Text style={styles.finderValue}>{freeShippingThresholdLabel}</Text>
+            </View>
+            <View style={styles.finderCell}>
+              <Text style={styles.finderLabel}>Missing for free delivery</Text>
+              <Text style={styles.finderValue}>{freeShippingGapLabel}</Text>
+            </View>
+            <View style={styles.finderCell}>
+              <Text style={styles.finderLabel}>Neighbors to share link</Text>
+              <Text style={styles.finderValue}>{neighborsToInvite}</Text>
+            </View>
+          </View>
+          <View style={styles.dealBox}>
+            <Text style={styles.finderLabel}>Deal / 1+1 check</Text>
+            <Text style={styles.dealText}>{dealLabel}</Text>
+          </View>
+          <Text style={styles.finderNote}>
+            If the store blocks public details, Shakana keeps the manual fields above so the order can still continue.
+          </Text>
         </View>
 
         <View style={styles.planCard}>
@@ -548,6 +595,66 @@ const styles = StyleSheet.create({
     height: 104,
     borderRadius: radii.md,
     backgroundColor: colors.s1,
+  },
+  finderCard: {
+    gap: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.brBr,
+    borderRadius: radii.lg,
+    backgroundColor: colors.white,
+    ...shadow.card,
+  },
+  finderTitle: {
+    fontFamily: fontFamily.display,
+    fontSize: 21,
+    color: colors.tx,
+  },
+  finderGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  finderCell: {
+    width: '48%',
+    minHeight: 86,
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: radii.md,
+    backgroundColor: colors.cardSoft,
+    borderWidth: 1,
+    borderColor: colors.br,
+  },
+  finderLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 10,
+    letterSpacing: 0.7,
+    color: colors.mu,
+    textTransform: 'uppercase',
+  },
+  finderValue: {
+    marginTop: 8,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.tx,
+  },
+  dealBox: {
+    gap: 6,
+    padding: 12,
+    borderRadius: radii.md,
+    backgroundColor: colors.accLight,
+  },
+  dealText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+    color: colors.acc,
+  },
+  finderNote: {
+    fontFamily: fontFamily.body,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.mu,
   },
   planCard: {
     gap: 10,
