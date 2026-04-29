@@ -27,7 +27,15 @@ type NewOrderParams = {
 };
 
 const ZARA_START_URL = 'https://www.zara.com/il/';
-const CATEGORIES = ['Fashion', 'Beauty', 'Home', 'Kids', 'Electronics', 'Grocery'];
+const CATEGORIES = [
+  { name: 'Fashion', detail: 'Sizes, colors, Zara/H&M links and 1+1 deals.' },
+  { name: 'Beauty', detail: 'Care products, refills and pharmacy-style orders.' },
+  { name: 'Home', detail: 'Home goods, kitchen, cleaning and building basics.' },
+  { name: 'Kids', detail: 'Kids clothes, school items and toy orders.' },
+  { name: 'Electronics', detail: 'Chargers, gadgets and shared delivery savings.' },
+  { name: 'Grocery', detail: 'Food and pantry orders with clear pickup.' },
+];
+const DEFAULT_CATEGORY = CATEGORIES[0]?.name ?? 'Fashion';
 const TIMER_UNITS = ['minutes', 'hours', 'days'] as const;
 
 export default function NewOrder() {
@@ -41,7 +49,7 @@ export default function NewOrder() {
   });
   const isZaraStart = params.store === 'zara' || initialDraft?.source === 'zara';
   const [url, setUrl] = useState(() => initialDraft?.url ?? '');
-  const [storeLabel, setStoreLabel] = useState(() => initialDraft?.storeLabel ?? '');
+  const [storeLabel, setStoreLabel] = useState(() => initialDraft?.storeLabel ?? (typeof params.store === 'string' ? params.store : ''));
   const [title, setTitle] = useState(() => initialDraft?.title ?? '');
   const [price, setPrice] = useState('');
   const [participants, setParticipants] = useState('3');
@@ -49,7 +57,7 @@ export default function NewOrder() {
   const [timerUnit, setTimerUnit] = useState<(typeof TIMER_UNITS)[number]>('minutes');
   const [shipping, setShipping] = useState('30');
   const [freeShippingThreshold, setFreeShippingThreshold] = useState('199');
-  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [category, setCategory] = useState(DEFAULT_CATEGORY);
   const [cartOpen, setCartOpen] = useState(false);
   const [insights, setInsights] = useState<SharedProductInsights | null>(null);
   const [insightsLoading, setInsightsLoading] = useState(Boolean(initialDraft));
@@ -187,9 +195,11 @@ export default function NewOrder() {
         {isZaraStart ? (
           <View style={styles.guideCard}>
             <Text style={styles.kicker}>ZARA</Text>
-            <Text style={styles.guideTitle}>Find a product, then use the copied link.</Text>
+            <Text style={styles.guideTitle}>Find a product, copy the URL, then come back.</Text>
             <Text style={styles.guideBody}>
-              Open Zara, go to the exact product, copy the page link, then come back and tap Use copied link.
+              This is the safe practical flow: Shakana opens Zara, you choose the exact item, copy the page link from the
+              browser address bar/share menu, then Shakana reads the public product page and keeps manual fields ready if
+              Zara blocks details.
             </Text>
             <View style={styles.actions}>
               <Pressable style={styles.primarySmall} onPress={openZara}>
@@ -204,6 +214,15 @@ export default function NewOrder() {
         ) : null}
 
         <View style={styles.formCard}>
+          <View style={styles.stepHeader}>
+            <View style={styles.stepBadge}>
+              <Text style={styles.stepBadgeText}>1</Text>
+            </View>
+            <View style={styles.stepCopy}>
+              <Text style={styles.stepTitle}>Product link</Text>
+              <Text style={styles.stepBody}>Paste Zara, H&M, or any store link. Tracking parameters are removed automatically.</Text>
+            </View>
+          </View>
           <Field
             label={t('order.new.urlLabel')}
             value={url}
@@ -216,21 +235,42 @@ export default function NewOrder() {
           <Field label="Store" value={storeLabel} onChange={setStoreLabel} placeholder="Zara, H&M, Amazon..." />
           <Field label={t('order.new.titleLabel')} value={title} onChange={setTitle} placeholder="Zara shirt" />
           <NumField label={t('order.new.priceLabel')} value={price} onChange={setPrice} placeholder="199" />
+          <View style={styles.stepHeader}>
+            <View style={styles.stepBadge}>
+              <Text style={styles.stepBadgeText}>2</Text>
+            </View>
+            <View style={styles.stepCopy}>
+              <Text style={styles.stepTitle}>Details and category</Text>
+              <Text style={styles.stepBody}>If the link cannot reveal title, price, or image, add them manually here.</Text>
+            </View>
+          </View>
           <View style={styles.categoryBlock}>
             <Text style={styles.fieldCaption}>Category</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
               {CATEGORIES.map((item) => (
                 <Pressable
-                  key={item}
-                  style={[styles.categoryChip, category === item && styles.categoryChipActive]}
-                  onPress={() => setCategory(item)}
+                  key={item.name}
+                  style={[styles.categoryChip, category === item.name && styles.categoryChipActive]}
+                  onPress={() => setCategory(item.name)}
                 >
-                  <Text style={[styles.categoryChipText, category === item && styles.categoryChipTextActive]}>
-                    {item}
+                  <Text style={[styles.categoryChipText, category === item.name && styles.categoryChipTextActive]}>
+                    {item.name}
+                  </Text>
+                  <Text style={[styles.categoryDetail, category === item.name && styles.categoryDetailActive]}>
+                    {item.detail}
                   </Text>
                 </Pressable>
               ))}
             </ScrollView>
+          </View>
+          <View style={styles.stepHeader}>
+            <View style={styles.stepBadge}>
+              <Text style={styles.stepBadgeText}>3</Text>
+            </View>
+            <View style={styles.stepCopy}>
+              <Text style={styles.stepTitle}>Timer and shipping</Text>
+              <Text style={styles.stepBody}>People can join until the timer ends. Edits lock right before closing.</Text>
+            </View>
           </View>
           <View style={styles.timerPickRow}>
             <View style={{ flex: 1 }}>
@@ -280,6 +320,9 @@ export default function NewOrder() {
 
         <View style={styles.planCard}>
           <Text style={styles.planTitle}>Timer-based order plan</Text>
+          <Text style={styles.planIntro}>
+            No target amount: the order closes by time, then the founder gets the checkout link and buys manually.
+          </Text>
           <View style={styles.planRow}>
             <Text style={styles.planLabel}>Timer closes in</Text>
             <Text style={styles.planValue}>{timerLabel}</Text>
@@ -439,6 +482,42 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     backgroundColor: colors.white,
   },
+  stepHeader: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'flex-start',
+    padding: 12,
+    borderRadius: radii.lg,
+    backgroundColor: colors.cardSoft,
+  },
+  stepBadge: {
+    width: 30,
+    height: 30,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.navy,
+  },
+  stepBadgeText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+    color: colors.white,
+  },
+  stepCopy: {
+    flex: 1,
+    gap: 3,
+  },
+  stepTitle: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
+    color: colors.tx,
+  },
+  stepBody: {
+    fontFamily: fontFamily.body,
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.mu,
+  },
   productCard: {
     flexDirection: 'row',
     gap: 14,
@@ -482,6 +561,12 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodyBold,
     fontSize: 15,
     color: colors.tx,
+  },
+  planIntro: {
+    fontFamily: fontFamily.body,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.mu,
   },
   planRow: {
     flexDirection: 'row',
@@ -538,6 +623,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   categoryChip: {
+    width: 172,
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: radii.pill,
@@ -556,6 +642,16 @@ const styles = StyleSheet.create({
   },
   categoryChipTextActive: {
     color: colors.white,
+  },
+  categoryDetail: {
+    marginTop: 4,
+    fontFamily: fontFamily.body,
+    fontSize: 10,
+    lineHeight: 14,
+    color: colors.mu,
+  },
+  categoryDetailActive: {
+    color: 'rgba(255,255,255,0.78)',
   },
   timerPickRow: {
     flexDirection: 'row',

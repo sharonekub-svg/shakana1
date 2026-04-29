@@ -53,10 +53,7 @@ export default function AuthCallback() {
 
       const code = getFirstParam(params.code);
       if (code) {
-        const existingSession = await supabase.auth.getSession();
-        const { error } = existingSession.data.session
-          ? { error: null }
-          : await supabase.auth.exchangeCodeForSession(code);
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) {
           const fallbackSession = await supabase.auth.getSession();
           if (!fallbackSession.data.session) {

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
@@ -15,27 +16,61 @@ const FEATURED_STORES = [
   {
     id: 'hm',
     name: 'H&M',
-    note: 'Fast split checkout',
+    note: 'Fashion basics, kids, home, easy link paste',
+    category: 'Fashion',
     tone: '#F5A9C7',
     image: 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1200&q=80',
   },
   {
     id: 'zara',
     name: 'Zara',
-    note: 'Open group basket',
+    note: 'Fashion drops, manual cart, founder checkout',
+    category: 'Fashion',
     tone: '#6B4CE6',
     image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1200&q=80',
   },
   {
     id: 'ksp',
     name: 'KSP',
-    note: 'Electronic picks',
+    note: 'Electronics and gadgets for the building',
+    category: 'Electronics',
     tone: '#16112C',
     image: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=1200&q=80',
   },
+  {
+    id: 'super-pharm',
+    name: 'Super-Pharm',
+    note: 'Beauty, pharmacy and daily essentials',
+    category: 'Beauty',
+    tone: '#D6336C',
+    image: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1200&q=80',
+  },
+  {
+    id: 'iherb',
+    name: 'iHerb',
+    note: 'Supplements and wellness orders',
+    category: 'Health',
+    tone: '#2F9E44',
+    image: 'https://images.unsplash.com/photo-1512069772995-ec65ed45afd6?auto=format&fit=crop&w=1200&q=80',
+  },
+  {
+    id: 'amazon',
+    name: 'Amazon',
+    note: 'Manual link orders when the store is unknown',
+    category: 'General',
+    tone: '#F59F00',
+    image: 'https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?auto=format&fit=crop&w=1200&q=80',
+  },
 ];
 
-const CATEGORY_CHIPS = ['Fashion', 'Beauty', 'Home', 'Kids', 'Electronics', 'Grocery'];
+const CATEGORY_CHIPS = [
+  { name: 'Fashion', detail: 'Clothes, shoes, sizes and color choices.' },
+  { name: 'Beauty', detail: 'Care products, makeup and pharmacy essentials.' },
+  { name: 'Home', detail: 'Home goods, cleaning, kitchen and decor.' },
+  { name: 'Kids', detail: 'Kids clothes, toys and school basics.' },
+  { name: 'Electronics', detail: 'Gadgets, chargers and building tech buys.' },
+  { name: 'Grocery', detail: 'Food, pantry and shared delivery orders.' },
+];
 
 function HomeMark() {
   return (
@@ -51,14 +86,33 @@ function HomeMark() {
   );
 }
 
-function SearchBar({ label }: { label: string }) {
+function SearchBar({
+  label,
+  value,
+  onChange,
+  onSubmit,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+}) {
   return (
     <View style={styles.searchBar}>
       <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
         <Circle cx="11" cy="11" r="7" stroke={colors.mu} strokeWidth="2" />
         <Line x1="16.5" y1="16.5" x2="21" y2="21" stroke={colors.mu} strokeWidth="2" strokeLinecap="round" />
       </Svg>
-      <Text style={styles.searchText}>{label}</Text>
+      <TextInput
+        value={value}
+        onChangeText={onChange}
+        onSubmitEditing={onSubmit}
+        placeholder={label}
+        placeholderTextColor={colors.mu}
+        style={styles.searchInput}
+        autoCapitalize="none"
+        returnKeyType="search"
+      />
       <View style={styles.cameraPill}>
         <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
           <Rect x="4" y="7" width="16" height="11" rx="3" stroke={colors.navy} strokeWidth="2" />
@@ -140,6 +194,7 @@ function OrderCard({
 export default function BuildingTab() {
   const router = useRouter();
   const { t } = useLocale();
+  const [search, setSearch] = useState('');
   const user = useAuthStore((s) => s.user);
   const { data: profile } = useProfile(user?.id);
   const { data: orders = [] } = useUserOrders(user?.id);
@@ -148,6 +203,30 @@ export default function BuildingTab() {
   const completedOrders = orders.filter((order) => order.status === 'completed').length;
   const openOrders = orders.filter((order) => !['completed', 'cancelled'].includes(order.status));
   const topOrders = orders.slice(0, 3);
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredStores = normalizedSearch
+    ? FEATURED_STORES.filter((store) =>
+        [store.name, store.note, store.category].some((value) => value.toLowerCase().includes(normalizedSearch)),
+      )
+    : FEATURED_STORES;
+  const filteredOrders = normalizedSearch
+    ? orders.filter((order) =>
+        [order.product_title ?? '', order.product_url, order.store_label ?? ''].some((value) =>
+          value.toLowerCase().includes(normalizedSearch),
+        ),
+      )
+    : [];
+  const submitSearch = () => {
+    const firstStore = filteredStores[0];
+    const firstOrder = filteredOrders[0];
+    if (firstStore) {
+      router.push(`/order/new?store=${encodeURIComponent(firstStore.id)}`);
+    } else if (firstOrder) {
+      router.push(`/order/${firstOrder.id}`);
+    } else if (normalizedSearch) {
+      router.push(`/order/new?store=${encodeURIComponent(normalizedSearch)}`);
+    }
+  };
 
   return (
     <ScreenBase padded={false} safeEdges={['top']}>
@@ -188,16 +267,47 @@ export default function BuildingTab() {
             </ImageBackground>
           </View>
 
-          <SearchBar label={t('tabs.home.searchPlaceholder')} />
+          <SearchBar
+            label={t('tabs.home.searchPlaceholder')}
+            value={search}
+            onChange={setSearch}
+            onSubmit={submitSearch}
+          />
+
+          {normalizedSearch ? (
+            <View style={styles.searchResults}>
+              {filteredStores.slice(0, 3).map((store) => (
+                <Pressable
+                  key={store.id}
+                  style={styles.searchResult}
+                  onPress={() => router.push(`/order/new?store=${encodeURIComponent(store.id)}`)}
+                >
+                  <Text style={styles.searchResultTitle}>{store.name}</Text>
+                  <Text style={styles.searchResultBody}>{store.note}</Text>
+                </Pressable>
+              ))}
+              {filteredOrders.slice(0, 2).map((order) => (
+                <Pressable key={order.id} style={styles.searchResult} onPress={() => router.push(`/order/${order.id}`)}>
+                  <Text style={styles.searchResultTitle}>{order.product_title ?? 'Order'}</Text>
+                  <Text style={styles.searchResultBody}>{order.store_label ?? order.product_url}</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
             {CATEGORY_CHIPS.map((category, index) => (
               <Pressable
-                key={category}
+                key={category.name}
                 style={[styles.categoryChip, index === 0 && styles.categoryChipActive]}
-                onPress={() => router.push(`/order/new?store=${encodeURIComponent(category.toLowerCase())}`)}
+                onPress={() => router.push(`/order/new?store=${encodeURIComponent(category.name.toLowerCase())}`)}
               >
-                <Text style={[styles.categoryChipText, index === 0 && styles.categoryChipTextActive]}>{category}</Text>
+                <Text style={[styles.categoryChipText, index === 0 && styles.categoryChipTextActive]}>
+                  {category.name}
+                </Text>
+                <Text style={[styles.categoryChipDetail, index === 0 && styles.categoryChipDetailActive]}>
+                  {category.detail}
+                </Text>
               </Pressable>
             ))}
           </ScrollView>
@@ -208,14 +318,14 @@ export default function BuildingTab() {
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.featureRow}>
-            {FEATURED_STORES.map((store) => (
+            {filteredStores.map((store) => (
               <FeaturedCard
                 key={store.id}
                 name={store.name}
                 note={store.note}
                 image={store.image}
                 tone={store.tone}
-                onPress={() => router.push(store.id === 'zara' ? '/order/new?store=zara' : '/order/new')}
+                onPress={() => router.push(`/order/new?store=${encodeURIComponent(store.id)}`)}
               />
             ))}
           </ScrollView>
@@ -228,10 +338,6 @@ export default function BuildingTab() {
             <View style={styles.statCard}>
               <Text style={styles.statValue}>{String(completedOrders)}</Text>
               <Text style={styles.statLabel}>{t('tabs.home.completed')}</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{profile ? t('tabs.home.statusReady') : t('tabs.home.statusSetup')}</Text>
-              <Text style={styles.statLabel}>{t('tabs.home.profile')}</Text>
             </View>
           </View>
 
@@ -398,11 +504,12 @@ const styles = StyleSheet.create({
     gap: 12,
     ...shadow.card,
   },
-  searchText: {
+  searchInput: {
     flex: 1,
     fontFamily: fontFamily.body,
     fontSize: 16,
-    color: colors.mu,
+    color: colors.tx,
+    paddingVertical: 0,
   },
   cameraPill: {
     width: 38,
@@ -417,6 +524,7 @@ const styles = StyleSheet.create({
     paddingRight: 4,
   },
   categoryChip: {
+    width: 164,
     paddingHorizontal: 15,
     paddingVertical: 10,
     borderRadius: radii.pill,
@@ -435,6 +543,38 @@ const styles = StyleSheet.create({
   },
   categoryChipTextActive: {
     color: colors.white,
+  },
+  categoryChipDetail: {
+    marginTop: 4,
+    fontFamily: fontFamily.body,
+    fontSize: 10,
+    lineHeight: 14,
+    color: colors.mu,
+  },
+  categoryChipDetailActive: {
+    color: 'rgba(255,255,255,0.78)',
+  },
+  searchResults: {
+    gap: 8,
+    marginTop: -8,
+  },
+  searchResult: {
+    padding: 14,
+    borderRadius: radii.lg,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.br,
+  },
+  searchResultTitle: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+    color: colors.tx,
+  },
+  searchResultBody: {
+    marginTop: 3,
+    fontFamily: fontFamily.body,
+    fontSize: 12,
+    color: colors.mu,
   },
   sectionHeader: {
     flexDirection: 'row',

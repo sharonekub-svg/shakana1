@@ -10,12 +10,18 @@ import { useUserOrders } from '@/api/orders';
 import { useAuthStore } from '@/stores/authStore';
 import { useNotificationSettingsStore } from '@/stores/notificationSettingsStore';
 import { usePaymentSettingsStore } from '@/stores/paymentSettingsStore';
+import { useSignOut } from '@/api/auth';
+import { resetAnalytics } from '@/lib/posthog';
+import { useUiStore } from '@/stores/uiStore';
 
 export default function AccountTab() {
   const router = useRouter();
   const { language, setLanguage } = useLocale();
+  const signOut = useSignOut();
   const user = useAuthStore((s) => s.user);
+  const resetAuth = useAuthStore((s) => s.reset);
   const profile = useAuthStore((s) => s.profile);
+  const pushToast = useUiStore((s) => s.pushToast);
   const notificationSettings = useNotificationSettingsStore((s) => s.settings);
   const notificationsHydrated = useNotificationSettingsStore((s) => s.hydrated);
   const loadNotifications = useNotificationSettingsStore((s) => s.load);
@@ -103,6 +109,18 @@ export default function AccountTab() {
     if (!notificationsHydrated) void loadNotifications();
     if (!paymentsHydrated) void loadPayments();
   }, [loadNotifications, loadPayments, notificationsHydrated, paymentsHydrated]);
+
+  const onSignOut = async () => {
+    try {
+      await signOut.mutateAsync();
+      resetAnalytics();
+      resetAuth();
+      pushToast(isHebrew ? 'התנתקת מהחשבון' : 'Signed out', 'success');
+      router.replace('/(auth)/welcome');
+    } catch (error) {
+      pushToast(error instanceof Error ? error.message : isHebrew ? 'לא הצלחנו להתנתק' : 'Could not sign out', 'error');
+    }
+  };
 
   return (
     <ScreenBase padded={false}>
@@ -202,6 +220,23 @@ export default function AccountTab() {
             </Pressable>
           ))}
         </View>
+
+        <Pressable
+          style={({ pressed }) => [styles.signOutCard, pressed && styles.linkPressed]}
+          onPress={onSignOut}
+          disabled={signOut.isPending}
+        >
+          <View style={styles.linkCopy}>
+            <Text style={styles.signOutLabel}>
+              {signOut.isPending ? (isHebrew ? 'מתנתקים...' : 'Signing out...') : isHebrew ? 'התנתק' : 'Sign out'}
+            </Text>
+            <Text style={styles.linkBody}>
+              {isHebrew
+                ? 'צא מהחשבון הזה כדי להתחבר עם Gmail אחר.'
+                : 'Leave this account so another Gmail can sign in cleanly.'}
+            </Text>
+          </View>
+        </Pressable>
       </ScrollView>
     </ScreenBase>
   );
@@ -406,6 +441,22 @@ const styles = StyleSheet.create({
     color: colors.mu,
   },
   dangerText: {
+    color: colors.err,
+  },
+  signOutCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 15,
+    borderWidth: 1,
+    borderColor: colors.brBr,
+    borderRadius: radii.lg,
+    backgroundColor: colors.cardSoft,
+  },
+  signOutLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
     color: colors.err,
   },
 });

@@ -37,6 +37,7 @@ export function useVerifyOtp() {
 export function useGoogleSignIn() {
   return useMutation({
     mutationFn: async () => {
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
       const redirectTo =
         Platform.OS === 'web'
           ? `${window.location.origin}/auth-callback`
@@ -46,6 +47,10 @@ export function useGoogleSignIn() {
         options: {
           redirectTo,
           skipBrowserRedirect: true,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'select_account',
+          },
         },
       });
       if (error) throw error;

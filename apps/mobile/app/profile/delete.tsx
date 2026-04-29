@@ -8,6 +8,7 @@ import { PrimaryBtn } from '@/components/primitives/Button';
 import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { useDeleteAccount } from '@/api/account';
+import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useUiStore } from '@/stores/uiStore';
 import { resetAnalytics } from '@/lib/posthog';
@@ -23,9 +24,11 @@ export default function DeleteAccountScreen() {
 
   useEffect(() => {
     if (deleteAccount.isSuccess) {
-      resetAnalytics();
-      reset();
-      router.replace('/(auth)/welcome');
+      void supabase.auth.signOut({ scope: 'local' }).finally(() => {
+        resetAnalytics();
+        reset();
+        router.replace('/(auth)/welcome');
+      });
     }
   }, [deleteAccount.isSuccess, reset, router]);
 

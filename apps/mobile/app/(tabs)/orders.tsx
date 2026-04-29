@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 
 import { ScreenBase } from '@/components/primitives/ScreenBase';
 import { EmptyState } from '@/components/primitives/EmptyState';
+import { ShakanaMark } from '@/components/primitives/ShakanaMark';
 import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { useAuthStore } from '@/stores/authStore';
@@ -25,9 +26,14 @@ export default function OrdersTab() {
   return (
     <ScreenBase padded={false} safeEdges={['top']}>
       <View style={styles.header}>
-        <View>
-          <Text style={styles.kicker}>SHAKANA</Text>
-          <Text style={styles.title}>{t('tabs.orders.title')}</Text>
+        <View style={styles.headerBrand}>
+          <View style={styles.logoBubble}>
+            <ShakanaMark size={44} />
+          </View>
+          <View>
+            <Text style={styles.kicker}>SHAKANA</Text>
+            <Text style={styles.title}>{t('tabs.orders.title')}</Text>
+          </View>
         </View>
         <Pressable onPress={newOrder} style={styles.newBtn} accessibilityRole="button">
           <Text style={styles.newBtnText}>{t('tabs.orders.newOrder')}</Text>
@@ -55,7 +61,7 @@ export default function OrdersTab() {
             >
               <View style={styles.rowTop}>
                 <View style={styles.badge}>
-                  <Text style={styles.badgeText}>ORD</Text>
+                  <Text style={styles.badgeText}>{(item.store_label ?? 'ORD').slice(0, 3).toUpperCase()}</Text>
                 </View>
                 <View style={styles.statusPill}>
                   <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
@@ -84,6 +90,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
+  },
+  headerBrand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  logoBubble: {
+    width: 52,
+    height: 52,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.br,
+    ...shadow.card,
   },
   kicker: {
     fontFamily: fontFamily.bodyBold,

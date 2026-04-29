@@ -1,4 +1,4 @@
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { ImageBackground, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Svg, { Path } from 'react-native-svg';
 
@@ -14,6 +14,7 @@ import { useUiStore } from '@/stores/uiStore';
 
 const TERMS_URL = 'https://shakana.app/legal/terms';
 const PRIVACY_URL = 'https://shakana.app/legal/privacy';
+const STORE_STRIP = ['Zara', 'H&M', 'KSP', 'Super-Pharm', 'iHerb', 'Nike', 'Amazon'];
 
 function GoogleGlyph() {
   return (
@@ -35,7 +36,9 @@ export default function Welcome() {
   const copy = isHebrew
     ? {
         authTitle: 'כניסה או הרשמה',
-        authBody: 'אותו כפתור עובד גם למשתמש חדש וגם למשתמש קיים. אם תחזור עם אותו Gmail, נחזיר אותך לאותו חשבון.',
+        authBody: 'Google יפתח בחירת חשבון בכל פעם, כדי שתוכל לעבור בין חשבונות בלי להיתקע על החשבון הקודם.',
+        conceptTitle: 'מה Shakana עושה?',
+        conceptBody: 'מדביקים קישור למוצר, בוחרים טיימר, שכנים מצטרפים ומשלמים, ואז מייסד ההזמנה קונה ידנית מהחנות. אין סקרייפינג נסתר ואין רכישה אוטומטית.',
         google: 'המשך עם Gmail',
         phone: 'המשך עם טלפון',
         openingGoogle: 'פותחים את Google...',
@@ -43,7 +46,9 @@ export default function Welcome() {
       }
     : {
         authTitle: 'Log in or sign up',
-        authBody: 'One flow works for new and returning users. If you come back with the same Gmail, Shakana remembers the same account.',
+        authBody: 'Google now asks which account to use, so switching between accounts does not silently reuse the previous one.',
+        conceptTitle: 'What Shakana does',
+        conceptBody: 'Paste a product link, choose a timer, neighbors join and pay, then the founder buys manually from the store. No hidden scraping and no automatic external purchase.',
         google: 'Continue with Gmail',
         phone: 'Continue with phone',
         openingGoogle: 'Opening Google...',
@@ -52,13 +57,32 @@ export default function Welcome() {
 
   return (
     <ScreenBase style={styles.screen}>
-      <View style={styles.hero}>
-        <ShakanaMark size={220} />
-        <View style={styles.heroCopy}>
-          <Text style={styles.kicker}>{t('landing.brand')}</Text>
-          <Text style={styles.title}>{t('landing.title')}</Text>
-          <Text style={styles.subtitle}>{t('landing.subtitle')}</Text>
+      <ImageBackground
+        source={{ uri: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1400&q=80' }}
+        style={styles.backdrop}
+        imageStyle={styles.backdropImage}
+      >
+        <View style={styles.backdropOverlay} />
+        <View style={styles.hero}>
+          <ShakanaMark size={188} />
+          <View style={styles.heroCopy}>
+            <Text style={styles.kicker}>{t('landing.brand')}</Text>
+            <Text style={styles.title}>{t('landing.title')}</Text>
+            <Text style={styles.subtitle}>{t('landing.subtitle')}</Text>
+          </View>
         </View>
+      </ImageBackground>
+
+      <View style={styles.conceptCard}>
+        <Text style={styles.conceptTitle}>{copy.conceptTitle}</Text>
+        <Text style={styles.conceptBody}>{copy.conceptBody}</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.storeStrip}>
+          {STORE_STRIP.map((store) => (
+            <View key={store} style={styles.storePill}>
+              <Text style={styles.storePillText}>{store}</Text>
+            </View>
+          ))}
+        </ScrollView>
       </View>
 
       <View style={styles.card}>
@@ -107,12 +131,28 @@ export default function Welcome() {
 const styles = StyleSheet.create({
   screen: {
     justifyContent: 'space-between',
-    paddingVertical: 34,
-    gap: 24,
+    paddingTop: 18,
+    paddingBottom: 34,
+    gap: 18,
+  },
+  backdrop: {
+    minHeight: 330,
+    justifyContent: 'flex-end',
+    borderRadius: 34,
+    overflow: 'hidden',
+  },
+  backdropImage: {
+    borderRadius: 34,
+  },
+  backdropOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(7, 18, 37, 0.42)',
   },
   hero: {
     alignItems: 'center',
-    gap: 18,
+    gap: 16,
+    paddingVertical: 26,
+    paddingHorizontal: 16,
   },
   heroCopy: {
     alignItems: 'center',
@@ -122,22 +162,59 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodyBold,
     fontSize: 10,
     letterSpacing: 2.4,
-    color: colors.acc,
+    color: colors.s1,
   },
   title: {
     fontFamily: fontFamily.display,
     fontSize: 34,
-    color: colors.tx,
+    color: colors.white,
     letterSpacing: -0.4,
     textAlign: 'center',
   },
   subtitle: {
     fontFamily: fontFamily.body,
     fontSize: 15,
-    color: colors.mu,
-    maxWidth: 280,
+    color: 'rgba(255,255,255,0.88)',
+    maxWidth: 290,
     textAlign: 'center',
     lineHeight: 24,
+  },
+  conceptCard: {
+    backgroundColor: colors.white,
+    borderRadius: 28,
+    padding: 18,
+    borderColor: colors.br,
+    borderWidth: 1,
+    gap: 12,
+    ...shadow.card,
+  },
+  conceptTitle: {
+    fontFamily: fontFamily.display,
+    fontSize: 22,
+    color: colors.tx,
+  },
+  conceptBody: {
+    fontFamily: fontFamily.body,
+    fontSize: 14,
+    lineHeight: 22,
+    color: colors.mu,
+  },
+  storeStrip: {
+    gap: 8,
+    paddingRight: 4,
+  },
+  storePill: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: radii.pill,
+    backgroundColor: colors.accLight,
+    borderWidth: 1,
+    borderColor: colors.brBr,
+  },
+  storePillText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+    color: colors.acc,
   },
   card: {
     backgroundColor: colors.white,
