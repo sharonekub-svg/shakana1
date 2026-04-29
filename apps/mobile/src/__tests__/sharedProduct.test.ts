@@ -131,10 +131,50 @@ describe('sharedProduct', () => {
     ).toEqual({
       url: 'https://example.com/product/123',
       title: 'Product item',
-      source: 'manual',
+      source: 'example',
       storeLabel: 'Example',
       rawText: undefined,
     });
+  });
+
+  it('detects a generic store from the product link domain', () => {
+    expect(
+      parseSharedProduct({
+        url: 'https://shop.cool-brand.co.il/products/linen-shirt-blue?utm_campaign=spring',
+      }),
+    ).toEqual({
+      url: 'https://shop.cool-brand.co.il/products/linen-shirt-blue',
+      title: 'Linen Shirt Blue',
+      source: 'cool-brand',
+      storeLabel: 'Cool Brand',
+      rawText: undefined,
+    });
+  });
+
+  it('reads generic product metadata for price, image, and promotion', () => {
+    const draft = {
+      url: 'https://shop.cool-brand.co.il/products/linen-shirt-blue',
+      title: 'Linen Shirt Blue',
+      source: 'cool-brand',
+      storeLabel: 'Cool Brand',
+    };
+
+    const insights = summarizeSharedProduct(draft, `
+      <html>
+        <head>
+          <meta property="og:title" content="Linen Shirt Blue | Cool Brand" />
+          <meta property="og:image" content="https://example.com/linen.jpg" />
+          <meta property="product:price:amount" content="149.90" />
+          <meta name="description" content="Buy 1 get 1 on selected shirts" />
+        </head>
+      </html>
+    `);
+
+    expect(insights.sourceLabel).toBe('Cool Brand');
+    expect(insights.title).toBe('Linen Shirt Blue');
+    expect(insights.imageUrl).toBe('https://example.com/linen.jpg');
+    expect(insights.priceAgorot).toBe(14990);
+    expect(insights.promotionText).toBe('Buy 1 get 1');
   });
 
   it('rejects Zara links that are not product pages', () => {

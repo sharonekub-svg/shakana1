@@ -12,54 +12,30 @@ import { useUserOrders } from '@/api/orders';
 import { formatAgorot } from '@/utils/format';
 import { useLocale } from '@/i18n/locale';
 
-const FEATURED_STORES = [
+const SHOPPING_FLOWS = [
   {
-    id: 'hm',
-    name: 'H&M',
-    note: 'Fashion basics, kids, home, easy link paste',
-    category: 'Fashion',
-    tone: '#F5A9C7',
-    image: 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1200&q=80',
-  },
-  {
-    id: 'zara',
-    name: 'Zara',
-    note: 'Fashion drops, manual cart, founder checkout',
+    id: 'paste-link',
+    name: 'Paste any link',
+    note: 'Shakana detects the store from the domain automatically.',
     category: 'Fashion',
     tone: '#6B4CE6',
+    image: 'https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?auto=format&fit=crop&w=1200&q=80',
+  },
+  {
+    id: 'auto-product',
+    name: 'Auto product read',
+    note: 'Looks for product name, image, price, SKU and promotions.',
+    category: 'Product',
+    tone: '#2F9E44',
     image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1200&q=80',
   },
   {
-    id: 'ksp',
-    name: 'KSP',
-    note: 'Electronics and gadgets for the building',
-    category: 'Electronics',
+    id: 'shared-cart',
+    name: 'Shared cart',
+    note: 'Friends join by link and add their own items before the timer ends.',
+    category: 'Cart',
     tone: '#16112C',
-    image: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=1200&q=80',
-  },
-  {
-    id: 'super-pharm',
-    name: 'Super-Pharm',
-    note: 'Beauty, pharmacy and daily essentials',
-    category: 'Beauty',
-    tone: '#D6336C',
-    image: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1200&q=80',
-  },
-  {
-    id: 'iherb',
-    name: 'iHerb',
-    note: 'Supplements and wellness orders',
-    category: 'Health',
-    tone: '#2F9E44',
-    image: 'https://images.unsplash.com/photo-1512069772995-ec65ed45afd6?auto=format&fit=crop&w=1200&q=80',
-  },
-  {
-    id: 'amazon',
-    name: 'Amazon',
-    note: 'Manual link orders when the store is unknown',
-    category: 'General',
-    tone: '#F59F00',
-    image: 'https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?auto=format&fit=crop&w=1200&q=80',
+    image: 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1200&q=80',
   },
 ];
 
@@ -204,11 +180,11 @@ export default function BuildingTab() {
   const openOrders = orders.filter((order) => !['completed', 'cancelled'].includes(order.status));
   const topOrders = orders.slice(0, 3);
   const normalizedSearch = search.trim().toLowerCase();
-  const filteredStores = normalizedSearch
-    ? FEATURED_STORES.filter((store) =>
+  const filteredFlows = normalizedSearch
+    ? SHOPPING_FLOWS.filter((store) =>
         [store.name, store.note, store.category].some((value) => value.toLowerCase().includes(normalizedSearch)),
       )
-    : FEATURED_STORES;
+    : SHOPPING_FLOWS;
   const filteredOrders = normalizedSearch
     ? orders.filter((order) =>
         [order.product_title ?? '', order.product_url, order.store_label ?? ''].some((value) =>
@@ -217,14 +193,15 @@ export default function BuildingTab() {
       )
     : [];
   const submitSearch = () => {
-    const firstStore = filteredStores[0];
+    if (/^https?:\/\//i.test(search.trim())) {
+      router.push(`/order/new?url=${encodeURIComponent(search.trim())}`);
+      return;
+    }
     const firstOrder = filteredOrders[0];
-    if (firstStore) {
-      router.push(`/order/new?store=${encodeURIComponent(firstStore.id)}`);
-    } else if (firstOrder) {
+    if (firstOrder) {
       router.push(`/order/${firstOrder.id}`);
     } else if (normalizedSearch) {
-      router.push(`/order/new?store=${encodeURIComponent(normalizedSearch)}`);
+      router.push(`/order/new?title=${encodeURIComponent(search.trim())}`);
     }
   };
 
@@ -276,11 +253,11 @@ export default function BuildingTab() {
 
           {normalizedSearch ? (
             <View style={styles.searchResults}>
-              {filteredStores.slice(0, 3).map((store) => (
+              {filteredFlows.slice(0, 3).map((store) => (
                 <Pressable
                   key={store.id}
                   style={styles.searchResult}
-                  onPress={() => router.push(`/order/new?store=${encodeURIComponent(store.id)}`)}
+                  onPress={() => router.push('/order/new')}
                 >
                   <Text style={styles.searchResultTitle}>{store.name}</Text>
                   <Text style={styles.searchResultBody}>{store.note}</Text>
@@ -313,19 +290,19 @@ export default function BuildingTab() {
           </ScrollView>
 
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t('tabs.home.featured')}</Text>
-            <Text style={styles.sectionLink}>{t('tabs.home.viewAll')}</Text>
+            <Text style={styles.sectionTitle}>Smart order flow</Text>
+            <Text style={styles.sectionLink}>Any store link</Text>
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.featureRow}>
-            {filteredStores.map((store) => (
+            {filteredFlows.map((store) => (
               <FeaturedCard
                 key={store.id}
                 name={store.name}
                 note={store.note}
                 image={store.image}
                 tone={store.tone}
-                onPress={() => router.push(`/order/new?store=${encodeURIComponent(store.id)}`)}
+                onPress={() => router.push('/order/new')}
               />
             ))}
           </ScrollView>

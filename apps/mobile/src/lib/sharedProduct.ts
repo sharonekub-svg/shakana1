@@ -6,7 +6,7 @@ const STORAGE_KEY = 'shakana.pendingSharedProduct';
 export type SharedProductDraft = {
   url: string;
   title: string;
-  source: 'zara' | 'hm' | 'manual';
+  source: string;
   storeLabel: string;
   rawText?: string;
 };
@@ -47,7 +47,7 @@ const DEFAULT_HOME_DELIVERY_FEE_AGOROT = 3000;
 const DEFAULT_FREE_SHIPPING_THRESHOLD_AGOROT = 19900;
 
 type BrandConfig = {
-  source: SharedProductDraft['source'];
+  source: string;
   brandName: string;
   displayName: string;
   hostTest: (hostname: string) => boolean;
@@ -85,6 +85,28 @@ function getBrandConfig(hostname: string): BrandConfig | null {
   return BRAND_CONFIGS.find((config) => config.hostTest(hostname)) ?? null;
 }
 
+function labelFromHostname(hostname: string): string {
+  const host = normalizeHost(hostname).replace(/^m\./, '').replace(/^www2\./, '');
+  const parts = host.split('.').filter(Boolean);
+  const brandPart = parts.length > 2 ? parts[parts.length - 3] : parts[0];
+  const raw = brandPart || host;
+  const known: Record<string, string> = {
+    hm: 'H&M',
+    zara: 'Zara',
+  };
+  return known[raw] ?? raw.split(/[-_]/).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
+}
+
+function sourceFromHostname(hostname: string): string {
+  return labelFromHostname(hostname).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'store';
+}
+
+function looksLikeNonProductPage(url: URL): boolean {
+  const path = url.pathname.toLowerCase();
+  if (!path || path === '/') return true;
+  return /\/(?:cart|basket|checkout|login|account|search|category|categories|wishlist)(?:\/|$)/i.test(path);
+}
+
 function parseCleanUrl(raw: string): URL | null {
   try {
     const url = new URL(cleanRawUrl(raw));
@@ -101,6 +123,12 @@ function safeProductUrl(raw: string): URL | null {
   const brand = getBrandConfig(url.hostname);
   if (!brand) return url;
   return brand.productPathTest(url) ? url : null;
+}
+
+function likelyProductUrl(raw: string): URL | null {
+  const url = safeProductUrl(raw);
+  if (!url || looksLikeNonProductPage(url)) return null;
+  return url;
 }
 
 function stripTrackingParams(url: URL): URL {
@@ -138,10 +166,10 @@ function extractUrl(text: string): string | null {
   const candidates = getCandidateUrls(text);
   return (
     candidates.find((candidate) => {
-      const url = safeProductUrl(candidate);
+      const url = likelyProductUrl(candidate);
       return url && getBrandConfig(url.hostname);
     }) ??
-    candidates.find((candidate) => safeProductUrl(candidate)) ??
+    candidates.find((candidate) => likelyProductUrl(candidate)) ??
     null
   );
 }
@@ -235,7 +263,11 @@ function chooseTitle(html: string, fallback: string): string {
   const ldTitle = jsonLd && typeof jsonLd.name === 'string' ? jsonLd.name : null;
   const headTitleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
   const raw = ldTitle ?? ogTitle ?? twitterTitle ?? headTitleMatch?.[1] ?? fallback;
-  return stripTags(raw).replace(/\s+[-|]\s+(ZARA|H&M).*$/i, '').trim() || fallback;
+  const stripped = stripTags(raw)
+    .replace(/\s+\|\s+[^|]+$/i, '')
+    .replace(/\s+-\s+(ZARA|H&M).*$/i, '')
+    .trim();
+  return stripped || fallback;
 }
 
 function chooseImage(html: string): string | null {
@@ -440,26 +472,27 @@ export function parseSharedProduct(input: {
   ];
   const raw =
     candidates.find((candidate) => {
-      const url = safeProductUrl(candidate);
+      const url = likelyProductUrl(candidate);
       return url && getBrandConfig(url.hostname);
     }) ??
-    candidates.find((candidate) => safeProductUrl(candidate)) ??
+    candidates.find((candidate) => likelyProductUrl(candidate)) ??
     (input.text ? extractUrl(input.text) : null);
   if (!raw) return null;
 
-  const url = safeProductUrl(raw);
+  const url = likelyProductUrl(raw);
   if (!url) return null;
 
   const brandConfig = getBrandConfig(url.hostname);
   const cleanUrl = stripTrackingParams(url);
   const title = (input.title ?? '').trim() || inferTitleFromUrl(cleanUrl);
   const manualStoreLabel = (input.manualStoreLabel ?? '').trim();
+  const inferredStoreLabel = brandConfig?.displayName ?? (manualStoreLabel || labelFromHostname(cleanUrl.hostname));
 
   return {
     url: cleanUrl.toString(),
     title,
-    source: brandConfig?.source ?? 'manual',
-    storeLabel: brandConfig?.displayName ?? (manualStoreLabel || normalizeHost(cleanUrl.hostname)),
+    source: brandConfig?.source ?? sourceFromHostname(cleanUrl.hostname),
+    storeLabel: inferredStoreLabel,
     rawText: input.text ?? undefined,
   };
 }

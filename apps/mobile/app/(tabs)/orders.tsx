@@ -1,9 +1,9 @@
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
 import { ScreenBase } from '@/components/primitives/ScreenBase';
 import { EmptyState } from '@/components/primitives/EmptyState';
-import { ShakanaMark } from '@/components/primitives/ShakanaMark';
 import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { useAuthStore } from '@/stores/authStore';
@@ -11,6 +11,19 @@ import { useUserOrders } from '@/api/orders';
 import { formatAgorot } from '@/utils/format';
 import { track } from '@/lib/posthog';
 import { useLocale } from '@/i18n/locale';
+
+function OrdersMark() {
+  return (
+    <Svg width={46} height={46} viewBox="0 0 46 46" fill="none">
+      <Rect x="2" y="2" width="42" height="42" rx="16" fill={colors.navy} />
+      <Path d="M14 18h18l-2 11H17l-3-15h-4" stroke={colors.white} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M19 14c1.2-3 6.8-3 8 0" stroke={colors.s1} strokeWidth={2.2} strokeLinecap="round" />
+      <Circle cx="19" cy="34" r="2.2" fill={colors.s1} />
+      <Circle cx="29" cy="34" r="2.2" fill={colors.s1} />
+      <Path d="M18 23h10" stroke={colors.s1} strokeWidth={2} strokeLinecap="round" />
+    </Svg>
+  );
+}
 
 export default function OrdersTab() {
   const router = useRouter();
@@ -28,7 +41,7 @@ export default function OrdersTab() {
       <View style={styles.header}>
         <View style={styles.headerBrand}>
           <View style={styles.logoBubble}>
-            <ShakanaMark size={44} />
+            <OrdersMark />
           </View>
           <View>
             <Text style={styles.kicker}>SHAKANA</Text>
@@ -98,15 +111,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   logoBubble: {
-    width: 52,
-    height: 52,
-    borderRadius: 20,
+    width: 58,
+    height: 58,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.navy,
     borderWidth: 1,
-    borderColor: colors.br,
-    ...shadow.card,
+    borderColor: colors.tx,
+    ...shadow.cta,
   },
   kicker: {
     fontFamily: fontFamily.bodyBold,
