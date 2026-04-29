@@ -17,6 +17,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useLocale } from '@/i18n/locale';
 import { loadSharedProductInsights, parseSharedProduct, type SharedProductInsights } from '@/lib/sharedProduct';
 import { formatAgorot } from '@/utils/format';
+import { formatCompactDuration, timerUnitToMinutes } from '@/utils/timer';
 
 type NewOrderParams = {
   url?: string;
@@ -26,6 +27,8 @@ type NewOrderParams = {
 };
 
 const ZARA_START_URL = 'https://www.zara.com/il/';
+const CATEGORIES = ['Fashion', 'Beauty', 'Home', 'Kids', 'Electronics', 'Grocery'];
+const TIMER_UNITS = ['minutes', 'hours', 'days'] as const;
 
 export default function NewOrder() {
   const router = useRouter();
@@ -42,9 +45,12 @@ export default function NewOrder() {
   const [title, setTitle] = useState(() => initialDraft?.title ?? '');
   const [price, setPrice] = useState('');
   const [participants, setParticipants] = useState('3');
-  const [timerMinutes, setTimerMinutes] = useState('30');
+  const [timerValue, setTimerValue] = useState('30');
+  const [timerUnit, setTimerUnit] = useState<(typeof TIMER_UNITS)[number]>('minutes');
   const [shipping, setShipping] = useState('30');
   const [freeShippingThreshold, setFreeShippingThreshold] = useState('199');
+  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [cartOpen, setCartOpen] = useState(false);
   const [insights, setInsights] = useState<SharedProductInsights | null>(null);
   const [insightsLoading, setInsightsLoading] = useState(Boolean(initialDraft));
   const [linkMessage, setLinkMessage] = useState('');
@@ -66,7 +72,9 @@ export default function NewOrder() {
   const parsedPriceAgorot = Math.floor(Number(price) * 100);
   const priceAgorot = Number.isFinite(parsedPriceAgorot) && parsedPriceAgorot > 0 ? parsedPriceAgorot : insights?.priceAgorot ?? 0;
   const participantCount = Math.max(2, Math.min(12, Math.floor(Number(participants)) || 3));
-  const timerMinutesNumber = Math.max(5, Math.min(180, Math.floor(Number(timerMinutes)) || 30));
+  const rawTimerValue = Math.max(1, Math.floor(Number(timerValue)) || 30);
+  const timerMinutesNumber = Math.max(5, Math.min(10080, timerUnitToMinutes(rawTimerValue, timerUnit)));
+  const timerLabel = formatCompactDuration(timerMinutesNumber * 60_000);
   const deliveryFeeAgorot = Math.max(0, Math.floor(Number(shipping) * 100) || insights?.deliveryFeeAgorot || 0);
   const freeShippingThresholdAgorot =
     Math.max(0, Math.floor(Number(freeShippingThreshold) * 100) || insights?.freeShippingThresholdAgorot || 0);
@@ -208,7 +216,40 @@ export default function NewOrder() {
           <Field label="Store" value={storeLabel} onChange={setStoreLabel} placeholder="Zara, H&M, Amazon..." />
           <Field label={t('order.new.titleLabel')} value={title} onChange={setTitle} placeholder="Zara shirt" />
           <NumField label={t('order.new.priceLabel')} value={price} onChange={setPrice} placeholder="199" />
-          <NumField label="Timer minutes" value={timerMinutes} onChange={setTimerMinutes} placeholder="30" />
+          <View style={styles.categoryBlock}>
+            <Text style={styles.fieldCaption}>Category</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+              {CATEGORIES.map((item) => (
+                <Pressable
+                  key={item}
+                  style={[styles.categoryChip, category === item && styles.categoryChipActive]}
+                  onPress={() => setCategory(item)}
+                >
+                  <Text style={[styles.categoryChipText, category === item && styles.categoryChipTextActive]}>
+                    {item}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+          <View style={styles.timerPickRow}>
+            <View style={{ flex: 1 }}>
+              <NumField label="Timer" value={timerValue} onChange={setTimerValue} placeholder="30" />
+            </View>
+            <View style={styles.timerUnitWrap}>
+              {TIMER_UNITS.map((unit) => (
+                <Pressable
+                  key={unit}
+                  style={[styles.unitChip, timerUnit === unit && styles.unitChipActive]}
+                  onPress={() => setTimerUnit(unit)}
+                >
+                  <Text style={[styles.unitChipText, timerUnit === unit && styles.unitChipTextActive]}>
+                    {unit === 'minutes' ? 'min' : unit === 'hours' ? 'hr' : 'day'}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
           <NumField label="Max participants" value={participants} onChange={setParticipants} placeholder="3" />
           <NumField label="Estimated shipping" value={shipping} onChange={setShipping} placeholder="30" />
           <NumField
@@ -241,7 +282,7 @@ export default function NewOrder() {
           <Text style={styles.planTitle}>Timer-based order plan</Text>
           <View style={styles.planRow}>
             <Text style={styles.planLabel}>Timer closes in</Text>
-            <Text style={styles.planValue}>{timerMinutesNumber} min</Text>
+            <Text style={styles.planValue}>{timerLabel}</Text>
           </View>
           <View style={styles.planRow}>
             <Text style={styles.planLabel}>Estimated shipping</Text>
@@ -264,6 +305,23 @@ export default function NewOrder() {
             <Text style={styles.planValue}>{formatAgorot(freeShippingGapAgorot)}</Text>
           </View>
         </View>
+
+        <Pressable style={styles.drawerHandle} onPress={() => setCartOpen((open) => !open)}>
+          <Text style={styles.drawerHandleText}>{cartOpen ? 'Hide cart drawer' : 'Show cart drawer'}</Text>
+          <Text style={styles.drawerCount}>1 item</Text>
+        </Pressable>
+
+        {cartOpen ? (
+          <View style={styles.cartDrawer}>
+            <Text style={styles.kicker}>Shopping cart</Text>
+            <Text style={styles.cartTitle}>{title || 'Manual product'}</Text>
+            <Text style={styles.cartLine}>Store: {storeLabel || 'Choose store'}</Text>
+            <Text style={styles.cartLine}>Category: {category}</Text>
+            <Text style={styles.cartLine}>Product price: {formatAgorot(priceAgorot)}</Text>
+            <Text style={styles.cartLine}>Shipping estimate: {formatAgorot(deliveryFeeAgorot)}</Text>
+            <Text style={styles.cartHint}>This drawer keeps browsing clean while still showing what will be ordered.</Text>
+          </View>
+        ) : null}
 
         <View style={styles.pickupCard}>
           <Text style={styles.kicker}>Pickup</Text>
@@ -463,6 +521,114 @@ const styles = StyleSheet.create({
     color: colors.mu,
   },
   uncertainText: {
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.acc,
+  },
+  categoryBlock: {
+    gap: 8,
+  },
+  fieldCaption: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+    color: colors.tx,
+  },
+  chipRow: {
+    gap: 8,
+  },
+  categoryChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.br,
+    backgroundColor: colors.white,
+  },
+  categoryChipActive: {
+    backgroundColor: colors.navy,
+    borderColor: colors.navy,
+  },
+  categoryChipText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+    color: colors.tx,
+  },
+  categoryChipTextActive: {
+    color: colors.white,
+  },
+  timerPickRow: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'flex-end',
+  },
+  timerUnitWrap: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingBottom: 2,
+  },
+  unitChip: {
+    minHeight: 42,
+    minWidth: 48,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.br,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.cardSoft,
+  },
+  unitChipActive: {
+    backgroundColor: colors.acc,
+    borderColor: colors.acc,
+  },
+  unitChipText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 11,
+    color: colors.tx,
+  },
+  unitChipTextActive: {
+    color: colors.white,
+  },
+  drawerHandle: {
+    minHeight: 54,
+    paddingHorizontal: 16,
+    borderRadius: radii.lg,
+    backgroundColor: colors.navy,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  drawerHandleText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+    color: colors.white,
+  },
+  drawerCount: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+    color: colors.s1,
+  },
+  cartDrawer: {
+    gap: 8,
+    padding: 16,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.br,
+    backgroundColor: colors.white,
+    ...shadow.card,
+  },
+  cartTitle: {
+    fontFamily: fontFamily.display,
+    fontSize: 21,
+    color: colors.tx,
+  },
+  cartLine: {
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    color: colors.mu,
+  },
+  cartHint: {
+    marginTop: 4,
     fontFamily: fontFamily.bodySemi,
     fontSize: 12,
     lineHeight: 18,

@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
     ) {
       throw httpError(400, 'invalid_participants');
     }
-    if (!Number.isInteger(body.timerMinutes) || body.timerMinutes < 5 || body.timerMinutes > 180) {
+    if (!Number.isInteger(body.timerMinutes) || body.timerMinutes < 5 || body.timerMinutes > 10080) {
       throw httpError(400, 'invalid_timer');
     }
     if (!Number.isInteger(body.estimatedShippingAgorot) || body.estimatedShippingAgorot < 0) {

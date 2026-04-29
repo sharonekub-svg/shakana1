@@ -10,6 +10,7 @@ import { fontFamily } from '@/theme/fonts';
 import { useCloseOrder, useOrder } from '@/api/orders';
 import { useAuthStore } from '@/stores/authStore';
 import { formatAgorot } from '@/utils/format';
+import { formatCompactDuration } from '@/utils/timer';
 import type { Participant } from '@/types/domain';
 
 function ParticipantTower({
@@ -97,11 +98,7 @@ export default function OrderShell() {
   const editLocksAtMs = order.edit_locks_at ? new Date(order.edit_locks_at).getTime() : null;
   const remainingMs = closesAtMs ? Math.max(0, closesAtMs - now) : null;
   const editLocked = Boolean(editLocksAtMs && editLocksAtMs <= now);
-  const totalSeconds = remainingMs == null ? 0 : Math.ceil(remainingMs / 1000);
-  const timerLabel =
-    remainingMs == null
-      ? 'No timer'
-      : `${Math.floor(totalSeconds / 60)}:${(totalSeconds % 60).toString().padStart(2, '0')}`;
+  const timerLabel = remainingMs == null ? 'No timer' : formatCompactDuration(remainingMs);
 
   return (
     <ScreenBase style={{ paddingTop: 20, paddingBottom: 36 }}>

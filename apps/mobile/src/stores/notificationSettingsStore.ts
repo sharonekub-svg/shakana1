@@ -7,6 +7,9 @@ export type NotificationSettings = {
   orderUpdates: boolean;
   paymentReminders: boolean;
   productAlerts: boolean;
+  buildingOrderAlerts: boolean;
+  friendOrderAlerts: boolean;
+  followedFriendUsernames: string[];
 };
 
 type NotificationSettingsState = {
@@ -14,12 +17,17 @@ type NotificationSettingsState = {
   hydrated: boolean;
   load: () => Promise<void>;
   setSetting: <K extends keyof NotificationSettings>(key: K, value: NotificationSettings[K]) => Promise<void>;
+  addFriendUsername: (username: string) => Promise<void>;
+  removeFriendUsername: (username: string) => Promise<void>;
 };
 
 const DEFAULT_SETTINGS: NotificationSettings = {
   orderUpdates: true,
   paymentReminders: true,
   productAlerts: false,
+  buildingOrderAlerts: false,
+  friendOrderAlerts: false,
+  followedFriendUsernames: [],
 };
 
 async function persist(settings: NotificationSettings) {
@@ -46,6 +54,11 @@ export const useNotificationSettingsStore = create<NotificationSettingsState>((s
           orderUpdates: parsed.orderUpdates ?? DEFAULT_SETTINGS.orderUpdates,
           paymentReminders: parsed.paymentReminders ?? DEFAULT_SETTINGS.paymentReminders,
           productAlerts: parsed.productAlerts ?? DEFAULT_SETTINGS.productAlerts,
+          buildingOrderAlerts: parsed.buildingOrderAlerts ?? DEFAULT_SETTINGS.buildingOrderAlerts,
+          friendOrderAlerts: parsed.friendOrderAlerts ?? DEFAULT_SETTINGS.friendOrderAlerts,
+          followedFriendUsernames: Array.isArray(parsed.followedFriendUsernames)
+            ? parsed.followedFriendUsernames.filter((name) => typeof name === 'string')
+            : DEFAULT_SETTINGS.followedFriendUsernames,
         },
         hydrated: true,
       });
@@ -55,6 +68,27 @@ export const useNotificationSettingsStore = create<NotificationSettingsState>((s
   },
   setSetting: async (key, value) => {
     const next = { ...get().settings, [key]: value };
+    set({ settings: next });
+    await persist(next);
+  },
+  addFriendUsername: async (username) => {
+    const clean = username.trim().replace(/^@/, '').toLowerCase();
+    if (!clean) return;
+    const current = get().settings.followedFriendUsernames;
+    const next = {
+      ...get().settings,
+      followedFriendUsernames: current.includes(clean) ? current : [...current, clean],
+      friendOrderAlerts: true,
+    };
+    set({ settings: next });
+    await persist(next);
+  },
+  removeFriendUsername: async (username) => {
+    const clean = username.trim().replace(/^@/, '').toLowerCase();
+    const next = {
+      ...get().settings,
+      followedFriendUsernames: get().settings.followedFriendUsernames.filter((name) => name !== clean),
+    };
     set({ settings: next });
     await persist(next);
   },

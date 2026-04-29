@@ -35,6 +35,8 @@ const FEATURED_STORES = [
   },
 ];
 
+const CATEGORY_CHIPS = ['Fashion', 'Beauty', 'Home', 'Kids', 'Electronics', 'Grocery'];
+
 function HomeMark() {
   return (
     <View style={styles.markWrap}>
@@ -187,6 +189,18 @@ export default function BuildingTab() {
           </View>
 
           <SearchBar label={t('tabs.home.searchPlaceholder')} />
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
+            {CATEGORY_CHIPS.map((category, index) => (
+              <Pressable
+                key={category}
+                style={[styles.categoryChip, index === 0 && styles.categoryChipActive]}
+                onPress={() => router.push(`/order/new?store=${encodeURIComponent(category.toLowerCase())}`)}
+              >
+                <Text style={[styles.categoryChipText, index === 0 && styles.categoryChipTextActive]}>{category}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
 
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{t('tabs.home.featured')}</Text>
@@ -397,6 +411,30 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accLight,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  categoryRow: {
+    gap: 8,
+    paddingRight: 4,
+  },
+  categoryChip: {
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.br,
+    backgroundColor: colors.white,
+  },
+  categoryChipActive: {
+    backgroundColor: colors.navy,
+    borderColor: colors.navy,
+  },
+  categoryChipText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+    color: colors.tx,
+  },
+  categoryChipTextActive: {
+    color: colors.white,
   },
   sectionHeader: {
     flexDirection: 'row',
