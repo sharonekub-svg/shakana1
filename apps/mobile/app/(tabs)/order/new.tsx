@@ -16,6 +16,7 @@ import { useUiStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useLocale } from '@/i18n/locale';
 import { loadSharedProductInsights, parseSharedProduct, type SharedProductInsights } from '@/lib/sharedProduct';
+import { fetchProductPageHtml } from '@/api/productInsights';
 import { formatAgorot } from '@/utils/format';
 import { formatCompactDuration, timerUnitToMinutes } from '@/utils/timer';
 
@@ -324,7 +325,7 @@ export default function NewOrder() {
     let active = true;
     setInsightsLoading(true);
 
-    void loadSharedProductInsights(currentDraft)
+    void loadSharedProductInsights(currentDraft, fetchProductPageHtml)
       .then((next) => {
         if (!active) return;
         setInsights(next);

@@ -31,6 +31,8 @@ export type SharedProductInsights = {
   amountMissingForFreeShippingAgorot: number | null;
 };
 
+export type ProductPageHtmlFetcher = (url: string) => Promise<string | null>;
+
 const TRACKER_KEYS = new Set([
   'gclid',
   'fbclid',
@@ -532,7 +534,19 @@ export function summarizeSharedProduct(draft: SharedProductDraft, html?: string 
   };
 }
 
-export async function loadSharedProductInsights(draft: SharedProductDraft): Promise<SharedProductInsights> {
+export async function loadSharedProductInsights(
+  draft: SharedProductDraft,
+  fetchProductPageHtml?: ProductPageHtmlFetcher,
+): Promise<SharedProductInsights> {
+  if (fetchProductPageHtml) {
+    try {
+      const backendHtml = await fetchProductPageHtml(draft.url);
+      if (backendHtml) return summarizeSharedProduct(draft, backendHtml);
+    } catch {
+      // Fall back to direct public fetch or manual entry if the backend lookup is unavailable.
+    }
+  }
+
   try {
     const res = await fetch(draft.url, {
       headers: {

@@ -1,4 +1,4 @@
-import { parseSharedProduct, summarizeSharedProduct } from '@/lib/sharedProduct';
+import { loadSharedProductInsights, parseSharedProduct, summarizeSharedProduct } from '@/lib/sharedProduct';
 
 describe('sharedProduct', () => {
   it('accepts a Zara product url and strips tracking params', () => {
@@ -222,6 +222,29 @@ describe('sharedProduct', () => {
     expect(insights.priceAgorot).toBe(124999);
     expect(insights.deliveryFeeAgorot).toBe(0);
     expect(insights.promotionText).toBe('Sale');
+  });
+
+  it('uses backend-fetched HTML before falling back to browser fetch', async () => {
+    const draft = {
+      url: 'https://www.amazon.com/example-product/dp/B0DZZWMB2L',
+      title: 'Example Product',
+      source: 'amazon' as const,
+      storeLabel: 'Amazon',
+    };
+
+    const insights = await loadSharedProductInsights(draft, async () => `
+      <html>
+        <head>
+          <meta property="og:title" content="Backend Price Product - Amazon.com" />
+          <meta property="product:price:amount" content="88.50" />
+        </head>
+        <body>Shipping $12.00</body>
+      </html>
+    `);
+
+    expect(insights.title).toBe('Backend Price Product');
+    expect(insights.priceAgorot).toBe(8850);
+    expect(insights.deliveryFeeAgorot).toBe(1200);
   });
 
   it('rejects Zara links that are not product pages', () => {
