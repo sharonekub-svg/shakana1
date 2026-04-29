@@ -28,51 +28,6 @@ type NewOrderParams = {
 };
 
 const ZARA_START_URL = 'https://www.zara.com/il/';
-const CATEGORIES = [
-  {
-    key: 'fashion',
-    enName: 'Fashion',
-    heName: 'אופנה',
-    enDetail: 'Sizes, colors, links and 1+1 deals.',
-    heDetail: 'מידות, צבעים, קישורים ומבצעי 1+1.',
-  },
-  {
-    key: 'beauty',
-    enName: 'Beauty',
-    heName: 'טיפוח',
-    enDetail: 'Care products, refills and pharmacy-style orders.',
-    heDetail: 'מוצרי טיפוח, מילויים והזמנות פארם.',
-  },
-  {
-    key: 'home',
-    enName: 'Home',
-    heName: 'בית',
-    enDetail: 'Home goods, kitchen, cleaning and building basics.',
-    heDetail: 'מוצרי בית, מטבח, ניקיון ודברים לבניין.',
-  },
-  {
-    key: 'kids',
-    enName: 'Kids',
-    heName: 'ילדים',
-    enDetail: 'Kids clothes, school items and toy orders.',
-    heDetail: 'בגדי ילדים, ציוד לבית ספר וצעצועים.',
-  },
-  {
-    key: 'electronics',
-    enName: 'Electronics',
-    heName: 'אלקטרוניקה',
-    enDetail: 'Chargers, gadgets and shared delivery savings.',
-    heDetail: 'מטענים, גאדג׳טים וחיסכון במשלוח.',
-  },
-  {
-    key: 'grocery',
-    enName: 'Grocery',
-    heName: 'סופר',
-    enDetail: 'Food and pantry orders with clear pickup.',
-    heDetail: 'אוכל ומוצרי מזווה עם איסוף ברור.',
-  },
-];
-const DEFAULT_CATEGORY = CATEGORIES[0]?.key ?? 'fashion';
 const TIMER_UNITS = ['minutes', 'hours', 'days'] as const;
 
 export default function NewOrder() {
@@ -106,9 +61,6 @@ export default function NewOrder() {
         titlePlaceholder: 'חולצה מזארה',
         stepProduct: 'קישור מוצר',
         stepProductBody: 'הדבק קישור מכל חנות. פרמטרים של מעקב יוסרו אוטומטית.',
-        detailsCategory: 'פרטים וקטגוריה',
-        detailsCategoryBody: 'אם הקישור לא מצליח להביא שם, מחיר או תמונה, אפשר להוסיף אותם ידנית כאן.',
-        category: 'קטגוריה',
         timerShipping: 'טיימר ומשלוח',
         timerShippingBody: 'שכנים יכולים להצטרף עד שהטיימר מסתיים. עריכות ננעלות מעט לפני הסגירה.',
         timer: 'טיימר',
@@ -126,9 +78,8 @@ export default function NewOrder() {
         whereFrom: 'מאיפה זה מגיע',
         productCost: 'מחיר המוצר',
         importantCosts: 'עלויות חשובות',
-        shippingFee: 'דמי משלוח',
         freeShippingMinimum: 'סכום למשלוח חינם',
-        costCardNote: 'אלה שלושת המספרים הכי חשובים להזמנה: מחיר מוצר, משלוח, וסף משלוח חינם.',
+        costCardNote: 'אלה המספרים שרואים מיד אחרי הלינק: כמה משלוח חוסכים, מאיזה סכום המשלוח חינם, וכמה המוצר עולה.',
         freeDeliveryFrom: 'משלוח חינם מ',
         missingFreeDelivery: 'חסר למשלוח חינם',
         neighborsToShare: 'שכנים לשיתוף הקישור',
@@ -187,9 +138,6 @@ export default function NewOrder() {
         titlePlaceholder: 'Zara shirt',
         stepProduct: 'Product link',
         stepProductBody: 'Paste any store link. Tracking parameters are removed automatically.',
-        detailsCategory: 'Details and category',
-        detailsCategoryBody: 'If the link cannot reveal title, price, or image, add them manually here.',
-        category: 'Category',
         timerShipping: 'Timer and shipping',
         timerShippingBody: 'People can join until the timer ends. Edits lock right before closing.',
         timer: 'Timer',
@@ -207,9 +155,8 @@ export default function NewOrder() {
         whereFrom: 'Where it comes from',
         productCost: 'Product cost',
         importantCosts: 'Important costs',
-        shippingFee: 'Delivery fee',
         freeShippingMinimum: 'Free delivery minimum',
-        costCardNote: 'These are the three most important numbers: product price, delivery fee, and free delivery minimum.',
+        costCardNote: 'These are shown first after the link: shipping saved, free-delivery minimum, and product cost.',
         freeDeliveryFrom: 'Free delivery from',
         missingFreeDelivery: 'Missing for free delivery',
         neighborsToShare: 'Neighbors to share link',
@@ -258,7 +205,6 @@ export default function NewOrder() {
   const [timerUnit, setTimerUnit] = useState<(typeof TIMER_UNITS)[number]>('minutes');
   const [shipping, setShipping] = useState('30');
   const [freeShippingThreshold, setFreeShippingThreshold] = useState('199');
-  const [category, setCategory] = useState(DEFAULT_CATEGORY);
   const [cartOpen, setCartOpen] = useState(false);
   const [linkHelpOpen, setLinkHelpOpen] = useState(false);
   const [insights, setInsights] = useState<SharedProductInsights | null>(null);
@@ -441,40 +387,30 @@ export default function NewOrder() {
             keyboardType="url"
             autoCapitalize="none"
           />
+          <View style={styles.costCard}>
+            <Text style={styles.kicker}>{copy.importantCosts}</Text>
+            <View style={styles.costGrid}>
+              <View style={styles.costItem}>
+                <Text style={styles.costLabel}>{copy.shippingSaved}</Text>
+                <Text style={styles.costValue}>{formatAgorot(shippingSavedAgorot)}</Text>
+              </View>
+              <View style={styles.costItem}>
+                <Text style={styles.costLabel}>{copy.freeShippingMinimum}</Text>
+                <Text style={styles.costValue}>{freeShippingThresholdLabel}</Text>
+              </View>
+              <View style={styles.costItem}>
+                <Text style={styles.costLabel}>{copy.productCost}</Text>
+                <Text style={styles.costValue}>{productCostLabel}</Text>
+              </View>
+            </View>
+            <Text style={styles.costNote}>{copy.costCardNote}</Text>
+          </View>
           <Field label={copy.store} value={storeLabel} onChange={setStoreLabel} placeholder={copy.storePlaceholder} />
           <Field label={t('order.new.titleLabel')} value={title} onChange={setTitle} placeholder={copy.titlePlaceholder} />
           <NumField label={t('order.new.priceLabel')} value={price} onChange={setPrice} placeholder="199" />
           <View style={styles.stepHeader}>
             <View style={styles.stepBadge}>
               <Text style={styles.stepBadgeText}>2</Text>
-            </View>
-            <View style={styles.stepCopy}>
-              <Text style={styles.stepTitle}>{copy.detailsCategory}</Text>
-              <Text style={styles.stepBody}>{copy.detailsCategoryBody}</Text>
-            </View>
-          </View>
-          <View style={styles.categoryBlock}>
-            <Text style={styles.fieldCaption}>{copy.category}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-              {CATEGORIES.map((item) => (
-                <Pressable
-                  key={item.key}
-                  style={[styles.categoryChip, category === item.key && styles.categoryChipActive]}
-                  onPress={() => setCategory(item.key)}
-                >
-                  <Text style={[styles.categoryChipText, category === item.key && styles.categoryChipTextActive]}>
-                    {isHebrew ? item.heName : item.enName}
-                  </Text>
-                  <Text style={[styles.categoryDetail, category === item.key && styles.categoryDetailActive]}>
-                    {isHebrew ? item.heDetail : item.enDetail}
-                  </Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
-          <View style={styles.stepHeader}>
-            <View style={styles.stepBadge}>
-              <Text style={styles.stepBadgeText}>3</Text>
             </View>
             <View style={styles.stepCopy}>
               <Text style={styles.stepTitle}>{copy.timerShipping}</Text>
@@ -525,25 +461,6 @@ export default function NewOrder() {
             {insightsLoading ? <ActivityIndicator color={colors.acc} /> : null}
           </View>
           {insights?.imageUrl ? <Image source={{ uri: insights.imageUrl }} style={styles.productImage} /> : null}
-        </View>
-
-        <View style={styles.costCard}>
-          <Text style={styles.kicker}>{copy.importantCosts}</Text>
-          <View style={styles.costGrid}>
-            <View style={styles.costItem}>
-              <Text style={styles.costLabel}>{copy.productCost}</Text>
-              <Text style={styles.costValue}>{productCostLabel}</Text>
-            </View>
-            <View style={styles.costItem}>
-              <Text style={styles.costLabel}>{copy.shippingFee}</Text>
-              <Text style={styles.costValue}>{formatAgorot(deliveryFeeAgorot)}</Text>
-            </View>
-            <View style={styles.costItem}>
-              <Text style={styles.costLabel}>{copy.freeShippingMinimum}</Text>
-              <Text style={styles.costValue}>{freeShippingThresholdLabel}</Text>
-            </View>
-          </View>
-          <Text style={styles.costNote}>{copy.costCardNote}</Text>
         </View>
 
         <View style={styles.finderCard}>
@@ -630,7 +547,6 @@ export default function NewOrder() {
             <Text style={styles.kicker}>{copy.shoppingCart}</Text>
             <Text style={styles.cartTitle}>{title || copy.manualProduct}</Text>
             <Text style={styles.cartLine}>{copy.store}: {storeLabel || copy.chooseStore}</Text>
-            <Text style={styles.cartLine}>{copy.category}: {CATEGORIES.find((item) => item.key === category)?.[isHebrew ? 'heName' : 'enName']}</Text>
             <Text style={styles.cartLine}>{copy.productPrice}: {formatAgorot(priceAgorot)}</Text>
             <Text style={styles.cartLine}>{copy.shippingEstimate}: {formatAgorot(deliveryFeeAgorot)}</Text>
             <Text style={styles.cartHint}>{copy.cartHint}</Text>
@@ -1003,48 +919,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     color: colors.acc,
-  },
-  categoryBlock: {
-    gap: 8,
-  },
-  fieldCaption: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 12,
-    color: colors.tx,
-  },
-  chipRow: {
-    gap: 8,
-  },
-  categoryChip: {
-    width: 172,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.br,
-    backgroundColor: colors.white,
-  },
-  categoryChipActive: {
-    backgroundColor: colors.navy,
-    borderColor: colors.navy,
-  },
-  categoryChipText: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 12,
-    color: colors.tx,
-  },
-  categoryChipTextActive: {
-    color: colors.white,
-  },
-  categoryDetail: {
-    marginTop: 4,
-    fontFamily: fontFamily.body,
-    fontSize: 10,
-    lineHeight: 14,
-    color: colors.mu,
-  },
-  categoryDetailActive: {
-    color: 'rgba(255,255,255,0.78)',
   },
   timerPickRow: {
     flexDirection: 'row',
