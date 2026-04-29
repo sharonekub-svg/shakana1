@@ -14,7 +14,10 @@ import { useUiStore } from '@/stores/uiStore';
 
 const TERMS_URL = 'https://shakana.app/legal/terms';
 const PRIVACY_URL = 'https://shakana.app/legal/privacy';
-const FLOW_STRIP = ['Paste link', 'Detect store', 'Read price', 'Find deals', 'Invite friends', 'Shared cart'];
+const FLOW_STRIP = {
+  he: ['הדבקת קישור', 'זיהוי חנות', 'קריאת מחיר', 'מציאת מבצעים', 'הזמנת חברים', 'סל משותף'],
+  en: ['Paste link', 'Detect store', 'Read price', 'Find deals', 'Invite friends', 'Shared cart'],
+};
 
 function GoogleGlyph() {
   return (
@@ -77,7 +80,7 @@ export default function Welcome() {
         <Text style={styles.conceptTitle}>{copy.conceptTitle}</Text>
         <Text style={styles.conceptBody}>{copy.conceptBody}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.storeStrip}>
-          {FLOW_STRIP.map((store) => (
+          {FLOW_STRIP[language].map((store) => (
             <View key={store} style={styles.storePill}>
               <Text style={styles.storePillText}>{store}</Text>
             </View>

@@ -28,20 +28,202 @@ type NewOrderParams = {
 
 const ZARA_START_URL = 'https://www.zara.com/il/';
 const CATEGORIES = [
-  { name: 'Fashion', detail: 'Sizes, colors, Zara/H&M links and 1+1 deals.' },
-  { name: 'Beauty', detail: 'Care products, refills and pharmacy-style orders.' },
-  { name: 'Home', detail: 'Home goods, kitchen, cleaning and building basics.' },
-  { name: 'Kids', detail: 'Kids clothes, school items and toy orders.' },
-  { name: 'Electronics', detail: 'Chargers, gadgets and shared delivery savings.' },
-  { name: 'Grocery', detail: 'Food and pantry orders with clear pickup.' },
+  {
+    key: 'fashion',
+    enName: 'Fashion',
+    heName: 'אופנה',
+    enDetail: 'Sizes, colors, links and 1+1 deals.',
+    heDetail: 'מידות, צבעים, קישורים ומבצעי 1+1.',
+  },
+  {
+    key: 'beauty',
+    enName: 'Beauty',
+    heName: 'טיפוח',
+    enDetail: 'Care products, refills and pharmacy-style orders.',
+    heDetail: 'מוצרי טיפוח, מילויים והזמנות פארם.',
+  },
+  {
+    key: 'home',
+    enName: 'Home',
+    heName: 'בית',
+    enDetail: 'Home goods, kitchen, cleaning and building basics.',
+    heDetail: 'מוצרי בית, מטבח, ניקיון ודברים לבניין.',
+  },
+  {
+    key: 'kids',
+    enName: 'Kids',
+    heName: 'ילדים',
+    enDetail: 'Kids clothes, school items and toy orders.',
+    heDetail: 'בגדי ילדים, ציוד לבית ספר וצעצועים.',
+  },
+  {
+    key: 'electronics',
+    enName: 'Electronics',
+    heName: 'אלקטרוניקה',
+    enDetail: 'Chargers, gadgets and shared delivery savings.',
+    heDetail: 'מטענים, גאדג׳טים וחיסכון במשלוח.',
+  },
+  {
+    key: 'grocery',
+    enName: 'Grocery',
+    heName: 'סופר',
+    enDetail: 'Food and pantry orders with clear pickup.',
+    heDetail: 'אוכל ומוצרי מזווה עם איסוף ברור.',
+  },
 ];
-const DEFAULT_CATEGORY = CATEGORIES[0]?.name ?? 'Fashion';
+const DEFAULT_CATEGORY = CATEGORIES[0]?.key ?? 'fashion';
 const TIMER_UNITS = ['minutes', 'hours', 'days'] as const;
 
 export default function NewOrder() {
   const router = useRouter();
   const params = useLocalSearchParams<NewOrderParams>();
-  const { t } = useLocale();
+  const { language, t } = useLocale();
+  const isHebrew = language === 'he';
+  const copy = isHebrew
+    ? {
+        detectedAfterPaste: 'יזוהה אחרי הדבקת הקישור',
+        waitingForLink: 'ממתין לקישור מוצר',
+        addPrice: 'הוסף מחיר ידנית',
+        addThreshold: 'הוסף סכום למשלוח חינם',
+        unknownThreshold: 'לא ידוע עד שמוסיפים סכום',
+        noDeal: 'לא זוהה מבצע כרגע',
+        findProductTitle: 'מצא מוצר, העתק קישור וחזור לכאן.',
+        findProductBody:
+          'זה המסלול הבטוח והפשוט: Shakana פותחת את החנות, אתה בוחר את הפריט המדויק, מעתיק את הקישור של דף המוצר, ואז Shakana קוראת מידע ציבורי ומשאירה שדות ידניים אם החנות חוסמת פרטים.',
+        openZara: 'פתח את Zara',
+        useCopiedLink: 'השתמש בקישור שהועתק',
+        copyLinkHelp: 'מצא את המוצר, העתק את קישור הדף וחזור לכאן.',
+        noProductLink: 'לא נמצא קישור מוצר בטקסט שהועתק.',
+        productLinkAdded: 'קישור המוצר נוסף.',
+        store: 'חנות',
+        storePlaceholder: 'Zara, H&M, Amazon...',
+        titlePlaceholder: 'חולצה מזארה',
+        stepProduct: 'קישור מוצר',
+        stepProductBody: 'הדבק קישור מכל חנות. פרמטרים של מעקב יוסרו אוטומטית.',
+        detailsCategory: 'פרטים וקטגוריה',
+        detailsCategoryBody: 'אם הקישור לא מצליח להביא שם, מחיר או תמונה, אפשר להוסיף אותם ידנית כאן.',
+        category: 'קטגוריה',
+        timerShipping: 'טיימר ומשלוח',
+        timerShippingBody: 'שכנים יכולים להצטרף עד שהטיימר מסתיים. עריכות ננעלות מעט לפני הסגירה.',
+        timer: 'טיימר',
+        maxParticipants: 'מקסימום משתתפים',
+        estimatedShipping: 'משלוח משוער',
+        freeShippingFrom: 'משלוח חינם מסכום',
+        product: 'מוצר',
+        pasteProductLink: 'הדבק קישור מוצר',
+        readingProduct: 'קורא את דף המוצר...',
+        deal: 'מבצע',
+        simpleOrder: 'הזמנה פשוטה, בלי בלגן.',
+        finderResult: 'תוצאת איתור מוצר',
+        finderTitle: 'מה Shakana מצאה מהקישור',
+        whatItIs: 'מה המוצר',
+        whereFrom: 'מאיפה זה מגיע',
+        productCost: 'מחיר המוצר',
+        freeDeliveryFrom: 'משלוח חינם מ',
+        missingFreeDelivery: 'חסר למשלוח חינם',
+        neighborsToShare: 'שכנים לשיתוף הקישור',
+        dealCheck: 'בדיקת מבצע / 1+1',
+        finderNote: 'אם החנות חוסמת פרטים ציבוריים, Shakana משאירה את השדות הידניים כדי שההזמנה עדיין תמשיך.',
+        timerPlan: 'תוכנית הזמנה לפי טיימר',
+        timerPlanIntro: 'אין יעד סכום: ההזמנה נסגרת לפי זמן, ואז מייסד ההזמנה מקבל קישור וקונה ידנית.',
+        timerClosesIn: 'הטיימר נסגר בעוד',
+        participants: 'משתתפים',
+        upTo: 'עד',
+        shippingSaved: 'חיסכון משלוח יחד',
+        approxEach: 'בערך לכל אחד',
+        missingShared: 'חסר להזמנה המשותפת למשלוח חינם',
+        showCart: 'הצג סל',
+        hideCart: 'הסתר סל',
+        oneItem: 'פריט אחד',
+        shoppingCart: 'סל קניות',
+        manualProduct: 'מוצר ידני',
+        chooseStore: 'בחר חנות',
+        productPrice: 'מחיר מוצר',
+        shippingEstimate: 'משלוח משוער',
+        cartHint: 'המגירה משאירה את הגלישה נקייה ועדיין מראה מה יוזמן.',
+        pickup: 'איסוף',
+        pickupManager: 'אחראי איסוף: אתה',
+        pickupBody:
+          'בחר נקודת איסוף מועדפת לפני יצירת ההזמנה. כולם יראו אותה, ואפשר לעדכן אותה בהמשך.',
+        pickupLocation: 'מיקום איסוף מועדף',
+        pickupPlaceholder: 'לובי הבניין, נקודת איסוף, או הדירה שלך',
+        pickupUncertain: 'מיקום האיסוף עשוי להשתנות לפי החנות או חברת המשלוחים',
+        min: 'דק׳',
+        hr: 'שעה',
+        day: 'יום',
+      }
+    : {
+        detectedAfterPaste: 'Detected after link paste',
+        waitingForLink: 'Waiting for product link',
+        addPrice: 'Add price manually',
+        addThreshold: 'Add store threshold',
+        unknownThreshold: 'Unknown until threshold is added',
+        noDeal: 'No deal detected yet',
+        findProductTitle: 'Find a product, copy the URL, then come back.',
+        findProductBody:
+          'This is the safe practical flow: Shakana opens the store, you choose the exact item, copy the product page link, then Shakana reads public product data and keeps manual fields ready if the store blocks details.',
+        openZara: 'Open Zara',
+        useCopiedLink: 'Use copied link',
+        copyLinkHelp: 'Find the product, copy its page link, then come back here.',
+        noProductLink: 'No product link found in the copied text.',
+        productLinkAdded: 'Product link added.',
+        store: 'Store',
+        storePlaceholder: 'Zara, H&M, Amazon...',
+        titlePlaceholder: 'Zara shirt',
+        stepProduct: 'Product link',
+        stepProductBody: 'Paste any store link. Tracking parameters are removed automatically.',
+        detailsCategory: 'Details and category',
+        detailsCategoryBody: 'If the link cannot reveal title, price, or image, add them manually here.',
+        category: 'Category',
+        timerShipping: 'Timer and shipping',
+        timerShippingBody: 'People can join until the timer ends. Edits lock right before closing.',
+        timer: 'Timer',
+        maxParticipants: 'Max participants',
+        estimatedShipping: 'Estimated shipping',
+        freeShippingFrom: 'Free shipping from',
+        product: 'Product',
+        pasteProductLink: 'Paste a product link',
+        readingProduct: 'Reading the product page...',
+        deal: 'Deal',
+        simpleOrder: 'Simple order, no extra clutter.',
+        finderResult: 'Product finder result',
+        finderTitle: 'What Shakana found from the link',
+        whatItIs: 'What it is',
+        whereFrom: 'Where it comes from',
+        productCost: 'Product cost',
+        freeDeliveryFrom: 'Free delivery from',
+        missingFreeDelivery: 'Missing for free delivery',
+        neighborsToShare: 'Neighbors to share link',
+        dealCheck: 'Deal / 1+1 check',
+        finderNote: 'If the store blocks public details, Shakana keeps the manual fields above so the order can still continue.',
+        timerPlan: 'Timer-based order plan',
+        timerPlanIntro: 'No target amount: the order closes by time, then the founder gets the checkout link and buys manually.',
+        timerClosesIn: 'Timer closes in',
+        participants: 'Participants',
+        upTo: 'up to',
+        shippingSaved: 'Shipping saved together',
+        approxEach: 'Approx. each',
+        missingShared: 'Shared order missing for free shipping',
+        showCart: 'Show cart drawer',
+        hideCart: 'Hide cart drawer',
+        oneItem: '1 item',
+        shoppingCart: 'Shopping cart',
+        manualProduct: 'Manual product',
+        chooseStore: 'Choose store',
+        productPrice: 'Product price',
+        shippingEstimate: 'Shipping estimate',
+        cartHint: 'This drawer keeps browsing clean while still showing what will be ordered.',
+        pickup: 'Pickup',
+        pickupManager: 'Pickup manager: you',
+        pickupBody:
+          'Choose the preferred pickup point before creating the order. Everyone will see it, and it can be updated later.',
+        pickupLocation: 'Preferred pickup location',
+        pickupPlaceholder: 'Building lobby, pickup point, or your apartment',
+        pickupUncertain: 'Pickup location may vary depending on the store/shipping provider',
+        min: 'min',
+        hr: 'hr',
+        day: 'day',
+      };
   const initialDraft = parseSharedProduct({
     url: typeof params.url === 'string' ? params.url : null,
     title: typeof params.title === 'string' ? params.title : null,
@@ -91,14 +273,14 @@ export default function NewOrder() {
   const shippingSavedAgorot = Math.max(0, deliveryFeeAgorot * Math.max(0, participantCount - 1));
   const perPersonAgorot = Math.ceil((priceAgorot + deliveryFeeAgorot / participantCount));
   const neighborsToInvite = Math.max(0, participantCount - 1);
-  const sourceLabel = insights?.sourceLabel || storeLabel || currentDraft?.storeLabel || 'Detected after link paste';
-  const productName = insights?.title || title || currentDraft?.title || 'Waiting for product link';
-  const productCostLabel = priceAgorot > 0 ? formatAgorot(priceAgorot) : 'Add price manually';
+  const sourceLabel = insights?.sourceLabel || storeLabel || currentDraft?.storeLabel || copy.detectedAfterPaste;
+  const productName = insights?.title || title || currentDraft?.title || copy.waitingForLink;
+  const productCostLabel = priceAgorot > 0 ? formatAgorot(priceAgorot) : copy.addPrice;
   const freeShippingThresholdLabel =
-    freeShippingThresholdAgorot > 0 ? formatAgorot(freeShippingThresholdAgorot) : 'Add store threshold';
+    freeShippingThresholdAgorot > 0 ? formatAgorot(freeShippingThresholdAgorot) : copy.addThreshold;
   const freeShippingGapLabel =
-    freeShippingThresholdAgorot > 0 ? formatAgorot(freeShippingGapAgorot) : 'Unknown until threshold is added';
-  const dealLabel = insights?.promotionText || insights?.dealSummary || 'No deal detected yet';
+    freeShippingThresholdAgorot > 0 ? formatAgorot(freeShippingGapAgorot) : copy.unknownThreshold;
+  const dealLabel = insights?.promotionText || insights?.dealSummary || copy.noDeal;
   const valid =
     urlCheck.success &&
     storeLabel.trim().length > 1 &&
@@ -153,20 +335,20 @@ export default function NewOrder() {
 
   const openZara = async () => {
     await Linking.openURL(ZARA_START_URL);
-    setLinkMessage('Find the product, copy its page link, then come back here.');
+    setLinkMessage(copy.copyLinkHelp);
   };
 
   const useCopiedLink = async () => {
     const copied = await Clipboard.getStringAsync();
     const draft = parseSharedProduct({ url: copied, text: copied });
     if (!draft) {
-      setLinkMessage('No Zara or H&M product link found in the copied text.');
+      setLinkMessage(copy.noProductLink);
       return;
     }
     setUrl(draft.url);
     setStoreLabel(draft.storeLabel);
     setTitle((prev) => prev || draft.title);
-    setLinkMessage('Product link added.');
+    setLinkMessage(copy.productLinkAdded);
   };
 
   const submit = async () => {
@@ -204,18 +386,16 @@ export default function NewOrder() {
         {isZaraStart ? (
           <View style={styles.guideCard}>
             <Text style={styles.kicker}>ZARA</Text>
-            <Text style={styles.guideTitle}>Find a product, copy the URL, then come back.</Text>
+            <Text style={styles.guideTitle}>{copy.findProductTitle}</Text>
             <Text style={styles.guideBody}>
-              This is the safe practical flow: Shakana opens Zara, you choose the exact item, copy the page link from the
-              browser address bar/share menu, then Shakana reads the public product page and keeps manual fields ready if
-              Zara blocks details.
+              {copy.findProductBody}
             </Text>
             <View style={styles.actions}>
               <Pressable style={styles.primarySmall} onPress={openZara}>
-                <Text style={styles.primarySmallText}>Open Zara</Text>
+                <Text style={styles.primarySmallText}>{copy.openZara}</Text>
               </Pressable>
               <Pressable style={styles.secondarySmall} onPress={useCopiedLink}>
-                <Text style={styles.secondarySmallText}>Use copied link</Text>
+                <Text style={styles.secondarySmallText}>{copy.useCopiedLink}</Text>
               </Pressable>
             </View>
             {linkMessage ? <Text style={styles.noteText}>{linkMessage}</Text> : null}
@@ -228,8 +408,8 @@ export default function NewOrder() {
               <Text style={styles.stepBadgeText}>1</Text>
             </View>
             <View style={styles.stepCopy}>
-              <Text style={styles.stepTitle}>Product link</Text>
-              <Text style={styles.stepBody}>Paste Zara, H&M, or any store link. Tracking parameters are removed automatically.</Text>
+              <Text style={styles.stepTitle}>{copy.stepProduct}</Text>
+              <Text style={styles.stepBody}>{copy.stepProductBody}</Text>
             </View>
           </View>
           <Field
@@ -241,32 +421,32 @@ export default function NewOrder() {
             keyboardType="url"
             autoCapitalize="none"
           />
-          <Field label="Store" value={storeLabel} onChange={setStoreLabel} placeholder="Zara, H&M, Amazon..." />
-          <Field label={t('order.new.titleLabel')} value={title} onChange={setTitle} placeholder="Zara shirt" />
+          <Field label={copy.store} value={storeLabel} onChange={setStoreLabel} placeholder={copy.storePlaceholder} />
+          <Field label={t('order.new.titleLabel')} value={title} onChange={setTitle} placeholder={copy.titlePlaceholder} />
           <NumField label={t('order.new.priceLabel')} value={price} onChange={setPrice} placeholder="199" />
           <View style={styles.stepHeader}>
             <View style={styles.stepBadge}>
               <Text style={styles.stepBadgeText}>2</Text>
             </View>
             <View style={styles.stepCopy}>
-              <Text style={styles.stepTitle}>Details and category</Text>
-              <Text style={styles.stepBody}>If the link cannot reveal title, price, or image, add them manually here.</Text>
+              <Text style={styles.stepTitle}>{copy.detailsCategory}</Text>
+              <Text style={styles.stepBody}>{copy.detailsCategoryBody}</Text>
             </View>
           </View>
           <View style={styles.categoryBlock}>
-            <Text style={styles.fieldCaption}>Category</Text>
+            <Text style={styles.fieldCaption}>{copy.category}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
               {CATEGORIES.map((item) => (
                 <Pressable
-                  key={item.name}
-                  style={[styles.categoryChip, category === item.name && styles.categoryChipActive]}
-                  onPress={() => setCategory(item.name)}
+                  key={item.key}
+                  style={[styles.categoryChip, category === item.key && styles.categoryChipActive]}
+                  onPress={() => setCategory(item.key)}
                 >
-                  <Text style={[styles.categoryChipText, category === item.name && styles.categoryChipTextActive]}>
-                    {item.name}
+                  <Text style={[styles.categoryChipText, category === item.key && styles.categoryChipTextActive]}>
+                    {isHebrew ? item.heName : item.enName}
                   </Text>
-                  <Text style={[styles.categoryDetail, category === item.name && styles.categoryDetailActive]}>
-                    {item.detail}
+                  <Text style={[styles.categoryDetail, category === item.key && styles.categoryDetailActive]}>
+                    {isHebrew ? item.heDetail : item.enDetail}
                   </Text>
                 </Pressable>
               ))}
@@ -277,13 +457,13 @@ export default function NewOrder() {
               <Text style={styles.stepBadgeText}>3</Text>
             </View>
             <View style={styles.stepCopy}>
-              <Text style={styles.stepTitle}>Timer and shipping</Text>
-              <Text style={styles.stepBody}>People can join until the timer ends. Edits lock right before closing.</Text>
+              <Text style={styles.stepTitle}>{copy.timerShipping}</Text>
+              <Text style={styles.stepBody}>{copy.timerShippingBody}</Text>
             </View>
           </View>
           <View style={styles.timerPickRow}>
             <View style={{ flex: 1 }}>
-              <NumField label="Timer" value={timerValue} onChange={setTimerValue} placeholder="30" />
+              <NumField label={copy.timer} value={timerValue} onChange={setTimerValue} placeholder="30" />
             </View>
             <View style={styles.timerUnitWrap}>
               {TIMER_UNITS.map((unit) => (
@@ -293,16 +473,16 @@ export default function NewOrder() {
                   onPress={() => setTimerUnit(unit)}
                 >
                   <Text style={[styles.unitChipText, timerUnit === unit && styles.unitChipTextActive]}>
-                    {unit === 'minutes' ? 'min' : unit === 'hours' ? 'hr' : 'day'}
+                    {unit === 'minutes' ? copy.min : unit === 'hours' ? copy.hr : copy.day}
                   </Text>
                 </Pressable>
               ))}
             </View>
           </View>
-          <NumField label="Max participants" value={participants} onChange={setParticipants} placeholder="3" />
-          <NumField label="Estimated shipping" value={shipping} onChange={setShipping} placeholder="30" />
+          <NumField label={copy.maxParticipants} value={participants} onChange={setParticipants} placeholder="3" />
+          <NumField label={copy.estimatedShipping} value={shipping} onChange={setShipping} placeholder="30" />
           <NumField
-            label="Free shipping from"
+            label={copy.freeShippingFrom}
             value={freeShippingThreshold}
             onChange={setFreeShippingThreshold}
             placeholder="199"
@@ -311,16 +491,16 @@ export default function NewOrder() {
 
         <View style={styles.productCard}>
           <View style={styles.productCopy}>
-            <Text style={styles.kicker}>Product</Text>
+            <Text style={styles.kicker}>{copy.product}</Text>
             <Text style={styles.productTitle} numberOfLines={2}>
-              {insights?.title || title || 'Paste a product link'}
+              {insights?.title || title || copy.pasteProductLink}
             </Text>
             <Text style={styles.productBody}>
               {insightsLoading
-                ? 'Reading the product page...'
+                ? copy.readingProduct
                 : insights?.promotionText
-                  ? `Deal: ${insights.promotionText}`
-                  : 'Simple order, no extra clutter.'}
+                  ? `${copy.deal}: ${insights.promotionText}`
+                  : copy.simpleOrder}
             </Text>
             {insightsLoading ? <ActivityIndicator color={colors.acc} /> : null}
           </View>
@@ -328,107 +508,98 @@ export default function NewOrder() {
         </View>
 
         <View style={styles.finderCard}>
-          <Text style={styles.kicker}>Product finder result</Text>
-          <Text style={styles.finderTitle}>What Shakana found from the link</Text>
+          <Text style={styles.kicker}>{copy.finderResult}</Text>
+          <Text style={styles.finderTitle}>{copy.finderTitle}</Text>
           <View style={styles.finderGrid}>
             <View style={styles.finderCell}>
-              <Text style={styles.finderLabel}>What it is</Text>
+              <Text style={styles.finderLabel}>{copy.whatItIs}</Text>
               <Text style={styles.finderValue}>{productName}</Text>
             </View>
             <View style={styles.finderCell}>
-              <Text style={styles.finderLabel}>Where it comes from</Text>
+              <Text style={styles.finderLabel}>{copy.whereFrom}</Text>
               <Text style={styles.finderValue}>{sourceLabel}</Text>
             </View>
             <View style={styles.finderCell}>
-              <Text style={styles.finderLabel}>Product cost</Text>
+              <Text style={styles.finderLabel}>{copy.productCost}</Text>
               <Text style={styles.finderValue}>{productCostLabel}</Text>
             </View>
             <View style={styles.finderCell}>
-              <Text style={styles.finderLabel}>Free delivery from</Text>
+              <Text style={styles.finderLabel}>{copy.freeDeliveryFrom}</Text>
               <Text style={styles.finderValue}>{freeShippingThresholdLabel}</Text>
             </View>
             <View style={styles.finderCell}>
-              <Text style={styles.finderLabel}>Missing for free delivery</Text>
+              <Text style={styles.finderLabel}>{copy.missingFreeDelivery}</Text>
               <Text style={styles.finderValue}>{freeShippingGapLabel}</Text>
             </View>
             <View style={styles.finderCell}>
-              <Text style={styles.finderLabel}>Neighbors to share link</Text>
+              <Text style={styles.finderLabel}>{copy.neighborsToShare}</Text>
               <Text style={styles.finderValue}>{neighborsToInvite}</Text>
             </View>
           </View>
           <View style={styles.dealBox}>
-            <Text style={styles.finderLabel}>Deal / 1+1 check</Text>
+            <Text style={styles.finderLabel}>{copy.dealCheck}</Text>
             <Text style={styles.dealText}>{dealLabel}</Text>
           </View>
-          <Text style={styles.finderNote}>
-            If the store blocks public details, Shakana keeps the manual fields above so the order can still continue.
-          </Text>
+          <Text style={styles.finderNote}>{copy.finderNote}</Text>
         </View>
 
         <View style={styles.planCard}>
-          <Text style={styles.planTitle}>Timer-based order plan</Text>
-          <Text style={styles.planIntro}>
-            No target amount: the order closes by time, then the founder gets the checkout link and buys manually.
-          </Text>
+          <Text style={styles.planTitle}>{copy.timerPlan}</Text>
+          <Text style={styles.planIntro}>{copy.timerPlanIntro}</Text>
           <View style={styles.planRow}>
-            <Text style={styles.planLabel}>Timer closes in</Text>
+            <Text style={styles.planLabel}>{copy.timerClosesIn}</Text>
             <Text style={styles.planValue}>{timerLabel}</Text>
           </View>
           <View style={styles.planRow}>
-            <Text style={styles.planLabel}>Estimated shipping</Text>
+            <Text style={styles.planLabel}>{copy.estimatedShipping}</Text>
             <Text style={styles.planValue}>{formatAgorot(deliveryFeeAgorot)}</Text>
           </View>
           <View style={styles.planRow}>
-            <Text style={styles.planLabel}>Participants</Text>
-            <Text style={styles.planValue}>up to {participantCount}</Text>
+            <Text style={styles.planLabel}>{copy.participants}</Text>
+            <Text style={styles.planValue}>{copy.upTo} {participantCount}</Text>
           </View>
           <View style={styles.planRow}>
-            <Text style={styles.planLabel}>Shipping saved together</Text>
+            <Text style={styles.planLabel}>{copy.shippingSaved}</Text>
             <Text style={styles.planValue}>{formatAgorot(shippingSavedAgorot)}</Text>
           </View>
           <View style={styles.planRow}>
-            <Text style={styles.planLabel}>Approx. each</Text>
+            <Text style={styles.planLabel}>{copy.approxEach}</Text>
             <Text style={styles.planValue}>{formatAgorot(perPersonAgorot)}</Text>
           </View>
           <View style={styles.planRow}>
-            <Text style={styles.planLabel}>Shared order missing for free shipping</Text>
+            <Text style={styles.planLabel}>{copy.missingShared}</Text>
             <Text style={styles.planValue}>{formatAgorot(freeShippingGapAgorot)}</Text>
           </View>
         </View>
 
         <Pressable style={styles.drawerHandle} onPress={() => setCartOpen((open) => !open)}>
-          <Text style={styles.drawerHandleText}>{cartOpen ? 'Hide cart drawer' : 'Show cart drawer'}</Text>
-          <Text style={styles.drawerCount}>1 item</Text>
+          <Text style={styles.drawerHandleText}>{cartOpen ? copy.hideCart : copy.showCart}</Text>
+          <Text style={styles.drawerCount}>{copy.oneItem}</Text>
         </Pressable>
 
         {cartOpen ? (
           <View style={styles.cartDrawer}>
-            <Text style={styles.kicker}>Shopping cart</Text>
-            <Text style={styles.cartTitle}>{title || 'Manual product'}</Text>
-            <Text style={styles.cartLine}>Store: {storeLabel || 'Choose store'}</Text>
-            <Text style={styles.cartLine}>Category: {category}</Text>
-            <Text style={styles.cartLine}>Product price: {formatAgorot(priceAgorot)}</Text>
-            <Text style={styles.cartLine}>Shipping estimate: {formatAgorot(deliveryFeeAgorot)}</Text>
-            <Text style={styles.cartHint}>This drawer keeps browsing clean while still showing what will be ordered.</Text>
+            <Text style={styles.kicker}>{copy.shoppingCart}</Text>
+            <Text style={styles.cartTitle}>{title || copy.manualProduct}</Text>
+            <Text style={styles.cartLine}>{copy.store}: {storeLabel || copy.chooseStore}</Text>
+            <Text style={styles.cartLine}>{copy.category}: {CATEGORIES.find((item) => item.key === category)?.[isHebrew ? 'heName' : 'enName']}</Text>
+            <Text style={styles.cartLine}>{copy.productPrice}: {formatAgorot(priceAgorot)}</Text>
+            <Text style={styles.cartLine}>{copy.shippingEstimate}: {formatAgorot(deliveryFeeAgorot)}</Text>
+            <Text style={styles.cartHint}>{copy.cartHint}</Text>
           </View>
         ) : null}
 
         <View style={styles.pickupCard}>
-          <Text style={styles.kicker}>Pickup</Text>
-          <Text style={styles.pickupTitle}>Pickup manager: you</Text>
-          <Text style={styles.pickupBody}>
-            Choose the preferred pickup point before creating the order. Everyone will see it, and it can be
-            updated later by the order creator or pickup manager.
-          </Text>
+          <Text style={styles.kicker}>{copy.pickup}</Text>
+          <Text style={styles.pickupTitle}>{copy.pickupManager}</Text>
+          <Text style={styles.pickupBody}>{copy.pickupBody}</Text>
           <Field
-            label="Preferred pickup location"
+            label={copy.pickupLocation}
             value={pickupLocation}
             onChange={setPickupLocation}
-            placeholder="Building lobby, Zara pickup point, or your apartment"
+            placeholder={copy.pickupPlaceholder}
           />
-          <Text style={styles.uncertainText}>
-            Pickup location may vary depending on the store/shipping provider
-          </Text>
+          <Text style={styles.uncertainText}>{copy.pickupUncertain}</Text>
         </View>
 
         <PrimaryBtn label={t('order.new.submit')} onPress={submit} disabled={!valid} loading={create.isPending} />

@@ -15,37 +15,46 @@ import { useLocale } from '@/i18n/locale';
 const SHOPPING_FLOWS = [
   {
     id: 'paste-link',
-    name: 'Paste any link',
-    note: 'Shakana detects the store from the domain automatically.',
-    category: 'Fashion',
+    enName: 'Paste any link',
+    heName: 'הדבק כל קישור',
+    enNote: 'Shakana detects the store from the domain automatically.',
+    heNote: 'Shakana מזהה את החנות אוטומטית לפי הדומיין.',
+    enCategory: 'Fashion',
+    heCategory: 'אופנה',
     tone: '#6B4CE6',
     image: 'https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?auto=format&fit=crop&w=1200&q=80',
   },
   {
     id: 'auto-product',
-    name: 'Auto product read',
-    note: 'Looks for product name, image, price, SKU and promotions.',
-    category: 'Product',
+    enName: 'Auto product read',
+    heName: 'קריאת מוצר אוטומטית',
+    enNote: 'Looks for product name, image, price, SKU and promotions.',
+    heNote: 'מחפש שם מוצר, תמונה, מחיר, SKU ומבצעים.',
+    enCategory: 'Product',
+    heCategory: 'מוצר',
     tone: '#2F9E44',
     image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1200&q=80',
   },
   {
     id: 'shared-cart',
-    name: 'Shared cart',
-    note: 'Friends join by link and add their own items before the timer ends.',
-    category: 'Cart',
+    enName: 'Shared cart',
+    heName: 'סל משותף',
+    enNote: 'Friends join by link and add their own items before the timer ends.',
+    heNote: 'חברים מצטרפים בקישור ומוסיפים פריטים לפני שהטיימר מסתיים.',
+    enCategory: 'Cart',
+    heCategory: 'סל',
     tone: '#16112C',
     image: 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1200&q=80',
   },
 ];
 
 const CATEGORY_CHIPS = [
-  { name: 'Fashion', detail: 'Clothes, shoes, sizes and color choices.' },
-  { name: 'Beauty', detail: 'Care products, makeup and pharmacy essentials.' },
-  { name: 'Home', detail: 'Home goods, cleaning, kitchen and decor.' },
-  { name: 'Kids', detail: 'Kids clothes, toys and school basics.' },
-  { name: 'Electronics', detail: 'Gadgets, chargers and building tech buys.' },
-  { name: 'Grocery', detail: 'Food, pantry and shared delivery orders.' },
+  { enName: 'Fashion', heName: 'אופנה', enDetail: 'Clothes, shoes, sizes and color choices.', heDetail: 'בגדים, נעליים, מידות וצבעים.' },
+  { enName: 'Beauty', heName: 'טיפוח', enDetail: 'Care products, makeup and pharmacy essentials.', heDetail: 'טיפוח, איפור ומוצרי פארם.' },
+  { enName: 'Home', heName: 'בית', enDetail: 'Home goods, cleaning, kitchen and decor.', heDetail: 'בית, ניקיון, מטבח ועיצוב.' },
+  { enName: 'Kids', heName: 'ילדים', enDetail: 'Kids clothes, toys and school basics.', heDetail: 'בגדי ילדים, צעצועים וציוד לימודים.' },
+  { enName: 'Electronics', heName: 'אלקטרוניקה', enDetail: 'Gadgets, chargers and building tech buys.', heDetail: 'גאדג׳טים, מטענים וקניות טכנולוגיה.' },
+  { enName: 'Grocery', heName: 'סופר', enDetail: 'Food, pantry and shared delivery orders.', heDetail: 'אוכל, מזווה והזמנות משלוח משותפות.' },
 ];
 
 function HomeMark() {
@@ -135,12 +144,14 @@ function OrderCard({
   subtitle,
   status,
   meta,
+  actionLabel,
   onPress,
 }: {
   title: string;
   subtitle: string;
   status: string;
   meta: string;
+  actionLabel: string;
   onPress: () => void;
 }) {
   return (
@@ -161,7 +172,7 @@ function OrderCard({
       </Text>
       <View style={styles.orderFooter}>
         <Text style={styles.orderMeta}>{meta}</Text>
-        <Text style={styles.orderAction}>OPEN</Text>
+        <Text style={styles.orderAction}>{actionLabel}</Text>
       </View>
     </Pressable>
   );
@@ -169,7 +180,21 @@ function OrderCard({
 
 export default function BuildingTab() {
   const router = useRouter();
-  const { t } = useLocale();
+  const { language, t } = useLocale();
+  const isHebrew = language === 'he';
+  const homeCopy = isHebrew
+    ? {
+        smartFlow: 'זרימת הזמנה חכמה',
+        anyStore: 'קישור מכל חנות',
+        order: 'הזמנה',
+        seats: 'מקומות',
+      }
+    : {
+        smartFlow: 'Smart order flow',
+        anyStore: 'Any store link',
+        order: 'Order',
+        seats: 'seats',
+      };
   const [search, setSearch] = useState('');
   const user = useAuthStore((s) => s.user);
   const { data: profile } = useProfile(user?.id);
@@ -182,7 +207,9 @@ export default function BuildingTab() {
   const normalizedSearch = search.trim().toLowerCase();
   const filteredFlows = normalizedSearch
     ? SHOPPING_FLOWS.filter((store) =>
-        [store.name, store.note, store.category].some((value) => value.toLowerCase().includes(normalizedSearch)),
+        [store.enName, store.heName, store.enNote, store.heNote, store.enCategory, store.heCategory].some((value) =>
+          value.toLowerCase().includes(normalizedSearch),
+        ),
       )
     : SHOPPING_FLOWS;
   const filteredOrders = normalizedSearch
@@ -259,13 +286,13 @@ export default function BuildingTab() {
                   style={styles.searchResult}
                   onPress={() => router.push('/order/new')}
                 >
-                  <Text style={styles.searchResultTitle}>{store.name}</Text>
-                  <Text style={styles.searchResultBody}>{store.note}</Text>
+                  <Text style={styles.searchResultTitle}>{isHebrew ? store.heName : store.enName}</Text>
+                  <Text style={styles.searchResultBody}>{isHebrew ? store.heNote : store.enNote}</Text>
                 </Pressable>
               ))}
               {filteredOrders.slice(0, 2).map((order) => (
                 <Pressable key={order.id} style={styles.searchResult} onPress={() => router.push(`/order/${order.id}`)}>
-                  <Text style={styles.searchResultTitle}>{order.product_title ?? 'Order'}</Text>
+                  <Text style={styles.searchResultTitle}>{order.product_title ?? homeCopy.order}</Text>
                   <Text style={styles.searchResultBody}>{order.store_label ?? order.product_url}</Text>
                 </Pressable>
               ))}
@@ -275,31 +302,31 @@ export default function BuildingTab() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
             {CATEGORY_CHIPS.map((category, index) => (
               <Pressable
-                key={category.name}
+                key={category.enName}
                 style={[styles.categoryChip, index === 0 && styles.categoryChipActive]}
-                onPress={() => router.push(`/order/new?store=${encodeURIComponent(category.name.toLowerCase())}`)}
+                onPress={() => router.push(`/order/new?store=${encodeURIComponent(category.enName.toLowerCase())}`)}
               >
                 <Text style={[styles.categoryChipText, index === 0 && styles.categoryChipTextActive]}>
-                  {category.name}
+                  {isHebrew ? category.heName : category.enName}
                 </Text>
                 <Text style={[styles.categoryChipDetail, index === 0 && styles.categoryChipDetailActive]}>
-                  {category.detail}
+                  {isHebrew ? category.heDetail : category.enDetail}
                 </Text>
               </Pressable>
             ))}
           </ScrollView>
 
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Smart order flow</Text>
-            <Text style={styles.sectionLink}>Any store link</Text>
+            <Text style={styles.sectionTitle}>{homeCopy.smartFlow}</Text>
+            <Text style={styles.sectionLink}>{homeCopy.anyStore}</Text>
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.featureRow}>
             {filteredFlows.map((store) => (
               <FeaturedCard
                 key={store.id}
-                name={store.name}
-                note={store.note}
+                name={isHebrew ? store.heName : store.enName}
+                note={isHebrew ? store.heNote : store.enNote}
                 image={store.image}
                 tone={store.tone}
                 onPress={() => router.push('/order/new')}
@@ -331,7 +358,8 @@ export default function BuildingTab() {
                   title={order.product_title ?? t('tabs.home.noOrdersTitle')}
                   subtitle={order.product_url}
                   status={order.status.toUpperCase()}
-                  meta={`${formatAgorot(order.product_price_agorot)} · ${order.max_participants} seats`}
+                  meta={`${formatAgorot(order.product_price_agorot)} · ${order.max_participants} ${homeCopy.seats}`}
+                  actionLabel={isHebrew ? 'פתח' : 'OPEN'}
                   onPress={() => router.push(`/order/${order.id}`)}
                 />
               ))

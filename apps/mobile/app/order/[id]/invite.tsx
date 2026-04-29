@@ -11,10 +11,52 @@ import { fontFamily } from '@/theme/fonts';
 import { trackInviteSent, useGenerateInvite } from '@/api/invites';
 import { buildAppInviteUrl, buildInviteUrl } from '@/lib/deeplinks';
 import { useUiStore } from '@/stores/uiStore';
+import { useLocale } from '@/i18n/locale';
 
 export default function InviteSheet() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { language } = useLocale();
+  const isHebrew = language === 'he';
+  const copy = isHebrew
+    ? {
+        createError: 'לא הצלחנו ליצור קישור הזמנה.',
+        shareMessage: 'פתח את Shakana כדי להצטרף להזמנה ולראות את כל הפרטים.',
+        shareError: 'השיתוף נכשל.',
+        copied: 'קישור ההזמנה הועתק.',
+        title: 'הזמן שכנים',
+        lead:
+          'שלח את הקישור לחשבון אחר. אחרי התחברות והשלמת כתובת, החבר יצטרף לאותה הזמנה, יראה את הסל המלא ויוכל להוסיף מוצר לפני שהטיימר נסגר.',
+        stepsTitle: 'איך השיתוף עובד',
+        step1: '1. מעתיקים או משתפים את קישור ההזמנה.',
+        step2: '2. החבר פותח את הקישור ומתחבר עם החשבון שלו.',
+        step3: '3. Shakana מצרפת אותו להזמנה המדויקת הזאת.',
+        step4: '4. בדמו הזה התשלום מדולג, אז אפשר מיד להוסיף מוצר לסל.',
+        tapCopy: 'לחץ להעתקה',
+        directLink: 'קישור ישיר לאפליקציה',
+        creating: 'יוצר...',
+        shareButton: 'שתף קישור עם חבר',
+        back: 'חזרה להזמנה',
+      }
+    : {
+        createError: 'Could not create invite link.',
+        shareMessage: 'Open Shakana to join the order and see the full details.',
+        shareError: 'Sharing failed.',
+        copied: 'Invite link copied.',
+        title: 'Invite neighbors',
+        lead:
+          'Send this link to another account. After they sign in and finish their address, they will join the same order, see the full cart, and add their own product before the timer closes.',
+        stepsTitle: 'How the share flow works',
+        step1: '1. Copy or share this invite link.',
+        step2: '2. Your friend opens it and logs in with their own account.',
+        step3: '3. Shakana joins them to this exact order.',
+        step4: '4. Payment is skipped for the demo, so they can immediately add a product to the cart.',
+        tapCopy: 'Tap to copy',
+        directLink: 'Direct app link',
+        creating: 'creating...',
+        shareButton: 'Share link with a friend',
+        back: 'Back to order',
+      };
   const gen = useGenerateInvite();
   const pushToast = useUiStore((s) => s.pushToast);
   const [token, setToken] = useState<string | null>(null);
@@ -22,7 +64,7 @@ export default function InviteSheet() {
   useEffect(() => {
     if (!id) return;
     gen.mutateAsync(String(id)).then((r) => setToken(r.token)).catch((e) => {
-      pushToast(e instanceof Error ? e.message : 'Could not create invite link.', 'error');
+      pushToast(e instanceof Error ? e.message : copy.createError, 'error');
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -34,40 +76,37 @@ export default function InviteSheet() {
     if (!token || !id) return;
     try {
       await Share.share({
-        message: `${appLink}\n${universal}\n\nOpen Shakana to join the order and see the full details.`,
+        message: `${appLink}\n${universal}\n\n${copy.shareMessage}`,
       });
       trackInviteSent(String(id));
     } catch (e) {
-      pushToast(e instanceof Error ? e.message : 'Sharing failed.', 'error');
+      pushToast(e instanceof Error ? e.message : copy.shareError, 'error');
     }
   };
 
   const onCopy = async () => {
     if (!universal) return;
     await Clipboard.setStringAsync(universal);
-    pushToast('Invite link copied.', 'success');
+    pushToast(copy.copied, 'success');
   };
 
   return (
     <ScreenBase style={{ paddingTop: 20, paddingBottom: 36 }}>
       <View style={styles.header}>
         <BackBtn onPress={() => router.back()} />
-        <Text style={styles.headerTitle}>Invite neighbors</Text>
+        <Text style={styles.headerTitle}>{copy.title}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <View style={{ gap: 16 }}>
-        <Text style={styles.lead}>
-          Send this link to another account. After they sign in and finish their address, they will join the same order,
-          see the full cart, and add their own product before the timer closes.
-        </Text>
+        <Text style={styles.lead}>{copy.lead}</Text>
 
         <View style={styles.stepsCard}>
-          <Text style={styles.stepsTitle}>How the share flow works</Text>
-          <Text style={styles.step}>1. Copy or share this invite link.</Text>
-          <Text style={styles.step}>2. Your friend opens it and logs in with their own account.</Text>
-          <Text style={styles.step}>3. Shakana joins them to this exact order.</Text>
-          <Text style={styles.step}>4. Payment is skipped for the demo, so they can immediately add a product to the cart.</Text>
+          <Text style={styles.stepsTitle}>{copy.stepsTitle}</Text>
+          <Text style={styles.step}>{copy.step1}</Text>
+          <Text style={styles.step}>{copy.step2}</Text>
+          <Text style={styles.step}>{copy.step3}</Text>
+          <Text style={styles.step}>{copy.step4}</Text>
         </View>
 
         <Pressable onPress={onCopy} style={styles.linkCard} accessibilityRole="button">
@@ -78,17 +117,17 @@ export default function InviteSheet() {
               {universal}
             </Text>
           )}
-          <Text style={styles.tap}>Tap to copy</Text>
+          <Text style={styles.tap}>{copy.tapCopy}</Text>
         </Pressable>
 
-        <Text style={styles.deepNote}>Direct app link: {appLink || 'creating...'}</Text>
+        <Text style={styles.deepNote}>{copy.directLink}: {appLink || copy.creating}</Text>
       </View>
 
       <View style={{ flex: 1 }} />
 
       <View style={{ gap: 10 }}>
-        <PrimaryBtn label="Share link with a friend" onPress={onShare} disabled={!token} />
-        <SecondaryBtn label="Back to order" onPress={() => router.back()} />
+        <PrimaryBtn label={copy.shareButton} onPress={onShare} disabled={!token} />
+        <SecondaryBtn label={copy.back} onPress={() => router.back()} />
       </View>
     </ScreenBase>
   );

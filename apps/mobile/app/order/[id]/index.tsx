@@ -15,6 +15,7 @@ import { useUiStore } from '@/stores/uiStore';
 import { formatAgorot } from '@/utils/format';
 import { formatCompactDuration } from '@/utils/timer';
 import type { Participant } from '@/types/domain';
+import { useLocale } from '@/i18n/locale';
 
 function ParticipantTower({
   participants,
@@ -25,6 +26,8 @@ function ParticipantTower({
   total: number;
   currentUserId: string | undefined;
 }) {
+  const { language } = useLocale();
+  const isHebrew = language === 'he';
   const slots = Array.from({ length: total }, (_, i) => participants[i]);
   return (
     <View style={styles.tower}>
@@ -34,10 +37,10 @@ function ParticipantTower({
           <View key={i} style={[styles.slot, p && styles.slotFilled, isMe && styles.slotMe]}>
             {p ? (
               <Text style={styles.slotText}>
-                {isMe ? 'YOU' : `SEAT ${i + 1}`} | {p.status === 'paid' ? 'PAID' : 'OPEN'}
+                {isMe ? (isHebrew ? 'אתה' : 'YOU') : `${isHebrew ? 'מקום' : 'SEAT'} ${i + 1}`} | {p.status === 'paid' ? (isHebrew ? 'שולם' : 'PAID') : (isHebrew ? 'פתוח' : 'OPEN')}
               </Text>
             ) : (
-              <Text style={styles.slotEmpty}>OPEN SLOT</Text>
+              <Text style={styles.slotEmpty}>{isHebrew ? 'מקום פנוי' : 'OPEN SLOT'}</Text>
             )}
           </View>
         );
@@ -49,6 +52,125 @@ function ParticipantTower({
 export default function OrderShell() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { language } = useLocale();
+  const isHebrew = language === 'he';
+  const copy = isHebrew
+    ? {
+        unableToLoad: 'לא הצלחנו לטעון את ההזמנה.',
+        noTimer: 'אין טיימר',
+        mainProduct: 'המוצר הראשי',
+        productAdded: 'המוצר נוסף לסל המשותף.',
+        order: 'הזמנה',
+        item: 'פריט',
+        store: 'חנות',
+        timerOrder: 'הזמנה לפי טיימר',
+        locked: 'נעול',
+        timerBody: 'משתמשים יכולים להצטרף ולהוסיף פריטים עד שהטיימר מסתיים. עריכות ננעלות 15 שניות לפני הסגירה.',
+        editsLocked: 'העריכות נעולות.',
+        editsOpen: 'העריכות עדיין פתוחות.',
+        participants: 'משתתפים',
+        finderSummary: 'סיכום איתור מוצר',
+        whatItIs: 'מה המוצר',
+        notDetected: 'שם המוצר לא זוהה',
+        whereFrom: 'מאיפה זה מגיע',
+        detectedFromLink: 'החנות זוהתה מהקישור',
+        productPriceDetected: 'מחיר מוצר שזוהה',
+        estimatedShipping: 'משלוח משוער',
+        freeDeliveryNeeds: 'כל ההזמנה צריכה להגיע לסכום הזה למשלוח חינם',
+        approxEach: 'בערך לכל אחד עכשיו',
+        shippingSaved: 'חיסכון משלוח יחד',
+        missingParticipants: 'חסר למשלוח חינם לפי משתתפים',
+        missingCart: 'חסר למשלוח חינם לפי הסל',
+        neighborsCanJoin: 'שכנים שעוד יכולים להצטרף מהקישור',
+        dealNote:
+          'בדיקת המבצעים קוראת טקסט ציבורי של המוצר עבור 1+1, סייל ומבצעים דומים. אם החנות חוסמת פרטים, המשתמשים עדיין יכולים להוסיף אותם ידנית.',
+        fullCart: 'הסל המשותף המלא',
+        items: 'פריטים',
+        hide: 'הסתר',
+        show: 'הצג',
+        size: 'מידה',
+        productLinkSaved: 'קישור מוצר נשמר',
+        manualItem: 'פריט ידני',
+        addProduct: 'הוסף את המוצר שלך',
+        addProductBody: 'משתמשים שהצטרפו יכולים להוסיף עוד מוצר לאותו סל משותף. בדמו הזה התשלום מדולג, אז זה רק מעדכן את הסל ומקל לבדוק את הזרימה.',
+        productName: 'שם מוצר',
+        productPlaceholder: 'חולצה מזארה, ג׳ינס מ-H&M...',
+        price: 'מחיר',
+        sizeNote: 'מידה / הערה',
+        sizePlaceholder: 'M, שחור',
+        productLink: 'קישור מוצר',
+        cartLocked: 'הסל ננעל בגלל הטיימר',
+        adding: 'מוסיף...',
+        addToCart: 'הוסף לסל המשותף',
+        couldNotAdd: 'לא הצלחנו להוסיף את המוצר.',
+        pickupPlan: 'תוכנית איסוף',
+        pickupManager: 'אחראי איסוף נקבע',
+        preferredLocation: 'מיקום מועדף',
+        creatorWillAdd: 'יוגדר על ידי יוצר ההזמנה',
+        pickupMayVary: 'מיקום האיסוף עשוי להשתנות לפי החנות או חברת המשלוחים',
+        founderCheckout: 'פתח Checkout למייסד',
+        skippedProgress: 'התשלום מדולג: הצג התקדמות הזמנה',
+        createInvite: 'צור קישור הזמנה',
+        explainOrder: 'הסבר את ההזמנה',
+      }
+    : {
+        unableToLoad: 'Unable to load order.',
+        noTimer: 'No timer',
+        mainProduct: 'Main product',
+        productAdded: 'Product added to the shared cart.',
+        order: 'Order',
+        item: 'ITEM',
+        store: 'Store',
+        timerOrder: 'Timer order',
+        locked: 'Locked',
+        timerBody: 'Users can join and add cart items until the timer ends. Edits lock 15 seconds before closing.',
+        editsLocked: 'Edits are locked.',
+        editsOpen: 'Edits are still open.',
+        participants: 'Participants',
+        finderSummary: 'Product finder summary',
+        whatItIs: 'What it is',
+        notDetected: 'Product name was not detected',
+        whereFrom: 'Where it comes from',
+        detectedFromLink: 'Store detected from link',
+        productPriceDetected: 'Product price detected',
+        estimatedShipping: 'Estimated shipping',
+        freeDeliveryNeeds: 'Whole order needs for free delivery',
+        approxEach: 'Approx. each right now',
+        shippingSaved: 'Shipping saved together',
+        missingParticipants: 'Missing for free shipping by participants',
+        missingCart: 'Missing for free shipping by cart total',
+        neighborsCanJoin: 'Neighbors who can still join from share link',
+        dealNote:
+          'Deal detection checks public product text for 1+1, sale, and similar promotions. If the store blocks details, users can still add them manually.',
+        fullCart: 'Full shared cart',
+        items: 'items',
+        hide: 'Hide',
+        show: 'Show',
+        size: 'Size',
+        productLinkSaved: 'Product link saved',
+        manualItem: 'Manual item',
+        addProduct: 'Add your product',
+        addProductBody: 'Joined users can add one more product to the same shared cart. Payment is skipped in this demo, so this only updates the cart and keeps the flow easy to test.',
+        productName: 'Product name',
+        productPlaceholder: 'Zara shirt, H&M jeans...',
+        price: 'Price',
+        sizeNote: 'Size / note',
+        sizePlaceholder: 'M, black',
+        productLink: 'Product link',
+        cartLocked: 'Cart locked by timer',
+        adding: 'Adding...',
+        addToCart: 'Add to shared cart',
+        couldNotAdd: 'Could not add the product.',
+        pickupPlan: 'Pickup plan',
+        pickupManager: 'Pickup manager assigned',
+        preferredLocation: 'Preferred location',
+        creatorWillAdd: 'Will be added by the order creator',
+        pickupMayVary: 'Pickup location may vary depending on the store/shipping provider',
+        founderCheckout: 'Open founder checkout',
+        skippedProgress: 'Payment skipped: view order progress',
+        createInvite: 'Create invite link',
+        explainOrder: 'Explain this order',
+      };
   const userId = useAuthStore((s) => s.user?.id);
   const pushToast = useUiStore((s) => s.pushToast);
   const { data, isLoading, error } = useOrder(id);
@@ -101,7 +223,7 @@ export default function OrderShell() {
   if (error || !order) {
     return (
       <ScreenBase style={{ alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ color: colors.err, fontFamily: fontFamily.body }}>Unable to load order.</Text>
+        <Text style={{ color: colors.err, fontFamily: fontFamily.body }}>{copy.unableToLoad}</Text>
       </ScreenBase>
     );
   }
@@ -117,13 +239,13 @@ export default function OrderShell() {
   const editLocksAtMs = order.edit_locks_at ? new Date(order.edit_locks_at).getTime() : null;
   const remainingMs = closesAtMs ? Math.max(0, closesAtMs - now) : null;
   const editLocked = Boolean(editLocksAtMs && editLocksAtMs <= now);
-  const timerLabel = remainingMs == null ? 'No timer' : formatCompactDuration(remainingMs);
+  const timerLabel = remainingMs == null ? copy.noTimer : formatCompactDuration(remainingMs);
   const visibleCartItems = cartItems.length > 0
     ? cartItems
     : [
         {
           id: 'main-product-preview',
-          title: order.product_title ?? 'Main product',
+          title: order.product_title ?? copy.mainProduct,
           price_agorot: order.product_price_agorot,
           ref: order.product_url,
           size: null,
@@ -156,14 +278,14 @@ export default function OrderShell() {
     setItemPrice('');
     setItemSize('');
     setItemRef('');
-    pushToast('Product added to the shared cart.', 'success');
+    pushToast(copy.productAdded, 'success');
   };
 
   return (
     <ScreenBase style={{ paddingTop: 20, paddingBottom: 36 }}>
       <View style={styles.header}>
         <BackBtn onPress={() => router.back()} />
-        <Text style={styles.headerTitle}>Order</Text>
+        <Text style={styles.headerTitle}>{copy.order}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -173,7 +295,7 @@ export default function OrderShell() {
             <Image source={{ uri: order.product_image }} style={styles.productImg} />
           ) : (
             <View style={[styles.productImg, styles.productPlaceholder]}>
-              <Text style={styles.placeholderText}>ITEM</Text>
+              <Text style={styles.placeholderText}>{copy.item}</Text>
             </View>
           )}
           <View style={{ flex: 1 }}>
@@ -181,24 +303,22 @@ export default function OrderShell() {
               {order.product_title ?? order.product_url}
             </Text>
             <Text style={styles.productPrice}>
-              {order.store_label ?? 'Store'} | {formatAgorot(order.product_price_agorot)}
+              {order.store_label ?? copy.store} | {formatAgorot(order.product_price_agorot)}
             </Text>
           </View>
         </View>
 
         <View style={styles.timerCard}>
-          <Text style={styles.kicker}>Timer order</Text>
-          <Text style={styles.timerValue}>{order.status === 'locked' ? 'Locked' : timerLabel}</Text>
-          <Text style={styles.timerBody}>
-            Users can join and add cart items until the timer ends. Edits lock 15 seconds before closing.
-          </Text>
+          <Text style={styles.kicker}>{copy.timerOrder}</Text>
+          <Text style={styles.timerValue}>{order.status === 'locked' ? copy.locked : timerLabel}</Text>
+          <Text style={styles.timerBody}>{copy.timerBody}</Text>
           <Text style={styles.timerNote}>
-            {editLocked || order.status === 'locked' ? 'Edits are locked.' : 'Edits are still open.'}
+            {editLocked || order.status === 'locked' ? copy.editsLocked : copy.editsOpen}
           </Text>
         </View>
 
         <View>
-          <Text style={styles.sectionTitle}>Participants</Text>
+          <Text style={styles.sectionTitle}>{copy.participants}</Text>
           <Text style={styles.sectionSub}>
             {data.participants.length} of {order.max_participants}
           </Text>
@@ -211,32 +331,29 @@ export default function OrderShell() {
         </View>
 
         <View style={styles.pickupCard}>
-          <Text style={styles.kicker}>Product finder summary</Text>
-          <Text style={styles.pickupBody}>What it is: {order.product_title ?? 'Product name was not detected'}</Text>
-          <Text style={styles.pickupBody}>Where it comes from: {order.store_label ?? 'Store detected from link'}</Text>
-          <Text style={styles.pickupBody}>Product price detected: {formatAgorot(order.product_price_agorot)}</Text>
-          <Text style={styles.pickupBody}>Estimated shipping: {formatAgorot(estimatedShipping)}</Text>
-          <Text style={styles.pickupBody}>Whole order needs for free delivery: {formatAgorot(freeShippingThreshold)}</Text>
-          <Text style={styles.pickupBody}>Approx. each right now: {formatAgorot(perPerson)}</Text>
-          <Text style={styles.pickupBody}>Shipping saved together: {formatAgorot(shippingSaved)}</Text>
-          <Text style={styles.pickupBody}>Missing for free shipping by participants: {formatAgorot(freeShippingGap)}</Text>
-          <Text style={styles.pickupBody}>Missing for free shipping by cart total: {formatAgorot(cartFreeShippingGap)}</Text>
-          <Text style={styles.pickupBody}>Neighbors who can still join from share link: {neighborsToInvite}</Text>
-          <Text style={styles.pickupNote}>
-            Deal detection checks public product text for 1+1, sale, and similar promotions. If the store blocks details,
-            users can still add them manually.
-          </Text>
+          <Text style={styles.kicker}>{copy.finderSummary}</Text>
+          <Text style={styles.pickupBody}>{copy.whatItIs}: {order.product_title ?? copy.notDetected}</Text>
+          <Text style={styles.pickupBody}>{copy.whereFrom}: {order.store_label ?? copy.detectedFromLink}</Text>
+          <Text style={styles.pickupBody}>{copy.productPriceDetected}: {formatAgorot(order.product_price_agorot)}</Text>
+          <Text style={styles.pickupBody}>{copy.estimatedShipping}: {formatAgorot(estimatedShipping)}</Text>
+          <Text style={styles.pickupBody}>{copy.freeDeliveryNeeds}: {formatAgorot(freeShippingThreshold)}</Text>
+          <Text style={styles.pickupBody}>{copy.approxEach}: {formatAgorot(perPerson)}</Text>
+          <Text style={styles.pickupBody}>{copy.shippingSaved}: {formatAgorot(shippingSaved)}</Text>
+          <Text style={styles.pickupBody}>{copy.missingParticipants}: {formatAgorot(freeShippingGap)}</Text>
+          <Text style={styles.pickupBody}>{copy.missingCart}: {formatAgorot(cartFreeShippingGap)}</Text>
+          <Text style={styles.pickupBody}>{copy.neighborsCanJoin}: {neighborsToInvite}</Text>
+          <Text style={styles.pickupNote}>{copy.dealNote}</Text>
         </View>
 
         <View style={styles.cartHeader}>
           <View>
-            <Text style={styles.sectionTitle}>Full shared cart</Text>
+            <Text style={styles.sectionTitle}>{copy.fullCart}</Text>
             <Text style={styles.sectionSub}>
-              {visibleCartItems.length} item{visibleCartItems.length === 1 ? '' : 's'} | {formatAgorot(cartTotal)}
+              {visibleCartItems.length} {copy.items} | {formatAgorot(cartTotal)}
             </Text>
           </View>
           <Pressable style={styles.cartToggle} onPress={() => setCartOpen((open) => !open)}>
-            <Text style={styles.cartToggleText}>{cartOpen ? 'Hide' : 'Show'}</Text>
+            <Text style={styles.cartToggleText}>{cartOpen ? copy.hide : copy.show}</Text>
           </Pressable>
         </View>
 
@@ -250,8 +367,8 @@ export default function OrderShell() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.cartItemTitle}>{item.title}</Text>
                   <Text style={styles.cartItemMeta}>
-                    {item.size ? `Size: ${item.size} | ` : ''}
-                    {item.ref ? 'Product link saved' : 'Manual item'}
+                    {item.size ? `${copy.size}: ${item.size} | ` : ''}
+                    {item.ref ? copy.productLinkSaved : copy.manualItem}
                   </Text>
                 </View>
                 <Text style={styles.cartItemPrice}>{formatAgorot(item.price_agorot)}</Text>
@@ -261,32 +378,29 @@ export default function OrderShell() {
         ) : null}
 
         <View style={styles.pickupCard}>
-          <Text style={styles.kicker}>Add your product</Text>
-          <Text style={styles.pickupBody}>
-            Joined users can add one more product to the same shared cart. Payment is skipped in this demo, so this only
-            updates the cart and keeps the flow easy to test.
-          </Text>
-          <Field label="Product name" value={itemTitle} onChange={setItemTitle} placeholder="Zara shirt, H&M jeans..." />
+          <Text style={styles.kicker}>{copy.addProduct}</Text>
+          <Text style={styles.pickupBody}>{copy.addProductBody}</Text>
+          <Field label={copy.productName} value={itemTitle} onChange={setItemTitle} placeholder={copy.productPlaceholder} />
           <View style={styles.addRow}>
             <View style={{ flex: 1 }}>
-              <NumField label="Price" value={itemPrice} onChange={setItemPrice} placeholder="99" />
+              <NumField label={copy.price} value={itemPrice} onChange={setItemPrice} placeholder="99" />
             </View>
             <View style={{ flex: 1 }}>
-              <Field label="Size / note" value={itemSize} onChange={setItemSize} placeholder="M, black" />
+              <Field label={copy.sizeNote} value={itemSize} onChange={setItemSize} placeholder={copy.sizePlaceholder} />
             </View>
           </View>
-          <Field label="Product link" value={itemRef} onChange={setItemRef} placeholder="https://..." ltr />
+          <Field label={copy.productLink} value={itemRef} onChange={setItemRef} placeholder="https://..." ltr />
           <PrimaryBtn
             label={
               editLocked || order.status === 'locked'
-                ? 'Cart locked by timer'
+                ? copy.cartLocked
                 : addItem.isPending
-                  ? 'Adding...'
-                  : 'Add to shared cart'
+                  ? copy.adding
+                  : copy.addToCart
             }
             onPress={() => {
               void onAddItem().catch((error) => {
-                pushToast(error instanceof Error ? error.message : 'Could not add the product.', 'error');
+                pushToast(error instanceof Error ? error.message : copy.couldNotAdd, 'error');
               });
             }}
             disabled={!canAddItem}
@@ -295,33 +409,33 @@ export default function OrderShell() {
         </View>
 
         <View style={styles.pickupCard}>
-          <Text style={styles.kicker}>Pickup plan</Text>
-          <Text style={styles.pickupTitle}>{order.pickup_responsible_name || 'Pickup manager assigned'}</Text>
+          <Text style={styles.kicker}>{copy.pickupPlan}</Text>
+          <Text style={styles.pickupTitle}>{order.pickup_responsible_name || copy.pickupManager}</Text>
           <Text style={styles.pickupBody}>
-            Preferred location: {order.preferred_pickup_location || 'Will be added by the order creator'}
+            {copy.preferredLocation}: {order.preferred_pickup_location || copy.creatorWillAdd}
           </Text>
           <Text style={styles.pickupNote}>
-            {order.pickup_location_note || 'Pickup location may vary depending on the store/shipping provider'}
+            {order.pickup_location_note || copy.pickupMayVary}
           </Text>
         </View>
 
         <View style={{ gap: 10 }}>
           {order.status === 'locked' && order.creator_id === userId ? (
             <PrimaryBtn
-              label="Open founder checkout"
+              label={copy.founderCheckout}
               onPress={() => {
                 void Linking.openURL(order.founder_checkout_url || order.product_url);
               }}
             />
           ) : order.status === 'locked' ? (
             <PrimaryBtn
-              label="Payment skipped: view order progress"
+              label={copy.skippedProgress}
               onPress={() => router.push(`/order/${order.id}/escrow`)}
             />
           ) : (
-            <PrimaryBtn label="Create invite link" onPress={() => router.push(`/order/${order.id}/invite`)} />
+            <PrimaryBtn label={copy.createInvite} onPress={() => router.push(`/order/${order.id}/invite`)} />
           )}
-          <SecondaryBtn label="Explain this order" onPress={() => setCartOpen(true)} />
+          <SecondaryBtn label={copy.explainOrder} onPress={() => setCartOpen(true)} />
         </View>
       </ScrollView>
     </ScreenBase>
