@@ -153,6 +153,15 @@ type UpdateDeliveryInput = {
   preferredPickupLocation?: string;
 };
 
+type AddOrderItemInput = {
+  orderId: string;
+  participantId: string;
+  title: string;
+  ref?: string | null;
+  size?: string | null;
+  priceAgorot: number;
+};
+
 export function useUpdateDelivery() {
   const qc = useQueryClient();
   return useMutation({
@@ -160,6 +169,45 @@ export function useUpdateDelivery() {
     onSuccess: (_d, input) => {
       qc.invalidateQueries({ queryKey: ['order', input.orderId] });
       track('delivery_status_updated', { orderId: input.orderId, action: input.action });
+    },
+  });
+}
+
+export function useAddOrderItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: AddOrderItemInput) => {
+      const orderItems = supabase.from('order_items') as unknown as {
+        insert: (values: {
+          order_id: string;
+          participant_id: string;
+          title: string;
+          ref: string | null;
+          size: string | null;
+          price_agorot: number;
+        }) => {
+          select: (columns: string) => {
+            single: () => Promise<{ data: unknown; error: Error | null }>;
+          };
+        };
+      };
+      const { data, error } = await orderItems
+        .insert({
+          order_id: input.orderId,
+          participant_id: input.participantId,
+          title: input.title.trim(),
+          ref: input.ref?.trim() || null,
+          size: input.size?.trim() || null,
+          price_agorot: input.priceAgorot,
+        })
+        .select('*')
+        .single();
+      if (error) throw error;
+      return data as OrderItem;
+    },
+    onSuccess: (_item, input) => {
+      qc.invalidateQueries({ queryKey: ['order', input.orderId] });
+      track('cart_item_added', { orderId: input.orderId });
     },
   });
 }

@@ -104,13 +104,23 @@ Deno.serve(async (req) => {
 
     // Creator is always the first participant.
     const amount = Math.ceil((body.productPriceAgorot + body.estimatedShippingAgorot) / body.maxParticipants);
-    const { error: partErr } = await admin.from('participants').insert({
+    const { data: participant, error: partErr } = await admin.from('participants').insert({
       order_id: order.id,
       user_id: userId,
       status: 'joined',
       amount_agorot: amount,
-    });
+    }).select('id').single();
     if (partErr) throw partErr;
+
+    const { error: itemErr } = await admin.from('order_items').insert({
+      order_id: order.id,
+      participant_id: participant.id,
+      title: body.productTitle.trim(),
+      ref: body.productUrl,
+      size: null,
+      price_agorot: body.productPriceAgorot,
+    });
+    if (itemErr) throw itemErr;
 
     return json({ order });
   } catch (e) {

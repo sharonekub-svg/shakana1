@@ -58,8 +58,17 @@ export default function InviteSheet() {
 
       <View style={{ gap: 16 }}>
         <Text style={styles.lead}>
-          Send this link to another account. After they sign in and finish their address, they will join the same order.
+          Send this link to another account. After they sign in and finish their address, they will join the same order,
+          see the full cart, and add their own product before the timer closes.
         </Text>
+
+        <View style={styles.stepsCard}>
+          <Text style={styles.stepsTitle}>How the share flow works</Text>
+          <Text style={styles.step}>1. Copy or share this invite link.</Text>
+          <Text style={styles.step}>2. Your friend opens it and logs in with their own account.</Text>
+          <Text style={styles.step}>3. Shakana joins them to this exact order.</Text>
+          <Text style={styles.step}>4. Payment is skipped for the demo, so they can immediately add a product to the cart.</Text>
+        </View>
 
         <Pressable onPress={onCopy} style={styles.linkCard} accessibilityRole="button">
           {gen.isPending || !token ? (
@@ -78,8 +87,8 @@ export default function InviteSheet() {
       <View style={{ flex: 1 }} />
 
       <View style={{ gap: 10 }}>
-        <PrimaryBtn label="Share link" onPress={onShare} disabled={!token} />
-        <SecondaryBtn label="Done" onPress={() => router.back()} />
+        <PrimaryBtn label="Share link with a friend" onPress={onShare} disabled={!token} />
+        <SecondaryBtn label="Back to order" onPress={() => router.back()} />
       </View>
     </ScreenBase>
   );
@@ -106,4 +115,23 @@ const styles = StyleSheet.create({
   link: { fontFamily: fontFamily.bodySemi, color: colors.tx, fontSize: 14 },
   tap: { fontFamily: fontFamily.body, color: colors.mu, fontSize: 12 },
   deepNote: { fontFamily: fontFamily.body, color: colors.mu, fontSize: 11 },
+  stepsCard: {
+    gap: 8,
+    padding: 16,
+    borderRadius: radii.lg,
+    backgroundColor: colors.cardSoft,
+    borderWidth: 1,
+    borderColor: colors.br,
+  },
+  stepsTitle: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+    color: colors.tx,
+  },
+  step: {
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.mu,
+  },
 });
