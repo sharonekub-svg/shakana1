@@ -29,9 +29,16 @@ function OrdersMark() {
 
 export default function OrdersTab() {
   const router = useRouter();
-  const { t } = useLocale();
+  const { language, t } = useLocale();
   const user = useAuthStore((s) => s.user);
   const { data: orders = [], isLoading } = useUserOrders(user?.id);
+  const openOrders = orders.filter((order) => !['completed', 'cancelled'].includes(order.status)).length;
+  const completedOrders = orders.filter((order) => order.status === 'completed').length;
+  const stats = [
+    { label: t('tabs.home.openOrders'), value: String(openOrders), featured: true },
+    { label: t('tabs.home.completed'), value: String(completedOrders) },
+    { label: language === 'he' ? 'קישורי שיתוף' : 'Invite links', value: '1' },
+  ];
 
   const newOrder = () => {
     track('start_order_clicked');
@@ -53,6 +60,15 @@ export default function OrdersTab() {
         <Pressable onPress={newOrder} style={styles.newBtn} accessibilityRole="button">
           <Text style={styles.newBtnText}>{t('tabs.orders.newOrder')}</Text>
         </Pressable>
+      </View>
+
+      <View style={styles.statsRow}>
+        {stats.map((stat) => (
+          <View key={stat.label} style={[styles.statCard, stat.featured && styles.statCardFeatured]}>
+            <Text style={[styles.statValue, stat.featured && styles.statValueFeatured]}>{stat.value}</Text>
+            <Text style={[styles.statLabel, stat.featured && styles.statLabelFeatured]}>{stat.label}</Text>
+          </View>
+        ))}
       </View>
 
       {isLoading || orders.length === 0 ? (
@@ -105,6 +121,46 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 18,
+    paddingBottom: 14,
+  },
+  statCard: {
+    flex: 1,
+    minHeight: 84,
+    padding: 14,
+    borderRadius: 22,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.br,
+    justifyContent: 'space-between',
+    ...shadow.card,
+  },
+  statCardFeatured: {
+    backgroundColor: colors.acc,
+    borderColor: colors.acc,
+  },
+  statValue: {
+    fontFamily: fontFamily.display,
+    fontSize: 24,
+    lineHeight: 28,
+    color: colors.tx,
+  },
+  statValueFeatured: {
+    color: colors.white,
+  },
+  statLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 10,
+    letterSpacing: 1,
+    color: colors.mu,
+    textTransform: 'uppercase',
+  },
+  statLabelFeatured: {
+    color: '#CFF4DB',
   },
   headerBrand: {
     flexDirection: 'row',

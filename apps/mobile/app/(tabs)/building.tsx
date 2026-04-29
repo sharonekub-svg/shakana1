@@ -219,6 +219,12 @@ export default function BuildingTab() {
         ),
       )
     : [];
+  const dashboardStats = [
+    { value: String(openOrders.length), label: t('tabs.home.openOrders'), featured: true },
+    { value: String(completedOrders), label: t('tabs.home.completed') },
+    { value: String(topOrders.length), label: isHebrew ? 'הזמנות מוכנות' : 'Ready orders' },
+    { value: '1', label: isHebrew ? 'שיתוף עובד' : 'Share flow' },
+  ];
   const submitSearch = () => {
     if (/^https?:\/\//i.test(search.trim())) {
       router.push(`/order/new?url=${encodeURIComponent(search.trim())}`);
@@ -278,6 +284,15 @@ export default function BuildingTab() {
             onSubmit={submitSearch}
           />
 
+          <View style={styles.statsRow}>
+            {dashboardStats.map((stat) => (
+              <View key={stat.label} style={[styles.statCard, stat.featured && styles.statCardFeatured]}>
+                <Text style={[styles.statValue, stat.featured && styles.statValueFeatured]}>{stat.value}</Text>
+                <Text style={[styles.statLabel, stat.featured && styles.statLabelFeatured]}>{stat.label}</Text>
+              </View>
+            ))}
+          </View>
+
           {normalizedSearch ? (
             <View style={styles.searchResults}>
               {filteredFlows.slice(0, 3).map((store) => (
@@ -333,17 +348,6 @@ export default function BuildingTab() {
               />
             ))}
           </ScrollView>
-
-          <View style={styles.statsRow}>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{String(openOrders.length)}</Text>
-              <Text style={styles.statLabel}>{t('tabs.home.openOrders')}</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{String(completedOrders)}</Text>
-              <Text style={styles.statLabel}>{t('tabs.home.completed')}</Text>
-            </View>
-          </View>
 
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{t('tabs.home.recent')}</Text>
@@ -443,7 +447,7 @@ const styles = StyleSheet.create({
   heroCard: {
     borderRadius: radii.xxl,
     overflow: 'hidden',
-    backgroundColor: colors.white,
+    backgroundColor: colors.navy,
     ...shadow.card,
   },
   heroImage: {
@@ -455,7 +459,7 @@ const styles = StyleSheet.create({
   },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15, 13, 26, 0.38)',
+    backgroundColor: 'rgba(6, 46, 27, 0.72)',
   },
   heroContent: {
     padding: 18,
@@ -487,7 +491,7 @@ const styles = StyleSheet.create({
     height: 46,
     paddingHorizontal: 18,
     borderRadius: radii.pill,
-    backgroundColor: colors.white,
+    backgroundColor: '#E9F8EF',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -654,10 +658,11 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
   },
   statCard: {
-    flex: 1,
+    width: '48%',
     paddingVertical: 16,
     paddingHorizontal: 14,
     borderRadius: 24,
@@ -665,6 +670,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.br,
     ...shadow.card,
+  },
+  statCardFeatured: {
+    backgroundColor: colors.acc,
+    borderColor: colors.acc,
   },
   statValue: {
     fontFamily: fontFamily.display,
@@ -679,6 +688,12 @@ const styles = StyleSheet.create({
     letterSpacing: 1.6,
     color: colors.mu,
     textTransform: 'uppercase',
+  },
+  statValueFeatured: {
+    color: colors.white,
+  },
+  statLabelFeatured: {
+    color: '#CFF4DB',
   },
   ordersList: {
     gap: 12,

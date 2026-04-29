@@ -110,6 +110,14 @@ export default function InviteSheet() {
         </View>
 
         <Pressable onPress={onCopy} style={styles.linkCard} accessibilityRole="button">
+          <Text style={styles.oneLinkTitle}>
+            {isHebrew ? 'זה הקישור היחיד ששולחים' : 'This is the one link to send'}
+          </Text>
+          <Text style={styles.oneLinkBody}>
+            {isHebrew
+              ? 'החבר פותח, מתחבר עם החשבון שלו, ונכנס לאותה הזמנה עם אותו סל.'
+              : 'Your friend opens it, signs in with their own account, and lands inside the same shared order.'}
+          </Text>
           {gen.isPending || !token ? (
             <ActivityIndicator color={colors.acc} />
           ) : (
@@ -143,16 +151,18 @@ const styles = StyleSheet.create({
   headerTitle: { fontFamily: fontFamily.display, fontSize: 22, color: colors.tx },
   lead: { fontFamily: fontFamily.body, fontSize: 15, color: colors.mu, lineHeight: 24 },
   linkCard: {
-    backgroundColor: colors.white,
-    borderColor: colors.br,
+    backgroundColor: colors.navy,
+    borderColor: colors.acc,
     borderWidth: 1,
     borderRadius: radii.lg,
     padding: 16,
-    gap: 6,
+    gap: 8,
     alignItems: 'center',
   },
-  link: { fontFamily: fontFamily.bodySemi, color: colors.tx, fontSize: 14 },
-  tap: { fontFamily: fontFamily.body, color: colors.mu, fontSize: 12 },
+  oneLinkTitle: { fontFamily: fontFamily.display, color: colors.white, fontSize: 20, textAlign: 'center' },
+  oneLinkBody: { fontFamily: fontFamily.body, color: 'rgba(255,255,255,0.78)', fontSize: 13, lineHeight: 19, textAlign: 'center' },
+  link: { fontFamily: fontFamily.bodySemi, color: colors.white, fontSize: 14 },
+  tap: { fontFamily: fontFamily.bodyBold, color: '#CFF4DB', fontSize: 12 },
   deepNote: { fontFamily: fontFamily.body, color: colors.mu, fontSize: 11 },
   stepsCard: {
     gap: 8,

@@ -13,6 +13,9 @@ describe('deeplinks', () => {
   it('parses universal link', () => {
     expect(parseInviteToken('https://shakana.app/join/XYZ-987')).toBe('XYZ-987');
   });
+  it('parses the live Vercel invite link', () => {
+    expect(parseInviteToken('https://shakana1.vercel.app/join/live_tok')).toBe('live_tok');
+  });
   it('returns null for unrelated urls', () => {
     expect(parseInviteToken('https://example.com/other')).toBeNull();
     expect(parseInviteToken(null)).toBeNull();
