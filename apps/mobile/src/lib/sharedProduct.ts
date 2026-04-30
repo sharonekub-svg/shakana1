@@ -60,6 +60,12 @@ const TRACKER_KEYS = new Set([
 const STORE_PICKUP_FEE_AGOROT = 0;
 const DEFAULT_HOME_DELIVERY_FEE_AGOROT = 3000;
 const DEFAULT_FREE_SHIPPING_THRESHOLD_AGOROT = 19900;
+const CURRENCY_TO_ILS_AGOROT: Record<string, number> = {
+  ILS: 100,
+  USD: 313,
+  EUR: 357,
+  GBP: 424,
+};
 
 type BrandConfig = {
   source: string;
@@ -342,8 +348,18 @@ function chooseImage(html: string): string | null {
   return readMeta(html, 'og:image') ?? readMeta(html, 'twitter:image');
 }
 
+function detectCurrency(raw: string | number): keyof typeof CURRENCY_TO_ILS_AGOROT {
+  const text = String(raw);
+  if (/₪|NIS|ILS|ש["״]?ח/i.test(text)) return 'ILS';
+  if (/€|EUR/i.test(text)) return 'EUR';
+  if (/£|GBP/i.test(text)) return 'GBP';
+  if (/\$|USD/i.test(text)) return 'USD';
+  return 'ILS';
+}
+
 function parseMoneyToAgorot(raw: string | number | null | undefined): number | null {
   if (raw == null) return null;
+  const currency = detectCurrency(raw);
   const text = String(raw).replace(/[^\d.,-]/g, '');
   if (!text) return null;
   const normalized = (() => {
@@ -353,7 +369,8 @@ function parseMoneyToAgorot(raw: string | number | null | undefined): number | n
   })();
   const value = Number(normalized);
   if (!Number.isFinite(value) || value <= 0) return null;
-  return Math.round(value * 100);
+  const rate = CURRENCY_TO_ILS_AGOROT[currency];
+  return Math.round(value * (typeof rate === 'number' ? rate : 100));
 }
 
 function parseStoreMinorUnitsToAgorot(raw: string | number | null | undefined): number | null {

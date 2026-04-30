@@ -219,7 +219,7 @@ describe('sharedProduct', () => {
     expect(insights.sourceLabel).toBe('Amazon');
     expect(insights.title).toBe('ASUS ROG Strix Gaming Laptop');
     expect(insights.imageUrl).toBe('https://example.com/rog.jpg');
-    expect(insights.priceAgorot).toBe(124999);
+    expect(insights.priceAgorot).toBe(391247);
     expect(insights.deliveryFeeAgorot).toBe(0);
     expect(insights.promotionText).toBe('Sale');
   });
@@ -245,7 +245,26 @@ describe('sharedProduct', () => {
       </div>
     `);
 
-    expect(insights.priceAgorot).toBe(129999);
+    expect(insights.priceAgorot).toBe(406897);
+  });
+
+  it('converts Amazon dollar prices to estimated shekels', () => {
+    const draft = {
+      url: 'https://www.amazon.com/example-product/dp/B006UACRTG',
+      title: 'Datacolor Spyder',
+      source: 'amazon' as const,
+      storeLabel: 'Amazon',
+    };
+
+    const insights = summarizeSharedProduct(draft, `
+      <div id="corePrice_feature_div">
+        <span class="a-price a-text-normal apex-pricetopay-value">
+          <span class="a-offscreen">$334.00</span>
+        </span>
+      </div>
+    `);
+
+    expect(insights.priceAgorot).toBe(104542);
   });
 
   it('uses backend-fetched HTML before falling back to browser fetch', async () => {
@@ -268,7 +287,7 @@ describe('sharedProduct', () => {
 
     expect(insights.title).toBe('Backend Price Product');
     expect(insights.priceAgorot).toBe(8850);
-    expect(insights.deliveryFeeAgorot).toBe(1200);
+    expect(insights.deliveryFeeAgorot).toBe(3756);
   });
 
   it('rejects Zara links that are not product pages', () => {
