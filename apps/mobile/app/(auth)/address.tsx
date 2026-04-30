@@ -43,6 +43,7 @@ export default function Address() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const skipPersistRef = useRef(false);
+  const lastPersistedDraftKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!draft) return;
@@ -77,14 +78,43 @@ export default function Address() {
     if (!baseProfile) return;
     if (baseProfile.first_name.trim().length === 0 || baseProfile.last_name.trim().length === 0) return;
 
-    void setDraft({
+    const nextDraft = {
       ...baseProfile,
       city: city.trim(),
       street: street.trim(),
       building: building.trim(),
       apt: apt.trim(),
       floor: floor.trim() || null,
+    };
+    const nextDraftKey = JSON.stringify({
+      id: nextDraft.id,
+      first_name: nextDraft.first_name,
+      last_name: nextDraft.last_name,
+      phone: nextDraft.phone,
+      city: nextDraft.city,
+      street: nextDraft.street,
+      building: nextDraft.building,
+      apt: nextDraft.apt,
+      floor: nextDraft.floor,
     });
+    const currentDraftKey = draft
+      ? JSON.stringify({
+          id: draft.id,
+          first_name: draft.first_name,
+          last_name: draft.last_name,
+          phone: draft.phone,
+          city: draft.city,
+          street: draft.street,
+          building: draft.building,
+          apt: draft.apt,
+          floor: draft.floor,
+        })
+      : null;
+
+    if (nextDraftKey === currentDraftKey || nextDraftKey === lastPersistedDraftKeyRef.current) return;
+
+    lastPersistedDraftKeyRef.current = nextDraftKey;
+    void setDraft(nextDraft);
   }, [apt, building, city, draft, floor, profile, setDraft, street, user]);
 
   const selectCity = (c: string) => {
