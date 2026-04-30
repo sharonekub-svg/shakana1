@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Stack, type Href, useRootNavigationState, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider, focusManager, onlineManager } from '@tanstack/react-query';
-import { AppState, Platform, StyleSheet, View } from 'react-native';
+import { AppState, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
@@ -27,6 +27,29 @@ if (Platform.OS !== 'web') {
   SplashScreen.preventAutoHideAsync().catch(() => {});
 }
 initSentry();
+
+export function ErrorBoundary({ error, retry }: { error: Error; retry: () => void }) {
+  useEffect(() => {
+    Sentry.captureException(error);
+  }, [error]);
+
+  return (
+    <SafeAreaProvider>
+      <View style={styles.errorScreen}>
+        <View style={styles.errorCard}>
+          <Text style={styles.errorLogo}>shakana</Text>
+          <Text style={styles.errorTitle}>משהו נתקע בטעינת המסך</Text>
+          <Text style={styles.errorBody}>
+            תיקנו את המנגנון כדי שלא תישאר על מסך לבן. נסה לטעון שוב, ואם זה חוזר נמשיך מהשגיאה המדויקת.
+          </Text>
+          <Pressable accessibilityRole="button" onPress={retry} style={styles.errorButton}>
+            <Text style={styles.errorButtonText}>נסה שוב</Text>
+          </Pressable>
+        </View>
+      </View>
+    </SafeAreaProvider>
+  );
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -272,5 +295,52 @@ const styles = StyleSheet.create({
   splashOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.bg,
+  },
+  errorScreen: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: colors.bg,
+  },
+  errorCard: {
+    width: '100%',
+    maxWidth: 430,
+    borderRadius: 30,
+    padding: 24,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.br,
+    alignItems: 'center',
+    gap: 12,
+  },
+  errorLogo: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: colors.navy,
+    letterSpacing: -1,
+  },
+  errorTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.tx,
+    textAlign: 'center',
+  },
+  errorBody: {
+    fontSize: 15,
+    lineHeight: 24,
+    color: colors.mu,
+    textAlign: 'center',
+  },
+  errorButton: {
+    marginTop: 8,
+    borderRadius: 999,
+    backgroundColor: colors.acc,
+    paddingHorizontal: 24,
+    paddingVertical: 13,
+  },
+  errorButtonText: {
+    color: colors.white,
+    fontWeight: '800',
   },
 });
