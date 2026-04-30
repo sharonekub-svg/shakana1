@@ -80,7 +80,7 @@ export default function NewOrder() {
         productCost: 'מחיר המוצר',
         importantCosts: 'עלויות חשובות',
         freeShippingMinimum: 'סכום למשלוח חינם',
-        costCardNote: 'אלה המספרים שרואים מיד אחרי הלינק: כמה משלוח חוסכים, מאיזה סכום המשלוח חינם, וכמה המוצר עולה.',
+        costCardNote: 'אלה המספרים שרואים מיד אחרי הלינק: כמה המוצר עולה, מאיזה סכום המשלוח חינם, וכמה חסר עד משלוח חינם.',
         freeDeliveryFrom: 'משלוח חינם מ',
         missingFreeDelivery: 'חסר למשלוח חינם',
         neighborsToShare: 'שכנים לשיתוף הקישור',
@@ -158,7 +158,7 @@ export default function NewOrder() {
         productCost: 'Product cost',
         importantCosts: 'Important costs',
         freeShippingMinimum: 'Free delivery minimum',
-        costCardNote: 'These are shown first after the link: shipping saved, free-delivery minimum, and product cost.',
+        costCardNote: 'These are shown first after the link: product price, free-delivery minimum, and how much is missing.',
         freeDeliveryFrom: 'Free delivery from',
         missingFreeDelivery: 'Missing for free delivery',
         neighborsToShare: 'Neighbors to share link',
@@ -202,10 +202,8 @@ export default function NewOrder() {
   const [storeLabel, setStoreLabel] = useState(() => initialDraft?.storeLabel ?? (typeof params.store === 'string' ? params.store : ''));
   const [title, setTitle] = useState(() => initialDraft?.title ?? '');
   const [price, setPrice] = useState('');
-  const [participants, setParticipants] = useState('3');
   const [timerValue, setTimerValue] = useState('30');
   const [timerUnit, setTimerUnit] = useState<(typeof TIMER_UNITS)[number]>('minutes');
-  const [shipping, setShipping] = useState('30');
   const [freeShippingThreshold, setFreeShippingThreshold] = useState('199');
   const [cartOpen, setCartOpen] = useState(false);
   const [linkHelpOpen, setLinkHelpOpen] = useState(false);
@@ -228,19 +226,15 @@ export default function NewOrder() {
 
   const urlCheck = productUrlSchema.safeParse(url);
   const parsedPriceAgorot = Math.floor(Number(price) * 100);
-  const priceAgorot = Number.isFinite(parsedPriceAgorot) && parsedPriceAgorot > 0 ? parsedPriceAgorot : insights?.priceAgorot ?? 0;
-  const participantCount = Math.max(2, Math.min(12, Math.floor(Number(participants)) || 3));
+  const priceAgorot = insights?.priceAgorot ?? (Number.isFinite(parsedPriceAgorot) && parsedPriceAgorot > 0 ? parsedPriceAgorot : 0);
+  const participantCount = insights?.recommendedParticipants ?? 3;
   const rawTimerValue = Math.max(1, Math.floor(Number(timerValue)) || 30);
   const timerMinutesNumber = Math.max(5, Math.min(10080, timerUnitToMinutes(rawTimerValue, timerUnit)));
   const timerLabel = formatCompactDuration(timerMinutesNumber * 60_000);
-  const deliveryFeeAgorot = Math.max(0, Math.floor(Number(shipping) * 100) || insights?.deliveryFeeAgorot || 0);
+  const deliveryFeeAgorot = insights?.deliveryFeeAgorot ?? 0;
   const freeShippingThresholdAgorot =
-    Math.max(0, Math.floor(Number(freeShippingThreshold) * 100) || insights?.freeShippingThresholdAgorot || 0);
-  const sharedOrderTotalAgorot = priceAgorot * participantCount;
-  const freeShippingGapAgorot = Math.max(0, freeShippingThresholdAgorot - sharedOrderTotalAgorot);
-  const shippingSavedAgorot = Math.max(0, deliveryFeeAgorot * Math.max(0, participantCount - 1));
-  const perPersonAgorot = Math.ceil((priceAgorot + deliveryFeeAgorot / participantCount));
-  const neighborsToInvite = Math.max(0, participantCount - 1);
+    insights?.freeShippingThresholdAgorot ?? Math.max(0, Math.floor(Number(freeShippingThreshold) * 100) || 0);
+  const freeShippingGapAgorot = Math.max(0, freeShippingThresholdAgorot - priceAgorot);
   const sourceLabel = insights?.sourceLabel || storeLabel || currentDraft?.storeLabel || copy.detectedAfterPaste;
   const productName = insights?.title || title || currentDraft?.title || copy.waitingForLink;
   const productCostLabel = priceAgorot > 0 ? formatAgorot(priceAgorot) : insightsLoading ? copy.readingPrice : copy.addPrice;
@@ -251,8 +245,8 @@ export default function NewOrder() {
   const dealLabel = insights?.promotionText || insights?.dealSummary || copy.noDeal;
   const valid =
     urlCheck.success &&
-    storeLabel.trim().length > 1 &&
-    title.trim().length > 1 &&
+    sourceLabel.trim().length > 1 &&
+    productName.trim().length > 1 &&
     priceAgorot > 0 &&
     pickupLocation.trim().length > 2 &&
     Boolean(user?.id);
@@ -282,7 +276,6 @@ export default function NewOrder() {
         if (!price.trim() && next.priceAgorot) {
           setPrice((next.priceAgorot / 100).toFixed(2).replace(/\.00$/, ''));
         }
-        if (next.deliveryFeeAgorot) setShipping((next.deliveryFeeAgorot / 100).toFixed(2).replace(/\.00$/, ''));
         if (next.freeShippingThresholdAgorot) {
           setFreeShippingThreshold((next.freeShippingThresholdAgorot / 100).toFixed(2).replace(/\.00$/, ''));
         }
@@ -324,11 +317,11 @@ export default function NewOrder() {
     try {
       const order = await create.mutateAsync({
         productUrl: url.trim(),
-        productTitle: title.trim(),
+        productTitle: productName.trim(),
         productPriceAgorot: priceAgorot,
         productImage: insights?.imageUrl ?? undefined,
         storeKey: currentDraft?.source ?? 'manual',
-        storeLabel: storeLabel.trim(),
+        storeLabel: sourceLabel.trim(),
         estimatedShippingAgorot: deliveryFeeAgorot,
         freeShippingThresholdAgorot,
         timerMinutes: timerMinutesNumber,
@@ -393,23 +386,20 @@ export default function NewOrder() {
             <Text style={styles.kicker}>{copy.importantCosts}</Text>
             <View style={styles.costGrid}>
               <View style={styles.costItem}>
-                <Text style={styles.costLabel}>{copy.shippingSaved}</Text>
-                <Text style={styles.costValue}>{formatAgorot(shippingSavedAgorot)}</Text>
+                <Text style={styles.costLabel}>{copy.productCost}</Text>
+                <Text style={styles.costValue}>{productCostLabel}</Text>
               </View>
               <View style={styles.costItem}>
                 <Text style={styles.costLabel}>{copy.freeShippingMinimum}</Text>
                 <Text style={styles.costValue}>{freeShippingThresholdLabel}</Text>
               </View>
               <View style={styles.costItem}>
-                <Text style={styles.costLabel}>{copy.productCost}</Text>
-                <Text style={styles.costValue}>{productCostLabel}</Text>
+                <Text style={styles.costLabel}>{copy.missingFreeDelivery}</Text>
+                <Text style={styles.costValue}>{freeShippingGapLabel}</Text>
               </View>
             </View>
             <Text style={styles.costNote}>{copy.costCardNote}</Text>
           </View>
-          <Field label={copy.store} value={storeLabel} onChange={setStoreLabel} placeholder={copy.storePlaceholder} />
-          <Field label={t('order.new.titleLabel')} value={title} onChange={setTitle} placeholder={copy.titlePlaceholder} />
-          <NumField label={t('order.new.priceLabel')} value={price} onChange={setPrice} placeholder="199" />
           <View style={styles.stepHeader}>
             <View style={styles.stepBadge}>
               <Text style={styles.stepBadgeText}>2</Text>
@@ -437,14 +427,6 @@ export default function NewOrder() {
               ))}
             </View>
           </View>
-          <NumField label={copy.maxParticipants} value={participants} onChange={setParticipants} placeholder="3" />
-          <NumField label={copy.estimatedShipping} value={shipping} onChange={setShipping} placeholder="30" />
-          <NumField
-            label={copy.freeShippingFrom}
-            value={freeShippingThreshold}
-            onChange={setFreeShippingThreshold}
-            placeholder="199"
-          />
         </View>
 
         <View style={styles.productCard}>
@@ -489,10 +471,6 @@ export default function NewOrder() {
               <Text style={styles.finderLabel}>{copy.missingFreeDelivery}</Text>
               <Text style={styles.finderValue}>{freeShippingGapLabel}</Text>
             </View>
-            <View style={styles.finderCell}>
-              <Text style={styles.finderLabel}>{copy.neighborsToShare}</Text>
-              <Text style={styles.finderValue}>{neighborsToInvite}</Text>
-            </View>
           </View>
           <View style={styles.dealBox}>
             <Text style={styles.finderLabel}>{copy.dealCheck}</Text>
@@ -506,6 +484,15 @@ export default function NewOrder() {
             <View style={styles.linkHelpCard}>
               <Text style={styles.linkHelpTitle}>{copy.linkHelpTitle}</Text>
               <Text style={styles.linkHelpBody}>{copy.linkHelpBody}</Text>
+              <Field label={copy.store} value={storeLabel} onChange={setStoreLabel} placeholder={copy.storePlaceholder} />
+              <Field label={t('order.new.titleLabel')} value={title} onChange={setTitle} placeholder={copy.titlePlaceholder} />
+              <NumField label={t('order.new.priceLabel')} value={price} onChange={setPrice} placeholder="199" />
+              <NumField
+                label={copy.freeShippingFrom}
+                value={freeShippingThreshold}
+                onChange={setFreeShippingThreshold}
+                placeholder="199"
+              />
             </View>
           ) : null}
         </View>
@@ -518,23 +505,7 @@ export default function NewOrder() {
             <Text style={styles.planValue}>{timerLabel}</Text>
           </View>
           <View style={styles.planRow}>
-            <Text style={styles.planLabel}>{copy.estimatedShipping}</Text>
-            <Text style={styles.planValue}>{formatAgorot(deliveryFeeAgorot)}</Text>
-          </View>
-          <View style={styles.planRow}>
-            <Text style={styles.planLabel}>{copy.participants}</Text>
-            <Text style={styles.planValue}>{copy.upTo} {participantCount}</Text>
-          </View>
-          <View style={styles.planRow}>
-            <Text style={styles.planLabel}>{copy.shippingSaved}</Text>
-            <Text style={styles.planValue}>{formatAgorot(shippingSavedAgorot)}</Text>
-          </View>
-          <View style={styles.planRow}>
-            <Text style={styles.planLabel}>{copy.approxEach}</Text>
-            <Text style={styles.planValue}>{formatAgorot(perPersonAgorot)}</Text>
-          </View>
-          <View style={styles.planRow}>
-            <Text style={styles.planLabel}>{copy.missingShared}</Text>
+            <Text style={styles.planLabel}>{copy.missingFreeDelivery}</Text>
             <Text style={styles.planValue}>{formatAgorot(freeShippingGapAgorot)}</Text>
           </View>
         </View>
@@ -547,10 +518,10 @@ export default function NewOrder() {
         {cartOpen ? (
           <View style={styles.cartDrawer}>
             <Text style={styles.kicker}>{copy.shoppingCart}</Text>
-            <Text style={styles.cartTitle}>{title || copy.manualProduct}</Text>
-            <Text style={styles.cartLine}>{copy.store}: {storeLabel || copy.chooseStore}</Text>
+            <Text style={styles.cartTitle}>{productName || copy.manualProduct}</Text>
+            <Text style={styles.cartLine}>{copy.store}: {sourceLabel || copy.chooseStore}</Text>
             <Text style={styles.cartLine}>{copy.productPrice}: {formatAgorot(priceAgorot)}</Text>
-            <Text style={styles.cartLine}>{copy.shippingEstimate}: {formatAgorot(deliveryFeeAgorot)}</Text>
+            <Text style={styles.cartLine}>{copy.missingFreeDelivery}: {formatAgorot(freeShippingGapAgorot)}</Text>
             <Text style={styles.cartHint}>{copy.cartHint}</Text>
           </View>
         ) : null}

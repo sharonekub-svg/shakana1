@@ -194,6 +194,20 @@ describe('sharedProduct', () => {
     });
   });
 
+  it('accepts Amazon gp/product links and normalizes them to a clean dp link', () => {
+    const draft = parseSharedProduct({
+      url: 'https://www.amazon.com/gp/product/B006UACRTG?ref_=ox_sc_act_title_1&smid=ATVPDKIKX0DER',
+    });
+
+    expect(draft).toEqual({
+      url: 'https://www.amazon.com/dp/B006UACRTG',
+      title: 'Product item',
+      source: 'amazon',
+      storeLabel: 'Amazon',
+      rawText: undefined,
+    });
+  });
+
   it('reads Amazon-style title, price, delivery, and promotion hints', () => {
     const draft = {
       url: 'https://www.amazon.com/-/he/%D7%9E%D7%97%D7%A9%D7%91-%D7%A0%D7%99%D7%99%D7%93-%D7%92%D7%99%D7%99%D7%9E%D7%99%D7%A0%D7%92-ASUS-Strix/dp/B0DZZWMB2L',
@@ -246,6 +260,30 @@ describe('sharedProduct', () => {
     `);
 
     expect(insights.priceAgorot).toBe(406897);
+  });
+
+  it('prefers the main Amazon price block over unrelated hidden prices', () => {
+    const draft = {
+      url: 'https://www.amazon.com/example-product/dp/B006UACRTG',
+      title: 'Datacolor Spyder',
+      source: 'amazon' as const,
+      storeLabel: 'Amazon',
+    };
+
+    const insights = summarizeSharedProduct(draft, `
+      <span class="a-offscreen">$99.00</span>
+      <div id="corePrice_feature_div">
+        <span class="a-price a-text-normal apex-pricetopay-value">
+          <span aria-hidden="true">
+            <span class="a-price-symbol">$</span>
+            <span class="a-price-whole">334<span class="a-price-decimal">.</span></span>
+            <span class="a-price-fraction">00</span>
+          </span>
+        </span>
+      </div>
+    `);
+
+    expect(insights.priceAgorot).toBe(104542);
   });
 
   it('converts Amazon dollar prices to estimated shekels', () => {

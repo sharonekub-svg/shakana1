@@ -83,7 +83,7 @@ const BRAND_CONFIGS: BrandConfig[] = [
     brandName: 'Amazon',
     displayName: 'Amazon',
     hostTest: (hostname) => /(?:^|\.)amazon\./i.test(normalizeHost(hostname)),
-    productPathTest: (url) => /\/dp\/[A-Z0-9]{10}(?:\/|$)/i.test(url.pathname),
+    productPathTest: (url) => /\/(?:dp|gp\/product|product)\/[A-Z0-9]{10}(?:\/|$)/i.test(url.pathname),
     homeDeliveryFeeAgorot: DEFAULT_HOME_DELIVERY_FEE_AGOROT,
     freeShippingThresholdAgorot: DEFAULT_FREE_SHIPPING_THRESHOLD_AGOROT,
   },
@@ -166,12 +166,15 @@ function stripTrackingParams(url: URL): URL {
   const cleaned = new URL(url.toString());
   const brand = getBrandConfig(cleaned.hostname);
   if (brand?.source === 'amazon') {
-    const asin = cleaned.pathname.match(/\/dp\/([A-Z0-9]{10})/i)?.[1];
+    const asin = cleaned.pathname.match(/\/(?:dp|gp\/product|product)\/([A-Z0-9]{10})/i)?.[1];
     if (asin) {
       const parts = cleaned.pathname.split('/').filter(Boolean);
-      const dpIndex = parts.findIndex((part) => part.toLowerCase() === 'dp');
-      const titleParts = dpIndex > 0 ? parts.slice(0, dpIndex) : [];
-      cleaned.pathname = `/${titleParts.join('/')}/dp/${asin}`;
+      const productIndex = parts.findIndex((part, index) => {
+        const normalized = part.toLowerCase();
+        return normalized === 'dp' || normalized === 'product' || (normalized === 'gp' && parts[index + 1]?.toLowerCase() === 'product');
+      });
+      const titleParts = productIndex > 0 ? parts.slice(0, productIndex) : [];
+      cleaned.pathname = titleParts.length ? `/${titleParts.join('/')}/dp/${asin}` : `/dp/${asin}`;
     }
     cleaned.search = '';
     cleaned.hash = '';
@@ -256,6 +259,7 @@ function inferTitleFromUrl(url: URL): string {
     const titleSlug = parts[amazonDpIndex - 1] ?? '';
     return humanizeSlug(titleSlug);
   }
+  if (amazonDpIndex === 0) return 'Product item';
   const slug = parts[parts.length - 1] ?? '';
   const title = humanizeSlug(slug);
   return title === 'Item' ? 'Product item' : title;
@@ -382,6 +386,44 @@ function parseStoreMinorUnitsToAgorot(raw: string | number | null | undefined): 
   return value >= 1000 ? value : value * 100;
 }
 
+function sliceAroundPattern(html: string, pattern: RegExp, before = 600, after = 6000): string | null {
+  const match = pattern.exec(html);
+  if (!match || typeof match.index !== 'number') return null;
+  return html.slice(Math.max(0, match.index - before), Math.min(html.length, match.index + after));
+}
+
+function chooseAmazonScopedPriceAgorot(html: string): number | null {
+  const scopes = [
+    sliceAroundPattern(html, /id=["']corePrice_feature_div["']/i, 0),
+    sliceAroundPattern(html, /id=["']apex_desktop["']/i, 0),
+    sliceAroundPattern(html, /id=["']corePriceDisplay_desktop_feature_div["']/i, 0),
+    sliceAroundPattern(html, /id=["']tp_price_block_total_price_ww["']/i, 0),
+    sliceAroundPattern(html, /class=["'][^"']*apexPriceToPay[^"']*["']/i, 0),
+    sliceAroundPattern(html, /class=["'][^"']*priceToPay[^"']*["']/i, 0),
+  ].filter(Boolean) as string[];
+
+  for (const scope of scopes) {
+    const offscreen = scope.match(/class=["'][^"']*a-offscreen[^"']*["'][^>]*>\s*(?<price>[$₪€£]?\s?\d[\d,.]*)\s*</i)?.groups?.price;
+    const parsedOffscreen = parseMoneyToAgorot(offscreen ?? null);
+    if (parsedOffscreen) return parsedOffscreen;
+
+    const displayPrice = scope.match(/"displayPrice"\s*:\s*"(?<price>[^"]*\d[^"]*)"/i)?.groups?.price;
+    const parsedDisplayPrice = parseMoneyToAgorot(displayPrice ?? null);
+    if (parsedDisplayPrice) return parsedDisplayPrice;
+
+    const whole = scope.match(/class=["'][^"']*a-price-whole[^"']*["'][^>]*>(?<whole>[\s\S]{0,80}?)<\/span>/i)?.groups?.whole;
+    const fraction = scope.match(/class=["'][^"']*a-price-fraction[^"']*["'][^>]*>(?<fraction>\d{1,2})<\/span>/i)?.groups?.fraction;
+    if (whole) {
+      const cleanWhole = stripTags(whole).replace(/[^\d,]/g, '').replace(/,$/, '');
+      const symbol = /[$]/.test(scope) ? '$' : /[€]/.test(scope) ? '€' : /[£]/.test(scope) ? '£' : /[₪]/.test(scope) ? '₪' : '';
+      const parsedSplit = parseMoneyToAgorot(`${symbol}${cleanWhole}${fraction ? `.${fraction}` : ''}`);
+      if (parsedSplit) return parsedSplit;
+    }
+  }
+
+  return null;
+}
+
 function choosePriceAgorot(html: string): number | null {
   const jsonLd = readFirstJsonLdObject(html);
   const offers = jsonLd?.offers;
@@ -398,6 +440,9 @@ function choosePriceAgorot(html: string): number | null {
       }
     }
   }
+
+  const amazonScopedPrice = chooseAmazonScopedPriceAgorot(html);
+  if (amazonScopedPrice) return amazonScopedPrice;
 
   const metaPrice =
     readMeta(html, 'product:price:amount') ??
