@@ -118,8 +118,9 @@ export default function Address() {
   }, [apt, building, city, draft, floor, profile, setDraft, street, user]);
 
   const selectCity = (c: string) => {
-    setCity(c);
-    setCityLocked(true);
+    const nextCity = c.trim();
+    setCity(nextCity);
+    setCityLocked(nextCity.length > 0);
     setStreet('');
     setStreetSuggs([]);
   };
@@ -193,23 +194,37 @@ export default function Address() {
   };
 
   const submit = async () => {
+    if (!user) {
+      router.replace('/(auth)/welcome');
+      return;
+    }
+
     const baseProfile =
       draft ??
       profile ??
-      (user
-        ? {
-            id: user.id,
-            first_name: '',
-            last_name: '',
-            phone: user.phone ?? '',
-            city: '',
-            street: '',
-            building: '',
-            apt: '',
-            floor: null,
-          }
-        : null);
-    if (!baseProfile) return;
+      {
+        id: user.id,
+        first_name: '',
+        last_name: '',
+        phone: user.phone ?? '',
+        city: '',
+        street: '',
+        building: '',
+        apt: '',
+        floor: null,
+      };
+
+    if (baseProfile.first_name.trim().length === 0 || baseProfile.last_name.trim().length === 0) {
+      pushToast(
+        language === 'he'
+          ? 'צריך לשמור שם פרטי ושם משפחה לפני הכתובת.'
+          : 'Save your first and last name before the address.',
+        'error',
+      );
+      router.replace('/(auth)/name');
+      return;
+    }
+
     const updated = {
       ...baseProfile,
       city: city.trim(),
