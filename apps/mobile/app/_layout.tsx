@@ -20,6 +20,7 @@ import { colors } from '@/theme/tokens';
 import { useProfile } from '@/api/profile';
 import { loadStoredLanguage, useLocaleStore } from '@/i18n/locale';
 import { useProfileDraftStore } from '@/stores/profileDraftStore';
+import { ToastLayer } from '@/components/primitives/ToastLayer';
 
 import '../global.css';
 
@@ -267,6 +268,7 @@ function RootLayoutInner() {
         <Stack.Screen name="share" />
       </Stack>
       {showSplash ? <View pointerEvents="none" style={styles.splashOverlay} /> : null}
+      <ToastLayer />
     </View>
   );
 }

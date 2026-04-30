@@ -32,6 +32,17 @@ export default function OrdersTab() {
   const { data: orders = [], isLoading } = useUserOrders(user?.id);
   const openOrders = orders.filter((order) => !['completed', 'cancelled'].includes(order.status)).length;
   const completedOrders = orders.filter((order) => order.status === 'completed').length;
+
+  const STATUS_LABEL: Record<string, Record<string, string>> = {
+    open: { he: 'פתוחה', en: 'OPEN' },
+    locked: { he: 'נעולה', en: 'LOCKED' },
+    paying: { he: 'תשלום', en: 'PAYING' },
+    escrow: { he: 'נאמנות', en: 'ESCROW' },
+    delivered: { he: 'נמסר', en: 'DELIVERED' },
+    completed: { he: 'הושלם', en: 'DONE' },
+    cancelled: { he: 'בוטל', en: 'CANCELLED' },
+  };
+  const statusLabel = (s: string) => STATUS_LABEL[s]?.[language] ?? s.toUpperCase();
   const stats = [
     { label: t('tabs.home.openOrders'), value: String(openOrders), featured: true },
     { label: t('tabs.home.completed'), value: String(completedOrders) },
@@ -93,7 +104,7 @@ export default function OrdersTab() {
                   <Text style={styles.badgeText}>{(item.store_label ?? 'ORD').slice(0, 3).toUpperCase()}</Text>
                 </View>
                 <View style={styles.statusPill}>
-                  <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
+                  <Text style={styles.statusText}>{statusLabel(item.status)}</Text>
                 </View>
               </View>
               <Text style={styles.rowTitle} numberOfLines={1}>

@@ -104,6 +104,24 @@ Deno.serve(async (req) => {
       { apiVersion: '2024-06-20' },
     );
 
+    // Reuse existing uncaptured PI to prevent double-charge on retries.
+    const REUSABLE_STATUSES = ['requires_payment_method', 'requires_confirmation', 'requires_action', 'requires_capture'];
+    if (participant.stripe_payment_intent_id) {
+      try {
+        const existingPi = await stripe.paymentIntents.retrieve(participant.stripe_payment_intent_id);
+        if (REUSABLE_STATUSES.includes(existingPi.status)) {
+          return json({
+            clientSecret: existingPi.client_secret,
+            ephemeralKey: ephemeralKey.secret,
+            customer: customerId,
+            publishableKey: Deno.env.get('STRIPE_PUBLISHABLE_KEY') ?? '',
+          });
+        }
+      } catch {
+        // PI not found or invalid — fall through to create a new one.
+      }
+    }
+
     const pi = await stripe.paymentIntents.create(
       {
         amount: serverAmountAgorot,
