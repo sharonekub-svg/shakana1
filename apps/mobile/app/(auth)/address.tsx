@@ -45,6 +45,31 @@ export default function Address() {
   const skipPersistRef = useRef(false);
   const lastPersistedDraftKeyRef = useRef<string | null>(null);
 
+  const getProfileBase = useCallback(() => {
+    if (!user) return null;
+    const emailName = user.email?.split('@')[0]?.replace(/[._-]+/g, ' ').trim();
+    const metadataName =
+      typeof user.user_metadata?.full_name === 'string'
+        ? user.user_metadata.full_name.trim()
+        : '';
+    const fallbackName = metadataName || emailName || 'Shakana user';
+    const [fallbackFirst = 'Shakana', ...fallbackLastParts] = fallbackName.split(/\s+/).filter(Boolean);
+    return (
+      draft ??
+      profile ?? {
+        id: user.id,
+        first_name: fallbackFirst,
+        last_name: fallbackLastParts.join(' ') || 'User',
+        phone: user.phone ?? '',
+        city: '',
+        street: '',
+        building: '',
+        apt: '',
+        floor: null,
+      }
+    );
+  }, [draft, profile, user]);
+
   useEffect(() => {
     if (!draft) return;
     setCity(draft.city ?? '');
@@ -57,26 +82,9 @@ export default function Address() {
 
   useEffect(() => {
     if (skipPersistRef.current) return;
-    if (!draft && !profile && !user) return;
-    const baseProfile =
-      draft ??
-      profile ??
-      (user
-        ? {
-            id: user.id,
-            first_name: '',
-            last_name: '',
-            phone: user.phone ?? '',
-            city: '',
-            street: '',
-            building: '',
-            apt: '',
-            floor: null,
-          }
-        : null);
+    const baseProfile = getProfileBase();
 
     if (!baseProfile) return;
-    if (baseProfile.first_name.trim().length === 0 || baseProfile.last_name.trim().length === 0) return;
 
     const nextDraft = {
       ...baseProfile,
@@ -115,7 +123,7 @@ export default function Address() {
 
     lastPersistedDraftKeyRef.current = nextDraftKey;
     void setDraft(nextDraft);
-  }, [apt, building, city, draft, floor, profile, setDraft, street, user]);
+  }, [apt, building, city, draft, floor, getProfileBase, setDraft, street]);
 
   const selectCity = (c: string) => {
     const nextCity = c.trim();
@@ -199,31 +207,8 @@ export default function Address() {
       return;
     }
 
-    const baseProfile =
-      draft ??
-      profile ??
-      {
-        id: user.id,
-        first_name: '',
-        last_name: '',
-        phone: user.phone ?? '',
-        city: '',
-        street: '',
-        building: '',
-        apt: '',
-        floor: null,
-      };
-
-    if (baseProfile.first_name.trim().length === 0 || baseProfile.last_name.trim().length === 0) {
-      pushToast(
-        language === 'he'
-          ? 'צריך לשמור שם פרטי ושם משפחה לפני הכתובת.'
-          : 'Save your first and last name before the address.',
-        'error',
-      );
-      router.replace('/(auth)/name');
-      return;
-    }
+    const baseProfile = getProfileBase();
+    if (!baseProfile) return;
 
     const updated = {
       ...baseProfile,
