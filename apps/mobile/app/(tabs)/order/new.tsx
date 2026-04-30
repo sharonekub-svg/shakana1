@@ -40,6 +40,7 @@ export default function NewOrder() {
         detectedAfterPaste: 'יזוהה אחרי הדבקת הקישור',
         waitingForLink: 'ממתין לקישור מוצר',
         addPrice: 'הוסף מחיר ידנית',
+        readingPrice: 'קורא מחיר...',
         addThreshold: 'הוסף סכום למשלוח חינם',
         unknownThreshold: 'לא ידוע עד שמוסיפים סכום',
         noDeal: 'לא זוהה מבצע כרגע',
@@ -117,6 +118,7 @@ export default function NewOrder() {
         detectedAfterPaste: 'Detected after link paste',
         waitingForLink: 'Waiting for product link',
         addPrice: 'Add price manually',
+        readingPrice: 'Reading price...',
         addThreshold: 'Add store threshold',
         unknownThreshold: 'Unknown until threshold is added',
         noDeal: 'No deal detected yet',
@@ -241,7 +243,7 @@ export default function NewOrder() {
   const neighborsToInvite = Math.max(0, participantCount - 1);
   const sourceLabel = insights?.sourceLabel || storeLabel || currentDraft?.storeLabel || copy.detectedAfterPaste;
   const productName = insights?.title || title || currentDraft?.title || copy.waitingForLink;
-  const productCostLabel = priceAgorot > 0 ? formatAgorot(priceAgorot) : copy.addPrice;
+  const productCostLabel = priceAgorot > 0 ? formatAgorot(priceAgorot) : insightsLoading ? copy.readingPrice : copy.addPrice;
   const freeShippingThresholdLabel =
     freeShippingThresholdAgorot > 0 ? formatAgorot(freeShippingThresholdAgorot) : copy.addThreshold;
   const freeShippingGapLabel =

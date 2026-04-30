@@ -224,6 +224,30 @@ describe('sharedProduct', () => {
     expect(insights.promotionText).toBe('Sale');
   });
 
+  it('reads the live Amazon price block shape', () => {
+    const draft = {
+      url: 'https://www.amazon.com/example-product/dp/B0DZZWMB2L',
+      title: 'Gaming laptop',
+      source: 'amazon' as const,
+      storeLabel: 'Amazon',
+    };
+
+    const insights = summarizeSharedProduct(draft, `
+      <div id="corePrice_feature_div">
+        <span class="a-price a-text-normal apex-pricetopay-value">
+          <span class="a-offscreen">$1,299.99</span>
+          <span aria-hidden="true">
+            <span class="a-price-symbol">$</span>
+            <span class="a-price-whole">1,299<span class="a-price-decimal">.</span></span>
+            <span class="a-price-fraction">99</span>
+          </span>
+        </span>
+      </div>
+    `);
+
+    expect(insights.priceAgorot).toBe(129999);
+  });
+
   it('uses backend-fetched HTML before falling back to browser fetch', async () => {
     const draft = {
       url: 'https://www.amazon.com/example-product/dp/B0DZZWMB2L',
