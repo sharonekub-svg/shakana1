@@ -142,17 +142,16 @@ async function searchRemote(
   city?: string,
 ): Promise<string[]> {
   const trimmed = query.trim();
-  if (trimmed.length < 2) return [];
-
-  const cacheKey = `${kind}:${language}:${city ?? ''}:${trimmed}`;
-  const cached = cache.get(cacheKey);
-  if (cached) return cached;
-
   const localPool = kind === 'city' ? IL_CITIES : COMMON_STREETS;
   const fallback = sortByQuery(
     trimmed,
     localPool.filter((value) => normalize(value).includes(normalize(trimmed))),
   ).slice(0, 8);
+  if (trimmed.length < 2) return fallback;
+
+  const cacheKey = `${kind}:${language}:${city ?? ''}:${trimmed}`;
+  const cached = cache.get(cacheKey);
+  if (cached) return cached;
 
   try {
     const res = await fetch(buildUrl(kind, trimmed, language, city), {

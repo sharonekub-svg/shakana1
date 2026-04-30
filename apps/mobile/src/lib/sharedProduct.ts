@@ -297,6 +297,19 @@ function readMeta(html: string, key: string, attr: 'property' | 'name' = 'proper
   return match?.[1]?.trim() || null;
 }
 
+function readContentByAttribute(html: string, attr: string, key: string): string | null {
+  const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const attrBeforeContent = new RegExp(
+    `<[^>]+${attr}=["']${escapedKey}["'][^>]*content=["']([^"']+)["'][^>]*>`,
+    'i',
+  );
+  const contentBeforeAttr = new RegExp(
+    `<[^>]+content=["']([^"']+)["'][^>]*${attr}=["']${escapedKey}["'][^>]*>`,
+    'i',
+  );
+  return html.match(attrBeforeContent)?.[1]?.trim() ?? html.match(contentBeforeAttr)?.[1]?.trim() ?? null;
+}
+
 function readFirstJsonLdObject(html: string): Record<string, unknown> | null {
   const blocks = [...html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
   for (const block of blocks) {
@@ -384,6 +397,9 @@ function chooseImage(html: string): string | null {
 
 function detectCurrency(raw: string | number): keyof typeof CURRENCY_TO_ILS_AGOROT {
   const text = String(raw);
+  if (/₪|ש["״]?ח|NIS|ILS/i.test(text)) return 'ILS';
+  if (/€|EUR/i.test(text)) return 'EUR';
+  if (/£|GBP/i.test(text)) return 'GBP';
   if (/₪|NIS|ILS|ש["״]?ח/i.test(text)) return 'ILS';
   if (/€|EUR/i.test(text)) return 'EUR';
   if (/£|GBP/i.test(text)) return 'GBP';
@@ -495,7 +511,9 @@ function choosePriceAgorot(html: string): number | null {
   const metaPrice =
     readMeta(html, 'product:price:amount') ??
     readMeta(html, 'og:price:amount') ??
-    readMeta(html, 'twitter:data1', 'name');
+    readMeta(html, 'twitter:data1', 'name') ??
+    readContentByAttribute(html, 'itemprop', 'price') ??
+    readContentByAttribute(html, 'property', 'price');
   const parsedMeta = parseMoneyToAgorot(metaPrice);
   if (parsedMeta) return parsedMeta;
 
@@ -506,6 +524,36 @@ function choosePriceAgorot(html: string): number | null {
   ];
   for (const pattern of amazonPricePatterns) {
     const parsed = parseMoneyToAgorot(html.match(pattern)?.groups?.price ?? null);
+    if (parsed) return parsed;
+  }
+
+  const htmlEntityDecoded = html
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&#8362;|&shekel;/gi, '₪')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'");
+
+  const explicitPricePatterns = [
+    /data-(?:price|sale-price|final-price|current-price|amount)=["'](?<price>[^"']*\d[^"']*)["']/i,
+    /itemprop=["']price["'][^>]*(?:content|value)=["'](?<price>[^"']*\d[^"']*)["']/i,
+    /(?:content|value)=["'](?<price>[^"']*\d[^"']*)["'][^>]*itemprop=["']price["']/i,
+    /"(?:priceAmount|regularPrice|sale_price|final_price|current_price|unitPrice|sellingPrice|priceValue)"\s*:\s*"?(?<price>\d+(?:[.,]\d+)?)"?/i,
+    /"(?:price|currentPrice|salePrice|finalPrice|regularPrice|sellingPrice)"\s*:\s*\{[^{}]{0,180}"(?:amount|value|current|price)"\s*:\s*"?(?<price>\d+(?:[.,]\d+)?)"?/i,
+  ];
+  for (const pattern of explicitPricePatterns) {
+    const parsed = parseMoneyToAgorot(htmlEntityDecoded.match(pattern)?.groups?.price ?? null);
+    if (parsed) return parsed;
+  }
+
+  const visibleText = stripTags(htmlEntityDecoded).replace(/\s+/g, ' ').slice(0, 60000);
+  const visiblePricePatterns = [
+    /(?:מחיר|price|sale price|special price|now)[^₪$€£\d]{0,50}(?<price>[₪$€£]\s?\d[\d,.]*)/i,
+    /(?:מחיר|price|sale price|special price|now)[^\d]{0,50}(?<price>\d[\d,.]*\s?(?:₪|ש["״]?ח|ILS|NIS))/i,
+    /(?<price>[₪$€£]\s?\d[\d,.]*)/,
+    /(?<price>\d[\d,.]*\s?(?:₪|ש["״]?ח|ILS|NIS))/i,
+  ];
+  for (const pattern of visiblePricePatterns) {
+    const parsed = parseMoneyToAgorot(visibleText.match(pattern)?.groups?.price ?? null);
     if (parsed) return parsed;
   }
 

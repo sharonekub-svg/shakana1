@@ -44,6 +44,7 @@ export default function Address() {
   const abortRef = useRef<AbortController | null>(null);
   const skipPersistRef = useRef(false);
   const lastPersistedDraftKeyRef = useRef<string | null>(null);
+  const hydratedAddressRef = useRef(false);
 
   const getProfileBase = useCallback(() => {
     if (!user) return null;
@@ -71,14 +72,18 @@ export default function Address() {
   }, [draft, profile, user]);
 
   useEffect(() => {
-    if (!draft) return;
-    setCity(draft.city ?? '');
-    setCityLocked(!!draft.city);
-    setStreet(draft.street ?? '');
-    setBuilding(draft.building ?? '');
-    setApt(draft.apt ?? '');
-    setFloor(draft.floor ?? '');
-  }, [draft]);
+    if (hydratedAddressRef.current) return;
+    const savedAddress = draft ?? profile;
+    if (!savedAddress) return;
+
+    hydratedAddressRef.current = true;
+    setCity(savedAddress.city ?? '');
+    setCityLocked(!!savedAddress.city);
+    setStreet(savedAddress.street ?? '');
+    setBuilding(savedAddress.building ?? '');
+    setApt(savedAddress.apt ?? '');
+    setFloor(savedAddress.floor ?? '');
+  }, [draft, profile]);
 
   useEffect(() => {
     if (skipPersistRef.current) return;
@@ -140,7 +145,7 @@ export default function Address() {
 
   const runCitySearch = useCallback((q: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (q.trim().length < 2) {
+    if (q.trim().length < 1) {
       setCitySuggs([]);
       return;
     }
@@ -163,7 +168,7 @@ export default function Address() {
   const runStreetSearch = useCallback(
     (q: string) => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
-      if (q.trim().length < 2) {
+      if (q.trim().length < 1) {
         setStreetSuggs([]);
         return;
       }

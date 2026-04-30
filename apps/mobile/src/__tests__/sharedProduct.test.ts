@@ -201,6 +201,54 @@ describe('sharedProduct', () => {
     expect(insights.promotionText).toBe('Buy 1 get 1');
   });
 
+  it('reads itemprop and data-price product prices', () => {
+    const draft = {
+      url: 'https://shop.cool-brand.co.il/products/camera-calibrator',
+      title: 'Camera Calibrator',
+      source: 'cool-brand',
+      storeLabel: 'Cool Brand',
+    };
+
+    const itempropInsights = summarizeSharedProduct(draft, `
+      <html>
+        <head>
+          <meta itemprop="price" content="999.90" />
+          <meta itemprop="priceCurrency" content="ILS" />
+        </head>
+      </html>
+    `);
+    const dataPriceInsights = summarizeSharedProduct(draft, `
+      <html>
+        <body>
+          <section data-price="₪1,299">Camera calibrator</section>
+        </body>
+      </html>
+    `);
+
+    expect(itempropInsights.priceAgorot).toBe(99990);
+    expect(dataPriceInsights.priceAgorot).toBe(129900);
+  });
+
+  it('reads visible Hebrew shekel prices before asking for manual price', () => {
+    const draft = {
+      url: 'https://shop.cool-brand.co.il/products/hebrew-price',
+      title: 'Hebrew Price',
+      source: 'cool-brand',
+      storeLabel: 'Cool Brand',
+    };
+
+    const insights = summarizeSharedProduct(draft, `
+      <html>
+        <body>
+          <h1>מוצר לדוגמה</h1>
+          <p>מחיר: ₪1,049</p>
+        </body>
+      </html>
+    `);
+
+    expect(insights.priceAgorot).toBe(104900);
+  });
+
   it('reads generic JSON-LD offer arrays and delivery fees', () => {
     const draft = {
       url: 'https://shop.cool-brand.co.il/products/noise-cancelling-headphones',
