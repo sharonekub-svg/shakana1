@@ -1,12 +1,15 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { ScreenBase } from '@/components/primitives/ScreenBase';
+import { Field } from '@/components/primitives/Field';
+import { PrimaryBtn } from '@/components/primitives/Button';
 import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { useLocale } from '@/i18n/locale';
 import { useUserOrders } from '@/api/orders';
+import { useUpsertProfile } from '@/api/profile';
 import { useAuthStore } from '@/stores/authStore';
 import { useNotificationSettingsStore } from '@/stores/notificationSettingsStore';
 import { usePaymentSettingsStore } from '@/stores/paymentSettingsStore';
@@ -20,8 +23,10 @@ export default function AccountTab() {
   const signOut = useSignOut();
   const user = useAuthStore((s) => s.user);
   const resetAuth = useAuthStore((s) => s.reset);
+  const setProfile = useAuthStore((s) => s.setProfile);
   const profile = useAuthStore((s) => s.profile);
   const pushToast = useUiStore((s) => s.pushToast);
+  const upsertProfile = useUpsertProfile();
   const notificationSettings = useNotificationSettingsStore((s) => s.settings);
   const notificationsHydrated = useNotificationSettingsStore((s) => s.hydrated);
   const loadNotifications = useNotificationSettingsStore((s) => s.load);
@@ -29,6 +34,9 @@ export default function AccountTab() {
   const paymentsHydrated = usePaymentSettingsStore((s) => s.hydrated);
   const loadPayments = usePaymentSettingsStore((s) => s.load);
   const { data: orders = [] } = useUserOrders(user?.id);
+  const [firstName, setFirstName] = useState(profile?.first_name ?? '');
+  const [lastName, setLastName] = useState(profile?.last_name ?? '');
+  const [phone, setPhone] = useState(profile?.phone ?? '');
 
   const isHebrew = language === 'he';
   const openOrders = orders.filter((order) => !['completed', 'cancelled'].includes(order.status)).length;
@@ -66,6 +74,21 @@ export default function AccountTab() {
     notifications: isHebrew ? 'התראות' : 'Notifications',
     paymentReady: isHebrew ? `${enabledPaymentCount} אפשרויות תשלום מוכנות` : `${enabledPaymentCount} payment options ready`,
     notificationsReady: isHebrew ? `${enabledNotifications} התראות פעילות` : `${enabledNotifications} notification toggles on`,
+  };
+
+  const editCopy = {
+    editDetails: isHebrew ? 'עריכת פרטים' : 'Edit details',
+    editDetailsBody: isHebrew
+      ? 'אפשר לעדכן שם וטלפון כאן. כתובת היא אופציונלית ומשמשת רק להתראות שכנים בבניין.'
+      : 'Update name and phone here. Address is optional and only used for building neighbor alerts.',
+    firstName: isHebrew ? 'שם פרטי' : 'First name',
+    lastName: isHebrew ? 'שם משפחה' : 'Last name',
+    phoneInput: isHebrew ? 'טלפון' : 'Phone',
+    saveDetails: isHebrew ? 'שמור פרטים' : 'Save details',
+    savingDetails: isHebrew ? 'שומר...' : 'Saving...',
+    detailsSaved: isHebrew ? 'הפרטים נשמרו' : 'Details saved',
+    detailsError: isHebrew ? 'לא הצלחנו לשמור את הפרטים' : 'Could not save details',
+    addressButton: isHebrew ? 'הוסף / שנה כתובת' : 'Add / change address',
   };
 
   const quickLinks = [
@@ -110,6 +133,34 @@ export default function AccountTab() {
     if (!paymentsHydrated) void loadPayments();
   }, [loadNotifications, loadPayments, notificationsHydrated, paymentsHydrated]);
 
+  useEffect(() => {
+    setFirstName(profile?.first_name ?? '');
+    setLastName(profile?.last_name ?? '');
+    setPhone(profile?.phone ?? '');
+  }, [profile?.first_name, profile?.last_name, profile?.phone]);
+
+  const onSaveDetails = async () => {
+    if (!user?.id) return;
+    const nextProfile = {
+      id: user.id,
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
+      phone: phone.trim(),
+      city: profile?.city ?? '',
+      street: profile?.street ?? '',
+      building: profile?.building ?? '',
+      apt: profile?.apt ?? '',
+      floor: profile?.floor ?? null,
+    };
+    try {
+      await upsertProfile.mutateAsync(nextProfile);
+      setProfile(nextProfile);
+      pushToast(editCopy.detailsSaved, 'success');
+    } catch (error) {
+      pushToast(error instanceof Error ? error.message : editCopy.detailsError, 'error');
+    }
+  };
+
   const onSignOut = async () => {
     try {
       await signOut.mutateAsync();
@@ -148,6 +199,29 @@ export default function AccountTab() {
           </View>
         </View>
 
+        <View style={styles.editCard}>
+          <Text style={styles.sectionTitle}>{editCopy.editDetails}</Text>
+          <Text style={styles.addressText}>{editCopy.editDetailsBody}</Text>
+          <View style={styles.editRow}>
+            <View style={{ flex: 1 }}>
+              <Field label={editCopy.firstName} value={firstName} onChange={setFirstName} placeholder="Shakana" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Field label={editCopy.lastName} value={lastName} onChange={setLastName} placeholder="User" />
+            </View>
+          </View>
+          <Field label={editCopy.phoneInput} value={phone} onChange={setPhone} placeholder="050..." keyboardType="phone-pad" />
+          <PrimaryBtn
+            label={upsertProfile.isPending ? editCopy.savingDetails : editCopy.saveDetails}
+            onPress={onSaveDetails}
+            loading={upsertProfile.isPending}
+            disabled={!user?.id}
+          />
+          <Pressable style={styles.addressShortcut} onPress={() => router.push('/(auth)/address')}>
+            <Text style={styles.addressShortcutText}>{editCopy.addressButton}</Text>
+          </Pressable>
+        </View>
+
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>{copy.phoneLabel}</Text>
@@ -161,10 +235,10 @@ export default function AccountTab() {
           </View>
         </View>
 
-        <View style={styles.addressCard}>
+        <Pressable style={styles.addressCard} onPress={() => router.push('/(auth)/address')}>
           <Text style={styles.sectionTitle}>{copy.deliveryAddress}</Text>
           <Text style={styles.addressText}>{copy.address}</Text>
-        </View>
+        </Pressable>
 
         <View style={styles.languageCard}>
           <Text style={styles.sectionTitle}>{copy.language}</Text>
@@ -356,6 +430,33 @@ const styles = StyleSheet.create({
     borderColor: colors.brBr,
     borderRadius: radii.lg,
     backgroundColor: colors.white,
+  },
+  editCard: {
+    gap: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.brBr,
+    borderRadius: radii.lg,
+    backgroundColor: colors.white,
+    ...shadow.card,
+  },
+  editRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  addressShortcut: {
+    minHeight: 44,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.brBr,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.cardSoft,
+  },
+  addressShortcutText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
+    color: colors.acc,
   },
   sectionTitle: {
     fontFamily: fontFamily.bodyBold,

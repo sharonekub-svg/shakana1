@@ -9,9 +9,11 @@ import { PrimaryBtn, SecondaryBtn } from '@/components/primitives/Button';
 import { colors, radii } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { trackInviteSent, useGenerateInvite } from '@/api/invites';
+import { useOrder } from '@/api/orders';
 import { buildAppInviteUrl, buildInviteUrl } from '@/lib/deeplinks';
 import { useUiStore } from '@/stores/uiStore';
 import { useLocale } from '@/i18n/locale';
+import { formatAgorot } from '@/utils/format';
 
 export default function InviteSheet() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -58,6 +60,7 @@ export default function InviteSheet() {
         back: 'Back to order',
       };
   const gen = useGenerateInvite();
+  const { data } = useOrder(id);
   const pushToast = useUiStore((s) => s.pushToast);
   const [token, setToken] = useState<string | null>(null);
 
@@ -71,12 +74,25 @@ export default function InviteSheet() {
 
   const universal = token ? buildInviteUrl(token) : '';
   const appLink = token ? buildAppInviteUrl(token) : '';
+  const order = data?.order;
+  const participantCount = Math.max(1, data?.participants.length ?? 1);
+  const deliveryFee = order?.estimated_shipping_agorot ?? 0;
+  const currentDeliveryShare = Math.ceil(deliveryFee / participantCount);
+  const nextDeliveryShare = Math.ceil(deliveryFee / (participantCount + 1));
+  const saveByJoining = Math.max(0, currentDeliveryShare - nextDeliveryShare);
+  const freeShippingGap = order
+    ? Math.max(0, (order.free_shipping_threshold_agorot ?? 0) - order.product_price_agorot * participantCount)
+    : 0;
+  const productTitle = order?.product_title ?? (isHebrew ? 'ההזמנה שלי' : 'my order');
+  const smartShareMessage = isHebrew
+    ? `פתחתי הזמנה ב-Shakana: ${productTitle}. אם מצטרפים עכשיו אפשר לחסוך בערך ${formatAgorot(saveByJoining)} בדמי משלוח. חסר ${formatAgorot(freeShippingGap)} למשלוח חינם.`
+    : `I opened a Shakana order for ${productTitle}. Join now and we can save about ${formatAgorot(saveByJoining)} on delivery. Missing ${formatAgorot(freeShippingGap)} for free delivery.`;
 
   const onShare = async () => {
     if (!token || !id) return;
     try {
       await Share.share({
-        message: `${appLink}\n${universal}\n\n${copy.shareMessage}`,
+        message: `${smartShareMessage}\n\n${universal}\n${appLink}\n\n${copy.shareMessage}`,
       });
       trackInviteSent(String(id));
     } catch (e) {

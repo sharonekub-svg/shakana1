@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
 
@@ -61,50 +60,12 @@ function HomeMark() {
   return (
     <View style={styles.markWrap}>
       <Svg width={28} height={28} viewBox="0 0 28 28" fill="none">
-        <Rect x="2" y="2" width="24" height="24" rx="12" stroke={colors.br} strokeWidth="1.5" />
-        <Path d="M7.5 9.5h13" stroke={colors.acc} strokeWidth="1.8" strokeLinecap="round" />
-        <Path d="M7.5 18.5h13" stroke={colors.acc} strokeWidth="1.8" strokeLinecap="round" />
-        <Line x1="14" y1="5.5" x2="14" y2="22.5" stroke={colors.tx} strokeWidth="1.5" strokeLinecap="round" />
-        <Circle cx="14" cy="14" r="3.2" stroke={colors.tx} strokeWidth="1.5" />
+        <Rect x="2" y="2" width="24" height="24" rx="12" stroke="rgba(255,255,255,0.55)" strokeWidth="1.5" />
+        <Path d="M7.5 9.5h13" stroke={colors.white} strokeWidth="1.8" strokeLinecap="round" />
+        <Path d="M7.5 18.5h13" stroke={colors.white} strokeWidth="1.8" strokeLinecap="round" />
+        <Line x1="14" y1="5.5" x2="14" y2="22.5" stroke={colors.white} strokeWidth="1.5" strokeLinecap="round" />
+        <Circle cx="14" cy="14" r="3.2" stroke={colors.white} strokeWidth="1.5" />
       </Svg>
-    </View>
-  );
-}
-
-function SearchBar({
-  label,
-  value,
-  onChange,
-  onSubmit,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  onSubmit: () => void;
-}) {
-  return (
-    <View style={styles.searchBar}>
-      <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-        <Circle cx="11" cy="11" r="7" stroke={colors.mu} strokeWidth="2" />
-        <Line x1="16.5" y1="16.5" x2="21" y2="21" stroke={colors.mu} strokeWidth="2" strokeLinecap="round" />
-      </Svg>
-      <TextInput
-        value={value}
-        onChangeText={onChange}
-        onSubmitEditing={onSubmit}
-        placeholder={label}
-        placeholderTextColor={colors.mu}
-        style={styles.searchInput}
-        autoCapitalize="none"
-        returnKeyType="search"
-      />
-      <View style={styles.cameraPill}>
-        <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-          <Rect x="4" y="7" width="16" height="11" rx="3" stroke={colors.navy} strokeWidth="2" />
-          <Circle cx="12" cy="12.5" r="2.8" stroke={colors.navy} strokeWidth="2" />
-          <Path d="M8.5 7l1.4-2h4.2l1.4 2" stroke={colors.navy} strokeWidth="2" strokeLinecap="round" />
-        </Svg>
-      </View>
     </View>
   );
 }
@@ -195,7 +156,6 @@ export default function BuildingTab() {
         order: 'Order',
         seats: 'seats',
       };
-  const [search, setSearch] = useState('');
   const user = useAuthStore((s) => s.user);
   const { data: profile } = useProfile(user?.id);
   const { data: orders = [] } = useUserOrders(user?.id);
@@ -204,40 +164,12 @@ export default function BuildingTab() {
   const completedOrders = orders.filter((order) => order.status === 'completed').length;
   const openOrders = orders.filter((order) => !['completed', 'cancelled'].includes(order.status));
   const topOrders = orders.slice(0, 3);
-  const normalizedSearch = search.trim().toLowerCase();
-  const filteredFlows = normalizedSearch
-    ? SHOPPING_FLOWS.filter((store) =>
-        [store.enName, store.heName, store.enNote, store.heNote, store.enCategory, store.heCategory].some((value) =>
-          value.toLowerCase().includes(normalizedSearch),
-        ),
-      )
-    : SHOPPING_FLOWS;
-  const filteredOrders = normalizedSearch
-    ? orders.filter((order) =>
-        [order.product_title ?? '', order.product_url, order.store_label ?? ''].some((value) =>
-          value.toLowerCase().includes(normalizedSearch),
-        ),
-      )
-    : [];
   const dashboardStats = [
     { value: String(openOrders.length), label: t('tabs.home.openOrders'), featured: true },
     { value: String(completedOrders), label: t('tabs.home.completed') },
     { value: String(topOrders.length), label: isHebrew ? 'הזמנות מוכנות' : 'Ready orders' },
     { value: '1', label: isHebrew ? 'שיתוף עובד' : 'Share flow' },
   ];
-  const submitSearch = () => {
-    if (/^https?:\/\//i.test(search.trim())) {
-      router.push(`/order/new?url=${encodeURIComponent(search.trim())}`);
-      return;
-    }
-    const firstOrder = filteredOrders[0];
-    if (firstOrder) {
-      router.push(`/order/${firstOrder.id}`);
-    } else if (normalizedSearch) {
-      router.push(`/order/new?title=${encodeURIComponent(search.trim())}`);
-    }
-  };
-
   return (
     <ScreenBase padded={false} safeEdges={['top']}>
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -277,13 +209,6 @@ export default function BuildingTab() {
             </ImageBackground>
           </View>
 
-          <SearchBar
-            label={t('tabs.home.searchPlaceholder')}
-            value={search}
-            onChange={setSearch}
-            onSubmit={submitSearch}
-          />
-
           <View style={styles.statsRow}>
             {dashboardStats.map((stat) => (
               <View key={stat.label} style={[styles.statCard, stat.featured && styles.statCardFeatured]}>
@@ -292,27 +217,6 @@ export default function BuildingTab() {
               </View>
             ))}
           </View>
-
-          {normalizedSearch ? (
-            <View style={styles.searchResults}>
-              {filteredFlows.slice(0, 3).map((store) => (
-                <Pressable
-                  key={store.id}
-                  style={styles.searchResult}
-                  onPress={() => router.push('/order/new')}
-                >
-                  <Text style={styles.searchResultTitle}>{isHebrew ? store.heName : store.enName}</Text>
-                  <Text style={styles.searchResultBody}>{isHebrew ? store.heNote : store.enNote}</Text>
-                </Pressable>
-              ))}
-              {filteredOrders.slice(0, 2).map((order) => (
-                <Pressable key={order.id} style={styles.searchResult} onPress={() => router.push(`/order/${order.id}`)}>
-                  <Text style={styles.searchResultTitle}>{order.product_title ?? homeCopy.order}</Text>
-                  <Text style={styles.searchResultBody}>{order.store_label ?? order.product_url}</Text>
-                </Pressable>
-              ))}
-            </View>
-          ) : null}
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
             {CATEGORY_CHIPS.map((category, index) => (
@@ -336,8 +240,8 @@ export default function BuildingTab() {
             <Text style={styles.sectionLink}>{homeCopy.anyStore}</Text>
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.featureRow}>
-            {filteredFlows.map((store) => (
+          <View style={styles.featureGrid}>
+            {SHOPPING_FLOWS.map((store) => (
               <FeaturedCard
                 key={store.id}
                 name={isHebrew ? store.heName : store.enName}
@@ -347,7 +251,7 @@ export default function BuildingTab() {
                 onPress={() => router.push('/order/new')}
               />
             ))}
-          </ScrollView>
+          </View>
 
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{t('tabs.home.recent')}</Text>
@@ -408,11 +312,11 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: radii.pill,
-    backgroundColor: colors.white,
+    backgroundColor: colors.acc,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: colors.br,
+    borderColor: colors.acc,
     ...shadow.card,
   },
   brandTag: {
@@ -501,33 +405,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1.4,
     color: colors.navy,
   },
-  searchBar: {
-    minHeight: 58,
-    borderRadius: radii.pill,
-    paddingHorizontal: 18,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.br,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    ...shadow.card,
-  },
-  searchInput: {
-    flex: 1,
-    fontFamily: fontFamily.body,
-    fontSize: 16,
-    color: colors.tx,
-    paddingVertical: 0,
-  },
-  cameraPill: {
-    width: 38,
-    height: 38,
-    borderRadius: radii.pill,
-    backgroundColor: colors.accLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   categoryRow: {
     gap: 8,
     paddingRight: 4,
@@ -563,28 +440,6 @@ const styles = StyleSheet.create({
   categoryChipDetailActive: {
     color: 'rgba(255,255,255,0.78)',
   },
-  searchResults: {
-    gap: 8,
-    marginTop: -8,
-  },
-  searchResult: {
-    padding: 14,
-    borderRadius: radii.lg,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.br,
-  },
-  searchResultTitle: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 14,
-    color: colors.tx,
-  },
-  searchResultBody: {
-    marginTop: 3,
-    fontFamily: fontFamily.body,
-    fontSize: 12,
-    color: colors.mu,
-  },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -601,12 +456,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.acc,
   },
-  featureRow: {
-    gap: 12,
-    paddingRight: 4,
+  featureGrid: {
+    flexDirection: 'row',
+    gap: 14,
+    width: '100%',
   },
   featureCard: {
-    width: 168,
+    flex: 1,
+    minWidth: 0,
     borderRadius: 26,
     backgroundColor: colors.white,
     borderWidth: 1,
@@ -618,7 +475,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   featureImage: {
-    height: 162,
+    height: 190,
     justifyContent: 'space-between',
     borderRadius: 22,
     overflow: 'hidden',

@@ -47,8 +47,8 @@ const styles = StyleSheet.create({
     width: 76,
     height: 76,
     borderRadius: radii.pill,
-    backgroundColor: colors.white,
-    borderColor: colors.br,
+    backgroundColor: colors.acc,
+    borderColor: colors.acc,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
   badge: {
     fontSize: 12,
     letterSpacing: 2.4,
-    color: colors.acc,
+    color: colors.white,
     fontFamily: fontFamily.bodyBold,
   },
   title: {
