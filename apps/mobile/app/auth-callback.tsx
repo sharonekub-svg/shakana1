@@ -13,11 +13,7 @@ import { consumePendingInvite } from '@/lib/deeplinks';
 const isProfileComplete = (profile: Profile | null): boolean =>
   !!profile &&
   profile.first_name.trim().length > 0 &&
-  profile.last_name.trim().length > 0 &&
-  profile.city.trim().length > 0 &&
-  profile.street.trim().length > 0 &&
-  profile.building.trim().length > 0 &&
-  profile.apt.trim().length > 0;
+  profile.last_name.trim().length > 0;
 
 const getFirstParam = (value: string | string[] | undefined): string | undefined =>
   Array.isArray(value) ? value[0] : value;

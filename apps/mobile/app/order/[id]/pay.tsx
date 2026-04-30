@@ -29,7 +29,8 @@ export default function Pay() {
 
   const order = data?.order;
   const me = data?.participants.find((p) => p.user_id === userId);
-  const perPerson = me?.amount_agorot ?? (order ? Math.ceil(order.product_price_agorot / order.max_participants) : 0);
+  const amountAgorot = me?.amount_agorot ?? 0;
+  const canPay = Boolean(order && me && amountAgorot > 0);
 
   useEffect(() => {
     if (pay.isSuccess) router.replace(`/order/${id}/escrow`);
@@ -40,6 +41,11 @@ export default function Pay() {
   }, [loadPayments, paymentsHydrated]);
 
   const go = async () => {
+    if (!me) {
+      pushToast('You need to join this order before paying.', 'error');
+      router.replace(`/order/${id}`);
+      return;
+    }
     if (!hasPaymentOption) {
       pushToast('Add Bit, PayBox, Venmo, or another payment option first.', 'error');
       router.push('/profile/payment');
@@ -68,9 +74,11 @@ export default function Pay() {
         <View style={{ flex: 1 }}>
           <View style={styles.card}>
             <Text style={styles.lead}>Your share</Text>
-            <Text style={styles.amount}>{formatAgorot(perPerson)}</Text>
+            <Text style={styles.amount}>{formatAgorot(amountAgorot)}</Text>
             <Text style={styles.note}>
-              Add a payment option like Bit, PayBox, Venmo, or cash before confirming.
+              {me
+                ? 'Add a payment option like Bit, PayBox, Venmo, or cash before confirming.'
+                : 'You are not a participant in this order yet.'}
             </Text>
           </View>
 
@@ -102,6 +110,7 @@ export default function Pay() {
           <PrimaryBtn
             label={hasPaymentOption ? 'Confirm payment' : 'Add payment option'}
             onPress={go}
+            disabled={!canPay && hasPaymentOption}
             loading={pay.isPending}
           />
         </View>
