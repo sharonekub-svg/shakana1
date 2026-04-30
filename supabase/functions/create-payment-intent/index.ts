@@ -6,6 +6,11 @@ import { idempotencyKeyFrom } from '../_shared/idempotency.ts';
 
 type Body = { orderId: string; idempotency_key?: string };
 
+function sumOrderItems(items: Array<{ price_agorot: number | null }> | null, fallbackAgorot: number): number {
+  const total = (items ?? []).reduce((sum, item) => sum + Math.max(0, item.price_agorot ?? 0), 0);
+  return total > 0 ? total : fallbackAgorot;
+}
+
 Deno.serve(async (req) => {
   const pre = handleOptions(req);
   if (pre) return pre;
@@ -37,6 +42,36 @@ Deno.serve(async (req) => {
     if (partErr) throw partErr;
     if (!participant) throw httpError(403, 'not_a_participant');
     if (participant.status === 'paid') throw httpError(409, 'already_paid');
+
+    const [{ data: participants, error: participantsErr }, { data: items, error: itemsErr }] = await Promise.all([
+      admin
+        .from('participants')
+        .select('id, status')
+        .eq('order_id', order.id)
+        .in('status', ['joined', 'paid']),
+      admin
+        .from('order_items')
+        .select('price_agorot')
+        .eq('order_id', order.id),
+    ]);
+    if (participantsErr) throw participantsErr;
+    if (itemsErr) throw itemsErr;
+
+    const participantCount = Math.max(1, participants?.length ?? 1);
+    const itemsTotalAgorot = sumOrderItems(items, order.product_price_agorot);
+    const serverAmountAgorot = Math.ceil((itemsTotalAgorot + (order.estimated_shipping_agorot ?? 0)) / participantCount);
+    if (!Number.isInteger(serverAmountAgorot) || serverAmountAgorot <= 0) {
+      throw httpError(409, 'invalid_server_amount');
+    }
+
+    if (participant.amount_agorot !== serverAmountAgorot) {
+      const { error: rebalanceErr } = await admin
+        .from('participants')
+        .update({ amount_agorot: serverAmountAgorot })
+        .eq('order_id', order.id)
+        .eq('status', 'joined');
+      if (rebalanceErr) throw rebalanceErr;
+    }
 
     const { data: profile } = await admin
       .from('profiles')
@@ -71,7 +106,7 @@ Deno.serve(async (req) => {
 
     const pi = await stripe.paymentIntents.create(
       {
-        amount: participant.amount_agorot,
+        amount: serverAmountAgorot,
         currency: 'ils',
         customer: customerId,
         capture_method: 'manual',

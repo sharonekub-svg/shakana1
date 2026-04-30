@@ -223,14 +223,14 @@ export default function OrderShell() {
     }
   }, [closeOrder, now, order]);
 
-  if (isLoading || !data) {
+  if (isLoading) {
     return (
       <ScreenBase style={{ alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator color={colors.acc} />
       </ScreenBase>
     );
   }
-  if (error || !order) {
+  if (error || !data || !order) {
     return (
       <ScreenBase style={{ alignItems: 'center', justifyContent: 'center' }}>
         <Text style={{ color: colors.err, fontFamily: fontFamily.body }}>{copy.unableToLoad}</Text>

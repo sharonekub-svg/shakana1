@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
     if (insErr) throw insErr;
 
     // Creator is always the first participant.
-    const amount = Math.ceil((body.productPriceAgorot + body.estimatedShippingAgorot) / body.maxParticipants);
+    const amount = body.productPriceAgorot + body.estimatedShippingAgorot;
     const { data: participant, error: partErr } = await admin.from('participants').insert({
       order_id: order.id,
       user_id: userId,

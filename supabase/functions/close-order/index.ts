@@ -4,6 +4,11 @@ import { admin, authedUserId, httpError } from '../_shared/supabaseAdmin.ts';
 
 type Body = { orderId: string };
 
+function sumOrderItems(items: Array<{ price_agorot: number | null }> | null, fallbackAgorot: number): number {
+  const total = (items ?? []).reduce((sum, item) => sum + Math.max(0, item.price_agorot ?? 0), 0);
+  return total > 0 ? total : fallbackAgorot;
+}
+
 Deno.serve(async (req) => {
   const pre = handleOptions(req);
   if (pre) return pre;
@@ -34,7 +39,13 @@ Deno.serve(async (req) => {
       .eq('order_id', order.id);
     if (countErr) throw countErr;
     const participantCount = Math.max(1, count ?? 1);
-    const finalAmount = Math.ceil((order.product_price_agorot + (order.estimated_shipping_agorot ?? 0)) / participantCount);
+    const { data: items, error: itemsErr } = await admin
+      .from('order_items')
+      .select('price_agorot')
+      .eq('order_id', order.id);
+    if (itemsErr) throw itemsErr;
+    const itemsTotal = sumOrderItems(items, order.product_price_agorot);
+    const finalAmount = Math.ceil((itemsTotal + (order.estimated_shipping_agorot ?? 0)) / participantCount);
 
     const { data: locked, error: updateErr } = await admin
       .from('orders')
