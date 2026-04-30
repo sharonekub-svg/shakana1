@@ -1,5 +1,5 @@
 export const colors = {
-  bg: '#F4F7F3',
+  bg: '#EEF1EE',
   s1: '#FFFFFF',
   s2: '#EEF4EE',
   s3: '#DDEBDD',
@@ -7,6 +7,8 @@ export const colors = {
   mu: '#66746B',
   mu2: '#9AA89F',
   acc: '#0F7A43',
+  lime: '#B7F36A',
+  limeSoft: '#E8FBD2',
   accLight: '#E4F5EA',
   grn: '#0F7A43',
   err: '#E45B5B',

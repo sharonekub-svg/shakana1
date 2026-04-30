@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
   heroCard: {
     borderRadius: radii.xxl,
     overflow: 'hidden',
-    backgroundColor: colors.navy,
+    backgroundColor: colors.lime,
     ...shadow.card,
   },
   heroImage: {
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
   },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(6, 46, 27, 0.72)',
+    backgroundColor: 'rgba(183, 243, 106, 0.88)',
   },
   heroContent: {
     padding: 18,
@@ -373,20 +373,20 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodyBold,
     fontSize: 11,
     letterSpacing: 2.4,
-    color: colors.white,
+    color: colors.navy,
   },
   heroTitle: {
     fontFamily: fontFamily.display,
     fontSize: 32,
     lineHeight: 36,
-    color: colors.white,
+    color: colors.navy,
     maxWidth: 260,
   },
   heroBody: {
     fontFamily: fontFamily.body,
     fontSize: 14,
     lineHeight: 22,
-    color: 'rgba(255,255,255,0.88)',
+    color: colors.tx,
     maxWidth: 320,
   },
   heroButton: {
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
     height: 46,
     paddingHorizontal: 18,
     borderRadius: radii.pill,
-    backgroundColor: '#E9F8EF',
+    backgroundColor: colors.navy,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodyBold,
     fontSize: 12,
     letterSpacing: 1.4,
-    color: colors.navy,
+    color: colors.white,
   },
   categoryRow: {
     gap: 8,
@@ -419,8 +419,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   categoryChipActive: {
-    backgroundColor: colors.navy,
-    borderColor: colors.navy,
+    backgroundColor: colors.lime,
+    borderColor: colors.lime,
   },
   categoryChipText: {
     fontFamily: fontFamily.bodyBold,
@@ -428,7 +428,7 @@ const styles = StyleSheet.create({
     color: colors.tx,
   },
   categoryChipTextActive: {
-    color: colors.white,
+    color: colors.navy,
   },
   categoryChipDetail: {
     marginTop: 4,
@@ -438,7 +438,7 @@ const styles = StyleSheet.create({
     color: colors.mu,
   },
   categoryChipDetailActive: {
-    color: 'rgba(255,255,255,0.78)',
+    color: colors.tx,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -529,8 +529,8 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   statCardFeatured: {
-    backgroundColor: colors.acc,
-    borderColor: colors.acc,
+    backgroundColor: colors.lime,
+    borderColor: colors.lime,
   },
   statValue: {
     fontFamily: fontFamily.display,
@@ -547,10 +547,10 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   statValueFeatured: {
-    color: colors.white,
+    color: colors.navy,
   },
   statLabelFeatured: {
-    color: '#CFF4DB',
+    color: colors.acc,
   },
   ordersList: {
     gap: 12,
@@ -575,7 +575,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.navy,
+    backgroundColor: colors.acc,
   },
   orderBadgeText: {
     color: colors.white,
