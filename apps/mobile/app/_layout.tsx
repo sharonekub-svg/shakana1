@@ -187,11 +187,7 @@ function RootLayoutInner() {
     const profileComplete =
       !!profile &&
       profile.first_name.trim().length > 0 &&
-      profile.last_name.trim().length > 0 &&
-      profile.city.trim().length > 0 &&
-      profile.street.trim().length > 0 &&
-      profile.building.trim().length > 0 &&
-      profile.apt.trim().length > 0;
+      profile.last_name.trim().length > 0;
     const draftHasName =
       !!draft &&
       draft.first_name.trim().length > 0 &&

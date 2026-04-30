@@ -12,6 +12,9 @@ import { fontFamily } from '@/theme/fonts';
 import { useAuthStore } from '@/stores/authStore';
 import { useProfileDraftStore } from '@/stores/profileDraftStore';
 import { useLocale } from '@/i18n/locale';
+import { useUpsertProfile } from '@/api/profile';
+import { consumePendingInvite } from '@/lib/deeplinks';
+import { useUiStore } from '@/stores/uiStore';
 
 export default function Name() {
   const router = useRouter();
@@ -19,6 +22,9 @@ export default function Name() {
   const user = useAuthStore((s) => s.user);
   const draft = useProfileDraftStore((s) => s.draft);
   const setDraft = useProfileDraftStore((s) => s.setDraft);
+  const clearDraft = useProfileDraftStore((s) => s.clearDraft);
+  const upsert = useUpsertProfile();
+  const pushToast = useUiStore((s) => s.pushToast);
   const { t } = useLocale();
   const [first, setFirst] = useState(() => draft?.first_name ?? '');
   const [last, setLast] = useState(() => draft?.last_name ?? '');
@@ -37,9 +43,20 @@ export default function Name() {
       apt: draft?.apt ?? '',
       floor: draft?.floor ?? null,
     };
-    setProfile(updated);
-    await setDraft(updated);
-    router.push('/(auth)/address');
+    try {
+      await upsert.mutateAsync(updated);
+      setProfile(updated);
+      await setDraft(updated);
+      await clearDraft();
+      const pending = await consumePendingInvite();
+      if (pending) {
+        router.replace(`/join/${pending}`);
+      } else {
+        router.replace('/(auth)/success');
+      }
+    } catch (error) {
+      pushToast(error instanceof Error ? error.message : t('auth.address.saveError'), 'error');
+    }
   };
 
   return (
@@ -69,7 +86,7 @@ export default function Name() {
 
       <View style={styles.spacer} />
 
-      <PrimaryBtn label={t('common.continue')} onPress={next} disabled={!valid} />
+      <PrimaryBtn label={t('common.continue')} onPress={next} disabled={!valid} loading={upsert.isPending} />
     </ScreenBase>
   );
 }

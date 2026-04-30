@@ -192,8 +192,6 @@ export default function Address() {
     runStreetSearch(v);
   };
 
-  const valid = city.trim().length > 0 && street.trim().length > 0 && building.trim().length > 0 && apt.trim().length > 0;
-
   const submit = async () => {
     const baseProfile =
       draft ??
@@ -211,7 +209,7 @@ export default function Address() {
             floor: null,
           }
         : null);
-    if (!valid || !baseProfile) return;
+    if (!baseProfile) return;
     const updated = {
       ...baseProfile,
       city: city.trim(),
@@ -245,14 +243,20 @@ export default function Address() {
 
       <View style={styles.hero}>
         <Text style={styles.kicker}>SHAKANA</Text>
-        <Text style={styles.title}>{t('auth.address.title')}</Text>
-        <Text style={styles.subtitle}>{t('auth.address.subtitle')}</Text>
+        <Text style={styles.title}>
+          {language === 'he' ? 'כתובת בניין להתראות שכנים' : 'Building address for neighbor alerts'}
+        </Text>
+        <Text style={styles.subtitle}>
+          {language === 'he'
+            ? 'זה אופציונלי. מלא רק אם תרצה לקבל התראות כששכנים בבניין שלך פותחים הזמנה.'
+            : 'This is optional. Add it only if you want alerts when neighbors in your building open an order.'}
+        </Text>
       </View>
 
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 14, paddingBottom: 6 }}>
         {!cityLocked ? (
           <AutoField
-            label={t('auth.address.city')}
+            label={language === 'he' ? 'עיר (אופציונלי)' : 'City (optional)'}
             value={city}
             onChange={(v) => {
               setCity(v);
@@ -268,7 +272,7 @@ export default function Address() {
           />
         ) : (
           <View style={{ gap: 8 }}>
-            <Text style={styles.fieldLabel}>{t('auth.address.city')}</Text>
+            <Text style={styles.fieldLabel}>{language === 'he' ? 'עיר (אופציונלי)' : 'City (optional)'}</Text>
             <View style={styles.cityChip}>
               <Text style={styles.cityChipText}>{city}</Text>
               <Pressable
@@ -286,7 +290,7 @@ export default function Address() {
         )}
 
         <AutoField
-          label={t('auth.address.street')}
+          label={language === 'he' ? 'רחוב (אופציונלי)' : 'Street (optional)'}
           value={street}
           onChange={onStreetChange}
           onSelect={(v) => {
@@ -305,20 +309,41 @@ export default function Address() {
         />
 
         <View style={styles.row}>
-          <NumField label={t('auth.address.building')} value={building} onChange={setBuilding} placeholder="22" />
-          <NumField label={t('auth.address.apartment')} value={apt} onChange={setApt} placeholder="4" />
-          <NumField label={t('auth.address.floor')} value={floor} onChange={setFloor} placeholder="2" />
+          <NumField
+            label={language === 'he' ? 'בניין' : t('auth.address.building')}
+            value={building}
+            onChange={setBuilding}
+            placeholder="22"
+          />
+          <NumField
+            label={language === 'he' ? 'דירה' : t('auth.address.apartment')}
+            value={apt}
+            onChange={setApt}
+            placeholder="4"
+          />
+          <NumField
+            label={language === 'he' ? 'קומה' : t('auth.address.floor')}
+            value={floor}
+            onChange={setFloor}
+            placeholder="2"
+          />
         </View>
 
         <View style={styles.privacy}>
           <Text style={styles.privacyText}>
-            {t('auth.address.privacy')}
+            {language === 'he'
+              ? 'אפשר להשאיר ריק. אם תמלא כתובת, נשתמש בה רק כדי לזהות הזמנות והתראות של שכנים מהבניין שלך.'
+              : 'You can leave this empty. If you add an address, it is only used for building-based neighbor order alerts.'}
           </Text>
         </View>
       </ScrollView>
 
       <View style={styles.footer}>
-        <PrimaryBtn label={t('common.save')} onPress={submit} disabled={!valid} loading={upsert.isPending} />
+        <PrimaryBtn
+          label={language === 'he' ? 'שמור והמשך' : t('common.save')}
+          onPress={submit}
+          loading={upsert.isPending}
+        />
       </View>
     </ScreenBase>
   );
