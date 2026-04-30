@@ -105,6 +105,15 @@ const BRAND_CONFIGS: BrandConfig[] = [
     homeDeliveryFeeAgorot: DEFAULT_HOME_DELIVERY_FEE_AGOROT,
     freeShippingThresholdAgorot: DEFAULT_FREE_SHIPPING_THRESHOLD_AGOROT,
   },
+  {
+    source: 'ksp',
+    brandName: 'KSP',
+    displayName: 'KSP',
+    hostTest: (hostname) => normalizeHost(hostname).endsWith('ksp.co.il'),
+    productPathTest: (url) => /\/(?:web\/)?item\/\d+(?:\/|$)/i.test(url.pathname),
+    homeDeliveryFeeAgorot: DEFAULT_HOME_DELIVERY_FEE_AGOROT,
+    freeShippingThresholdAgorot: DEFAULT_FREE_SHIPPING_THRESHOLD_AGOROT,
+  },
 ];
 
 function normalizeHost(hostname: string): string {
@@ -116,13 +125,20 @@ function getBrandConfig(hostname: string): BrandConfig | null {
 }
 
 function labelFromHostname(hostname: string): string {
-  const host = normalizeHost(hostname).replace(/^m\./, '').replace(/^www2\./, '');
+  const host = normalizeHost(hostname).replace(/^(?:m|www2|shop|store)\./, '');
   const parts = host.split('.').filter(Boolean);
-  const brandPart = parts.length > 2 ? parts[parts.length - 3] : parts[0];
+  const twoPartSuffixes = new Set(['co.il', 'org.il', 'net.il', 'ac.il', 'co.uk', 'com.au']);
+  const suffix = parts.slice(-2).join('.');
+  const brandPart = twoPartSuffixes.has(suffix)
+    ? parts[parts.length - 3]
+    : parts.length > 1
+      ? parts[parts.length - 2]
+      : parts[0];
   const raw = brandPart || host;
   const known: Record<string, string> = {
     amazon: 'Amazon',
     hm: 'H&M',
+    ksp: 'KSP',
     zara: 'Zara',
   };
   return known[raw] ?? raw.split(/[-_]/).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
@@ -260,7 +276,10 @@ function inferTitleFromUrl(url: URL): string {
     return humanizeSlug(titleSlug);
   }
   if (amazonDpIndex === 0) return 'Product item';
+  const itemId = url.pathname.match(/\/(?:web\/)?item\/(\d+)(?:\/|$)/i)?.[1];
+  if (itemId) return `${labelFromHostname(url.hostname)} item ${itemId}`;
   const slug = parts[parts.length - 1] ?? '';
+  if (/^\d+$/.test(slug)) return `${labelFromHostname(url.hostname)} item ${slug}`;
   const title = humanizeSlug(slug);
   return title === 'Item' ? 'Product item' : title;
 }
@@ -326,6 +345,16 @@ function readBrand(html: string): string | null {
   return readMeta(html, 'og:site_name');
 }
 
+function isGenericPageTitle(title: string, fallback: string): boolean {
+  const normalized = title.trim().replace(/\s+/g, ' ');
+  const fallbackNormalized = fallback.trim().replace(/\s+/g, ' ');
+  if (!normalized) return true;
+  if (normalized === fallbackNormalized) return false;
+  if (/^(?:KSP|Amazon|ZARA|H&M|Home|Product|Store)$/i.test(normalized)) return true;
+  if (normalized.length < 4 && fallbackNormalized.length > 3) return true;
+  return false;
+}
+
 function chooseTitle(html: string, fallback: string): string {
   const jsonLd = readFirstJsonLdObject(html);
   const ogTitle = readMeta(html, 'og:title');
@@ -338,6 +367,7 @@ function chooseTitle(html: string, fallback: string): string {
     .replace(/\s+-\s+(Amazon|ZARA|H&M).*$/i, '')
     .replace(/^Amazon\.[a-z.]+:\s*/i, '')
     .trim();
+  if (isGenericPageTitle(stripped, fallback)) return polishInferredTitle(fallback);
   return polishInferredTitle(stripped || fallback);
 }
 
@@ -427,10 +457,18 @@ function chooseAmazonScopedPriceAgorot(html: string): number | null {
 function choosePriceAgorot(html: string): number | null {
   const jsonLd = readFirstJsonLdObject(html);
   const offers = jsonLd?.offers;
-  if (offers && typeof offers === 'object') {
-    const obj = offers as Record<string, unknown>;
+  const readOfferPrice = (offer: unknown): number | null => {
+    if (!offer || typeof offer !== 'object') return null;
+    const obj = offer as Record<string, unknown>;
     const direct = parseMoneyToAgorot(obj.price as string | number | undefined);
     if (direct) return direct;
+    const priceValue = parseMoneyToAgorot(obj.priceValue as string | number | undefined);
+    if (priceValue) return priceValue;
+    if (obj.price && typeof obj.price === 'object') {
+      const nested = obj.price as Record<string, unknown>;
+      const nestedValue = parseMoneyToAgorot(nested.value as string | number | undefined);
+      if (nestedValue) return nestedValue;
+    }
     if (Array.isArray(obj.priceSpecification)) {
       for (const spec of obj.priceSpecification) {
         if (spec && typeof spec === 'object') {
@@ -439,6 +477,16 @@ function choosePriceAgorot(html: string): number | null {
         }
       }
     }
+    return null;
+  };
+  if (Array.isArray(offers)) {
+    for (const offer of offers) {
+      const next = readOfferPrice(offer);
+      if (next) return next;
+    }
+  } else if (offers && typeof offers === 'object') {
+    const direct = readOfferPrice(offers);
+    if (direct) return direct;
   }
 
   const amazonScopedPrice = chooseAmazonScopedPriceAgorot(html);
@@ -461,12 +509,19 @@ function choosePriceAgorot(html: string): number | null {
     if (parsed) return parsed;
   }
 
-  const structuredMinorUnitMatch = html.match(/"price"\s*:\s*"?(?<price>\d{4,7})"?/i);
+  const structuredMinorUnitMatch = html.match(/"(?:price|finalPrice|salePrice|currentPrice)"\s*:\s*"?(?<price>\d{4,7})"?/i);
   const minorUnits = parseStoreMinorUnitsToAgorot(structuredMinorUnitMatch?.groups?.price ?? null);
   if (minorUnits) return minorUnits;
 
-  const match = html.match(/"price"\s*:\s*"?(?<price>\d+(?:[.,]\d+)?)"?/i);
-  return parseMoneyToAgorot(match?.groups?.price ?? null);
+  const genericPatterns = [
+    /"(?:price|salePrice|currentPrice|finalPrice|priceValue|amount)"\s*:\s*"?(?<price>\d+(?:[.,]\d+)?)"?/i,
+    /"(?:price|salePrice|currentPrice|finalPrice)"\s*:\s*\{[^}]*"(?:value|amount)"\s*:\s*"?(?<price>\d+(?:[.,]\d+)?)"?/i,
+  ];
+  for (const pattern of genericPatterns) {
+    const parsed = parseMoneyToAgorot(html.match(pattern)?.groups?.price ?? null);
+    if (parsed) return parsed;
+  }
+  return null;
 }
 
 function chooseDeliveryFeeAgorot(html: string, fallbackAgorot: number): number {
@@ -474,6 +529,10 @@ function chooseDeliveryFeeAgorot(html: string, fallbackAgorot: number): number {
   if (/\bfree\s+(?:delivery|shipping)\b/i.test(text) || /משלוח\s+חינם/i.test(text)) return 0;
 
   const shippingPatterns = [
+    /(?:shipping|delivery)[^₪$ג‚×ג‚¬ֲ£\d]{0,80}(?<price>[₪$ג‚×ג‚¬ֲ£]?\s?\d[\d,.]*)/i,
+    /(?<price>[₪$ג‚×ג‚¬ֲ£]?\s?\d[\d,.]*)[^.]{0,80}(?:shipping|delivery)/i,
+    /משלוח[^₪\d]{0,80}(?<price>₪?\s?\d[\d,.]*)/i,
+    /"(?:shipping|delivery)(?:Fee|Price|Cost)?"\s*:\s*"?(?<price>\d+(?:[.,]\d+)?)"?/i,
     /(?:shipping|delivery)[^$₪€£]{0,80}(?<price>[$₪€£]\s?\d[\d,.]*)/i,
     /(?<price>[$₪€£]\s?\d[\d,.]*)[^.]{0,80}(?:shipping|delivery)/i,
     /משלוח[^₪]{0,80}(?<price>₪\s?\d[\d,.]*)/i,

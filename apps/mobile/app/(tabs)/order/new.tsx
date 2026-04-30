@@ -76,9 +76,10 @@ export default function NewOrder() {
         whatItIs: 'מה המוצר',
         whereFrom: 'מאיפה זה מגיע',
         productCost: 'מחיר המוצר',
+        deliveryFee: 'דמי משלוח',
         importantCosts: 'עלויות חשובות',
         freeShippingMinimum: 'סכום למשלוח חינם',
-        costCardNote: 'אלה המספרים שרואים מיד אחרי הלינק: כמה המוצר עולה, מאיזה סכום המשלוח חינם, וכמה חסר עד משלוח חינם.',
+        costCardNote: 'אלה המספרים שרואים מיד אחרי הלינק: מחיר המוצר, דמי המשלוח, מאיזה סכום המשלוח חינם, וכמה חסר.',
         freeDeliveryFrom: 'משלוח חינם מ',
         missingFreeDelivery: 'חסר למשלוח חינם',
         dealCheck: 'בדיקת מבצע / 1+1',
@@ -145,9 +146,10 @@ export default function NewOrder() {
         whatItIs: 'What it is',
         whereFrom: 'Where it comes from',
         productCost: 'Product cost',
+        deliveryFee: 'Delivery fee',
         importantCosts: 'Important costs',
         freeShippingMinimum: 'Free delivery minimum',
-        costCardNote: 'These are shown first after the link: product price, free-delivery minimum, and how much is missing.',
+        costCardNote: 'These are shown first after the link: product price, delivery fee, free-delivery minimum, and how much is missing.',
         freeDeliveryFrom: 'Free delivery from',
         missingFreeDelivery: 'Missing for free delivery',
         dealCheck: 'Deal / 1+1 check',
@@ -225,6 +227,7 @@ export default function NewOrder() {
   const freeShippingGapLabel =
     freeShippingThresholdAgorot > 0 ? formatAgorot(freeShippingGapAgorot) : copy.unknownThreshold;
   const dealLabel = insights?.promotionText || insights?.dealSummary || copy.noDeal;
+  const deliveryFeeLabel = insightsLoading ? copy.readingProduct : formatAgorot(deliveryFeeAgorot);
   const valid =
     urlCheck.success &&
     sourceLabel.trim().length > 1 &&
@@ -372,6 +375,10 @@ export default function NewOrder() {
                 <Text style={styles.costValue}>{productCostLabel}</Text>
               </View>
               <View style={styles.costItem}>
+                <Text style={styles.costLabel}>{copy.deliveryFee}</Text>
+                <Text style={styles.costValue}>{deliveryFeeLabel}</Text>
+              </View>
+              <View style={styles.costItem}>
                 <Text style={styles.costLabel}>{copy.freeShippingMinimum}</Text>
                 <Text style={styles.costValue}>{freeShippingThresholdLabel}</Text>
               </View>
@@ -446,6 +453,10 @@ export default function NewOrder() {
               <Text style={styles.finderValue}>{productCostLabel}</Text>
             </View>
             <View style={styles.finderCell}>
+              <Text style={styles.finderLabel}>{copy.deliveryFee}</Text>
+              <Text style={styles.finderValue}>{deliveryFeeLabel}</Text>
+            </View>
+            <View style={styles.finderCell}>
               <Text style={styles.finderLabel}>{copy.freeDeliveryFrom}</Text>
               <Text style={styles.finderValue}>{freeShippingThresholdLabel}</Text>
             </View>
@@ -503,6 +514,7 @@ export default function NewOrder() {
             <Text style={styles.cartTitle}>{productName || copy.manualProduct}</Text>
             <Text style={styles.cartLine}>{copy.store}: {sourceLabel || copy.chooseStore}</Text>
             <Text style={styles.cartLine}>{copy.productPrice}: {formatAgorot(priceAgorot)}</Text>
+            <Text style={styles.cartLine}>{copy.deliveryFee}: {deliveryFeeLabel}</Text>
             <Text style={styles.cartLine}>{copy.missingFreeDelivery}: {formatAgorot(freeShippingGapAgorot)}</Text>
             <Text style={styles.cartHint}>{copy.cartHint}</Text>
           </View>

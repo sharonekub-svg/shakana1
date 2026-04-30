@@ -130,7 +130,7 @@ describe('sharedProduct', () => {
       }),
     ).toEqual({
       url: 'https://example.com/product/123',
-      title: 'Product item',
+      title: 'Example item 123',
       source: 'example',
       storeLabel: 'Example',
       rawText: undefined,
@@ -149,6 +149,27 @@ describe('sharedProduct', () => {
       storeLabel: 'Cool Brand',
       rawText: undefined,
     });
+  });
+
+  it('detects KSP product links and does not use the app-shell title as the product name', () => {
+    const draft = parseSharedProduct({
+      url: 'https://ksp.co.il/web/item/330386?utm_source=share&ref=abc',
+    });
+
+    expect(draft).toEqual({
+      url: 'https://ksp.co.il/web/item/330386',
+      title: 'KSP item 330386',
+      source: 'ksp',
+      storeLabel: 'KSP',
+      rawText: undefined,
+    });
+
+    const insights = summarizeSharedProduct(draft!, '<html><head><title>KSP</title></head><body></body></html>');
+
+    expect(insights.title).toBe('KSP item 330386');
+    expect(insights.sourceLabel).toBe('KSP');
+    expect(insights.deliveryFeeAgorot).toBe(3000);
+    expect(insights.freeShippingThresholdAgorot).toBe(19900);
   });
 
   it('reads generic product metadata for price, image, and promotion', () => {
@@ -178,6 +199,37 @@ describe('sharedProduct', () => {
     expect(insights.amountMissingForFreeShippingAgorot).toBe(4910);
     expect(insights.neighborsNeeded).toBe(2);
     expect(insights.promotionText).toBe('Buy 1 get 1');
+  });
+
+  it('reads generic JSON-LD offer arrays and delivery fees', () => {
+    const draft = {
+      url: 'https://shop.cool-brand.co.il/products/noise-cancelling-headphones',
+      title: 'Noise Cancelling Headphones',
+      source: 'cool-brand',
+      storeLabel: 'Cool Brand',
+    };
+
+    const insights = summarizeSharedProduct(draft, `
+      <html>
+        <head>
+          <script type="application/ld+json">
+            {
+              "@type": "Product",
+              "name": "Noise Cancelling Headphones",
+              "offers": [
+                { "@type": "Offer", "price": "349.90", "priceCurrency": "ILS" }
+              ]
+            }
+          </script>
+        </head>
+        <body>Delivery ₪29.90</body>
+      </html>
+    `);
+
+    expect(insights.title).toBe('Noise Cancelling Headphones');
+    expect(insights.priceAgorot).toBe(34990);
+    expect(insights.deliveryFeeAgorot).toBe(2990);
+    expect(insights.amountMissingForFreeShippingAgorot).toBe(0);
   });
 
   it('cleans Amazon links and infers the product name from the title slug', () => {
