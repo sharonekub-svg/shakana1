@@ -29,13 +29,37 @@ export async function invokeFn<T = unknown>(
   name: string,
   body: Record<string, unknown>,
 ): Promise<T> {
+  if (Platform.OS === 'web') {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    const res = await fetch(`${env.supabaseUrl.replace(/\/$/, '')}/functions/v1/${name}`, {
+      method: 'POST',
+      headers: {
+        apikey: env.supabaseAnonKey,
+        authorization: `Bearer ${token ?? env.supabaseAnonKey}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    const text = await res.text();
+    const parsed = text ? JSON.parse(text) as T & { error?: string; message?: string } : null;
+    if (!res.ok) {
+      throw new Error(parsed?.message || parsed?.error || `Order service returned ${res.status}`);
+    }
+    if (!parsed) throw new Error(`Empty response from ${name}`);
+    return parsed as T;
+  }
+
   const { data, error } = await supabase.functions.invoke<T>(name, { body });
   if (error) {
     const message = error.message || String(error);
-    if (/not found|failed to send a request|functionsfetcherror/i.test(message)) {
+    if (/not found/i.test(message)) {
       throw new Error(
         `The ${name} order service is not deployed yet. Deploy the Supabase Edge Function and try again.`,
       );
+    }
+    if (/failed to send a request|functionsfetcherror/i.test(message)) {
+      throw new Error(`Could not reach the ${name} order service. Refresh the app and try again.`);
     }
     throw error;
   }
