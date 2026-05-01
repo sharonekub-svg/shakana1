@@ -101,7 +101,7 @@ const BRAND_CONFIGS: BrandConfig[] = [
     brandName: 'H&M',
     displayName: 'H&M',
     hostTest: (hostname) => normalizeHost(hostname).endsWith('hm.com'),
-    productPathTest: (url) => /product(?:-|_)page|\/product\//i.test(url.pathname),
+    productPathTest: (url) => /productpage|\/product[/_\-.]/i.test(url.pathname),
     homeDeliveryFeeAgorot: DEFAULT_HOME_DELIVERY_FEE_AGOROT,
     freeShippingThresholdAgorot: DEFAULT_FREE_SHIPPING_THRESHOLD_AGOROT,
   },
@@ -113,6 +113,33 @@ const BRAND_CONFIGS: BrandConfig[] = [
     productPathTest: (url) => /\/(?:web\/)?item\/\d+(?:\/|$)/i.test(url.pathname),
     homeDeliveryFeeAgorot: DEFAULT_HOME_DELIVERY_FEE_AGOROT,
     freeShippingThresholdAgorot: DEFAULT_FREE_SHIPPING_THRESHOLD_AGOROT,
+  },
+  {
+    source: 'terminalx',
+    brandName: 'TerminalX',
+    displayName: 'TerminalX',
+    hostTest: (hostname) => normalizeHost(hostname).endsWith('terminalx.com'),
+    productPathTest: (url) => /\/[a-z0-9%-]+-\d{4,}/i.test(url.pathname),
+    homeDeliveryFeeAgorot: DEFAULT_HOME_DELIVERY_FEE_AGOROT,
+    freeShippingThresholdAgorot: DEFAULT_FREE_SHIPPING_THRESHOLD_AGOROT,
+  },
+  {
+    source: 'shein',
+    brandName: 'Shein',
+    displayName: 'Shein',
+    hostTest: (hostname) => normalizeHost(hostname).endsWith('shein.com'),
+    productPathTest: (url) => /-p-\d+/i.test(url.pathname),
+    homeDeliveryFeeAgorot: 0,
+    freeShippingThresholdAgorot: 0,
+  },
+  {
+    source: 'aliexpress',
+    brandName: 'AliExpress',
+    displayName: 'AliExpress',
+    hostTest: (hostname) => normalizeHost(hostname).endsWith('aliexpress.com'),
+    productPathTest: (url) => /\/item\/\d+/i.test(url.pathname),
+    homeDeliveryFeeAgorot: 0,
+    freeShippingThresholdAgorot: 0,
   },
 ];
 
@@ -140,6 +167,9 @@ function labelFromHostname(hostname: string): string {
     hm: 'H&M',
     ksp: 'KSP',
     zara: 'Zara',
+    terminalx: 'TerminalX',
+    shein: 'Shein',
+    aliexpress: 'AliExpress',
   };
   return known[raw] ?? raw.split(/[-_]/).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
 }
@@ -400,9 +430,6 @@ function detectCurrency(raw: string | number): keyof typeof CURRENCY_TO_ILS_AGOR
   if (/₪|ש["״]?ח|NIS|ILS/i.test(text)) return 'ILS';
   if (/€|EUR/i.test(text)) return 'EUR';
   if (/£|GBP/i.test(text)) return 'GBP';
-  if (/₪|NIS|ILS|ש["״]?ח/i.test(text)) return 'ILS';
-  if (/€|EUR/i.test(text)) return 'EUR';
-  if (/£|GBP/i.test(text)) return 'GBP';
   if (/\$|USD/i.test(text)) return 'USD';
   return 'ILS';
 }
@@ -476,19 +503,29 @@ function choosePriceAgorot(html: string): number | null {
   const readOfferPrice = (offer: unknown): number | null => {
     if (!offer || typeof offer !== 'object') return null;
     const obj = offer as Record<string, unknown>;
-    const direct = parseMoneyToAgorot(obj.price as string | number | undefined);
+    const ctxCurrency = typeof obj.priceCurrency === 'string' ? obj.priceCurrency.trim() : null;
+    const parseTagged = (val: unknown, ctx = ctxCurrency): number | null => {
+      if (val == null) return null;
+      const text = String(val);
+      const tagged = ctx && /^\d[\d,. ]*$/.test(text.trim()) ? `${text} ${ctx}` : text;
+      return parseMoneyToAgorot(tagged);
+    };
+    const direct = parseTagged(obj.price);
     if (direct) return direct;
-    const priceValue = parseMoneyToAgorot(obj.priceValue as string | number | undefined);
+    const priceValue = parseTagged(obj.priceValue);
     if (priceValue) return priceValue;
     if (obj.price && typeof obj.price === 'object') {
       const nested = obj.price as Record<string, unknown>;
-      const nestedValue = parseMoneyToAgorot(nested.value as string | number | undefined);
+      const nestedCtx = typeof nested.currency === 'string' ? nested.currency.trim() : ctxCurrency;
+      const nestedValue = parseTagged(nested.value, nestedCtx);
       if (nestedValue) return nestedValue;
     }
     if (Array.isArray(obj.priceSpecification)) {
       for (const spec of obj.priceSpecification) {
         if (spec && typeof spec === 'object') {
-          const next = parseMoneyToAgorot((spec as Record<string, unknown>).price as string | number | undefined);
+          const specObj = spec as Record<string, unknown>;
+          const specCtx = typeof specObj.priceCurrency === 'string' ? specObj.priceCurrency.trim() : ctxCurrency;
+          const next = parseTagged(specObj.price, specCtx);
           if (next) return next;
         }
       }
@@ -577,8 +614,8 @@ function chooseDeliveryFeeAgorot(html: string, fallbackAgorot: number): number {
   if (/\bfree\s+(?:delivery|shipping)\b/i.test(text) || /משלוח\s+חינם/i.test(text)) return 0;
 
   const shippingPatterns = [
-    /(?:shipping|delivery)[^₪$ג‚×ג‚¬ֲ£\d]{0,80}(?<price>[₪$ג‚×ג‚¬ֲ£]?\s?\d[\d,.]*)/i,
-    /(?<price>[₪$ג‚×ג‚¬ֲ£]?\s?\d[\d,.]*)[^.]{0,80}(?:shipping|delivery)/i,
+    /(?:shipping|delivery)[^₪$€£\d]{0,80}(?<price>[₪$€£]?\s?\d[\d,.]*)/i,
+    /(?<price>[₪$€£]?\s?\d[\d,.]*)[^.]{0,80}(?:shipping|delivery)/i,
     /משלוח[^₪\d]{0,80}(?<price>₪?\s?\d[\d,.]*)/i,
     /"(?:shipping|delivery)(?:Fee|Price|Cost)?"\s*:\s*"?(?<price>\d+(?:[.,]\d+)?)"?/i,
     /(?:shipping|delivery)[^$₪€£]{0,80}(?<price>[$₪€£]\s?\d[\d,.]*)/i,

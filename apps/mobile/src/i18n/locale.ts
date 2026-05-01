@@ -80,6 +80,7 @@ const messages = {
         newOrder: 'הזמנה חדשה',
         noOrdersTitle: 'אין עדיין הזמנות פעילות.',
         noOrdersBody: 'צור סל משותף והתחל להזמין יחד.',
+        seats: 'מקומות',
       },
     profile: {
       title: 'פרופיל',

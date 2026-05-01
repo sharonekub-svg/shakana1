@@ -103,6 +103,9 @@ export default function OrdersTab() {
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{(item.store_label ?? 'ORD').slice(0, 3).toUpperCase()}</Text>
                 </View>
+                {item.store_label ? (
+                  <Text style={styles.storeName} numberOfLines={1}>{item.store_label}</Text>
+                ) : null}
                 <View style={styles.statusPill}>
                   <Text style={styles.statusText}>{statusLabel(item.status)}</Text>
                 </View>
@@ -111,7 +114,8 @@ export default function OrdersTab() {
                 {item.product_title ?? item.product_url}
               </Text>
               <Text style={styles.rowSub}>
-                {formatAgorot(item.product_price_agorot)} ֲ· {item.max_participants} {t('tabs.orders.seats')}
+                {formatAgorot(item.product_price_agorot)} · {item.max_participants} {t('tabs.orders.seats')}
+                {item.estimated_shipping_agorot ? ` · ${formatAgorot(item.estimated_shipping_agorot)} ${language === 'he' ? 'משלוח' : 'shipping'}` : ''}
               </Text>
             </Pressable>
           )}
@@ -235,6 +239,13 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1.4,
     color: colors.tx,
+  },
+  storeName: {
+    flex: 1,
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 12,
+    color: colors.mu,
+    paddingHorizontal: 6,
   },
   statusPill: {
     paddingHorizontal: 12,
