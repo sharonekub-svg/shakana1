@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { Profile } from '@/types/domain';
 
@@ -20,6 +20,7 @@ export function useProfile(userId: string | undefined) {
 }
 
 export function useUpsertProfile() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: async (p: Profile) => {
       const payload = {
@@ -36,6 +37,10 @@ export function useUpsertProfile() {
       const { error } = await supabase.from('profiles').upsert(payload as never, { onConflict: 'id' });
       if (error) throw new Error(error.message || 'Could not save profile');
       return p;
+    },
+    onSuccess: (profile) => {
+      qc.setQueryData(['profile', profile.id], profile);
+      qc.invalidateQueries({ queryKey: ['profile', profile.id] });
     },
   });
 }

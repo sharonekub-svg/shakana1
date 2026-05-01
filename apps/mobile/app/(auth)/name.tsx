@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
@@ -21,14 +21,31 @@ export default function Name() {
   const setProfile = useAuthStore((s) => s.setProfile);
   const user = useAuthStore((s) => s.user);
   const draft = useProfileDraftStore((s) => s.draft);
-  const setDraft = useProfileDraftStore((s) => s.setDraft);
   const clearDraft = useProfileDraftStore((s) => s.clearDraft);
   const upsert = useUpsertProfile();
   const pushToast = useUiStore((s) => s.pushToast);
   const { t } = useLocale();
-  const [first, setFirst] = useState(() => draft?.first_name ?? '');
-  const [last, setLast] = useState(() => draft?.last_name ?? '');
+  const userDraft = draft?.id === user?.id ? draft : null;
+  const hydratedNameRef = useRef(false);
+  const [first, setFirst] = useState('');
+  const [last, setLast] = useState('');
   const valid = first.trim().length >= 2 && last.trim().length >= 2;
+
+  useEffect(() => {
+    if (hydratedNameRef.current || !user) return;
+    hydratedNameRef.current = true;
+
+    const metadataName =
+      typeof user.user_metadata?.full_name === 'string'
+        ? user.user_metadata.full_name.trim()
+        : '';
+    const emailName = user.email?.split('@')[0]?.replace(/[._-]+/g, ' ').trim() ?? '';
+    const fallbackName = metadataName || emailName;
+    const [fallbackFirst = '', ...fallbackLastParts] = fallbackName.split(/\s+/).filter(Boolean);
+
+    setFirst(userDraft?.first_name ?? fallbackFirst);
+    setLast(userDraft?.last_name ?? fallbackLastParts.join(' '));
+  }, [user, userDraft]);
 
   const next = async () => {
     if (!valid || !user) return;
@@ -37,16 +54,15 @@ export default function Name() {
       first_name: first.trim(),
       last_name: last.trim(),
       phone: user.phone ?? '',
-      city: draft?.city ?? '',
-      street: draft?.street ?? '',
-      building: draft?.building ?? '',
-      apt: draft?.apt ?? '',
-      floor: draft?.floor ?? null,
+      city: userDraft?.city ?? '',
+      street: userDraft?.street ?? '',
+      building: userDraft?.building ?? '',
+      apt: userDraft?.apt ?? '',
+      floor: userDraft?.floor ?? null,
     };
     try {
       await upsert.mutateAsync(updated);
       setProfile(updated);
-      await setDraft(updated);
       await clearDraft();
       const pending = await consumePendingInvite();
       if (pending) {
