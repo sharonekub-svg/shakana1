@@ -21,6 +21,8 @@ import { buildInviteUrl } from '@/lib/deeplinks';
 import { loadSharedProductInsights, parseSharedProduct } from '@/lib/sharedProduct';
 import { fetchProductPageHtml } from '@/api/productInsights';
 
+const DEFAULT_DELIVERY_FEE_AGOROT = 3000;
+const DEFAULT_FREE_SHIPPING_THRESHOLD_AGOROT = 19900;
 const FALLBACK_SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 const FALLBACK_COLOR_OPTIONS = [
   { he: 'שחור', en: 'Black' },
@@ -193,6 +195,14 @@ export default function OrderShell() {
         createInvite: 'Create invite link',
         explainOrder: 'Explain this order',
       };
+  const actionCopy = {
+    changeTimer: isHebrew ? 'שנה' : 'Change',
+    chooseBeforeShare: isHebrew ? 'בחר מידה וצבע לפני שיתוף' : 'Choose size and color before sharing',
+    shareHint: isHebrew
+      ? 'בחר מידה וצבע כדי שהקישור לוואטסאפ יישלח עם פרטי הזמנה נכונים.'
+      : 'Choose size and color so the WhatsApp link includes the correct order details.',
+    shareAction: isHebrew ? 'שתף ב-WhatsApp' : 'Share on WhatsApp',
+  };
   const userId = useAuthStore((s) => s.user?.id);
   const pushToast = useUiStore((s) => s.pushToast);
   const { data, isLoading, error } = useOrder(id);
@@ -286,8 +296,16 @@ export default function OrderShell() {
     );
   }
 
-  const estimatedShipping = order.estimated_shipping_agorot ?? 0;
-  const freeShippingThreshold = order.free_shipping_threshold_agorot ?? 0;
+  const freeShippingThreshold =
+    typeof order.free_shipping_threshold_agorot === 'number' && order.free_shipping_threshold_agorot > 0
+      ? order.free_shipping_threshold_agorot
+      : DEFAULT_FREE_SHIPPING_THRESHOLD_AGOROT;
+  const estimatedShipping =
+    typeof order.estimated_shipping_agorot === 'number' && order.estimated_shipping_agorot > 0
+      ? order.estimated_shipping_agorot
+      : order.product_price_agorot >= freeShippingThreshold
+        ? 0
+        : DEFAULT_DELIVERY_FEE_AGOROT;
   const sharedOrderTotal = order.product_price_agorot * participantCount;
   const freeShippingGap = Math.max(0, freeShippingThreshold - sharedOrderTotal);
   const shippingSaved = Math.max(0, estimatedShipping * Math.max(0, participantCount - 1));
@@ -313,6 +331,9 @@ export default function OrderShell() {
       ];
   const cartTotal = visibleCartItems.reduce((sum, item) => sum + item.price_agorot, 0);
   const cartFreeShippingGap = Math.max(0, freeShippingThreshold - cartTotal);
+  const hasSavedOptions = cartItems.some((item) => Boolean(item.size?.trim()));
+  const hasSelectedOptions = itemSize.trim().length > 0 && itemColor.trim().length > 0;
+  const canShareOrder = hasSavedOptions || hasSelectedOptions;
   const itemPriceAgorot = Math.floor(Number(itemPrice) * 100);
   const canAddItem =
     Boolean(me?.id) &&
@@ -343,12 +364,21 @@ export default function OrderShell() {
   };
 
   const onShareOrder = async () => {
+    if (!canShareOrder) {
+      pushToast(actionCopy.chooseBeforeShare, 'error');
+      return;
+    }
     try {
       const invite = await generateInvite.mutateAsync(order.id);
       const inviteUrl = buildInviteUrl(invite.token);
+      const optionText = hasSelectedOptions
+        ? isHebrew
+          ? ` מידה: ${itemSize.trim()}, צבע: ${itemColor.trim()}.`
+          : ` Size: ${itemSize.trim()}, color: ${itemColor.trim()}.`
+        : '';
       const message = isHebrew
-        ? `פתחתי הזמנה ב-Shakana: ${order.product_title ?? order.product_url}. דמי משלוח: ${formatAgorot(estimatedShipping)}. חסר למשלוח חינם: ${formatAgorot(cartFreeShippingGap)}. ${inviteUrl}`
-        : `I opened a Shakana order: ${order.product_title ?? order.product_url}. Delivery fee: ${formatAgorot(estimatedShipping)}. Missing for free delivery: ${formatAgorot(cartFreeShippingGap)}. ${inviteUrl}`;
+        ? `פתחתי הזמנה ב-Shakana: ${order.product_title ?? order.product_url}.${optionText} דמי משלוח: ${formatAgorot(estimatedShipping)}. משלוח חינם מ-${formatAgorot(freeShippingThreshold)}. חסר למשלוח חינם: ${formatAgorot(cartFreeShippingGap)}. ${inviteUrl}`
+        : `I opened a Shakana order: ${order.product_title ?? order.product_url}.${optionText} Delivery fee: ${formatAgorot(estimatedShipping)}. Free delivery from ${formatAgorot(freeShippingThreshold)}. Missing for free delivery: ${formatAgorot(cartFreeShippingGap)}. ${inviteUrl}`;
       await Linking.openURL(`https://wa.me/?text=${encodeURIComponent(message)}`);
     } catch (e) {
       pushToast(e instanceof Error ? e.message : isHebrew ? 'לא הצלחנו לפתוח שיתוף.' : 'Could not open sharing.', 'error');
@@ -406,8 +436,36 @@ export default function OrderShell() {
         </View>
 
         <View style={styles.timerCard}>
-          <Text style={styles.kicker}>{copy.timerOrder}</Text>
-          <Text style={styles.timerValue}>{order.status === 'locked' ? copy.locked : timerLabel}</Text>
+          <View style={styles.timerHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.kicker}>{copy.timerOrder}</Text>
+              <Text style={styles.timerValue}>{order.status === 'locked' ? copy.locked : timerLabel}</Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              style={styles.timerChangeButton}
+              onPress={() => router.push({
+                pathname: '/(tabs)/order/new',
+                params: {
+                  url: order.product_url,
+                  title: order.product_title ?? '',
+                  store: order.store_label ?? '',
+                },
+              })}
+            >
+              <Text style={styles.timerChangeText}>{actionCopy.changeTimer}</Text>
+            </Pressable>
+          </View>
+          <View style={styles.timerMetricRow}>
+            <View style={styles.timerMetric}>
+              <Text style={styles.timerMetricLabel}>{copy.shippingFee}</Text>
+              <Text style={styles.timerMetricValue}>{formatAgorot(estimatedShipping)}</Text>
+            </View>
+            <View style={styles.timerMetric}>
+              <Text style={styles.timerMetricLabel}>{copy.freeShippingMinimum}</Text>
+              <Text style={styles.timerMetricValue}>{formatAgorot(freeShippingThreshold)}</Text>
+            </View>
+          </View>
           <Text style={styles.timerBody}>{copy.timerBody}</Text>
           <Text style={styles.timerNote}>
             {editLocked || order.status === 'locked' ? copy.editsLocked : copy.editsOpen}
@@ -567,15 +625,22 @@ export default function OrderShell() {
           ) : (
             <Pressable
               accessibilityRole="button"
-              style={({ pressed }) => [styles.shareButton, pressed && { transform: [{ scale: 0.98 }] }]}
+              style={({ pressed }) => [
+                styles.shareButton,
+                !canShareOrder && styles.shareButtonDisabled,
+                pressed && canShareOrder && { transform: [{ scale: 0.98 }] },
+              ]}
               onPress={() => {
                 void onShareOrder();
               }}
               disabled={generateInvite.isPending}
             >
-              <Text style={styles.shareButtonText}>{generateInvite.isPending ? '...' : isHebrew ? 'שתף' : 'Share'}</Text>
+              <Text style={styles.shareButtonText}>
+                {generateInvite.isPending ? '...' : canShareOrder ? actionCopy.shareAction : actionCopy.chooseBeforeShare}
+              </Text>
             </Pressable>
           )}
+          {!canShareOrder ? <Text style={styles.shareHint}>{actionCopy.shareHint}</Text> : null}
           <SecondaryBtn label={copy.explainOrder} onPress={() => setCartOpen(true)} />
         </View>
       </ScrollView>
@@ -786,10 +851,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.acc,
   },
+  shareButtonDisabled: {
+    backgroundColor: colors.s1,
+    borderColor: colors.brBr,
+  },
   shareButtonText: {
     fontFamily: fontFamily.bodyBold,
     fontSize: 17,
     color: colors.navy,
+  },
+  shareHint: {
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.acc,
+    textAlign: 'center',
   },
   loadErrorScreen: {
     alignItems: 'center',
@@ -825,9 +901,52 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     backgroundColor: colors.navy,
   },
+  timerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  timerChangeButton: {
+    minHeight: 42,
+    paddingHorizontal: 16,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.lime,
+    borderWidth: 1,
+    borderColor: colors.acc,
+  },
+  timerChangeText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
+    color: colors.navy,
+  },
   timerValue: {
     fontFamily: fontFamily.display,
     fontSize: 36,
+    color: colors.white,
+  },
+  timerMetricRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  timerMetric: {
+    flex: 1,
+    gap: 4,
+    padding: 12,
+    borderRadius: radii.md,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+  },
+  timerMetricLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.68)',
+  },
+  timerMetricValue: {
+    fontFamily: fontFamily.display,
+    fontSize: 18,
     color: colors.white,
   },
   timerBody: { fontFamily: fontFamily.body, fontSize: 13, color: 'rgba(255,255,255,0.86)', lineHeight: 20 },

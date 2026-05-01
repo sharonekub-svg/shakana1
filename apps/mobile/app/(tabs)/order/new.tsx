@@ -28,6 +28,8 @@ type NewOrderParams = {
 };
 
 const ZARA_START_URL = 'https://www.zara.com/il/';
+const DEFAULT_DELIVERY_FEE_AGOROT = 3000;
+const DEFAULT_FREE_SHIPPING_THRESHOLD_AGOROT = 19900;
 const TIMER_UNITS = ['minutes', 'hours', 'days'] as const;
 const TIMER_PRESETS = [
   { label: '30m', value: '30', unit: 'minutes' },
@@ -221,9 +223,15 @@ export default function NewOrder() {
   const rawTimerValue = Math.max(1, Math.floor(Number(timerValue)) || 30);
   const timerMinutesNumber = Math.max(5, Math.min(10080, timerUnitToMinutes(rawTimerValue, timerUnit)));
   const timerLabel = formatCompactDuration(timerMinutesNumber * 60_000);
-  const deliveryFeeAgorot = insights?.deliveryFeeAgorot ?? 0;
   const freeShippingThresholdAgorot =
-    insights?.freeShippingThresholdAgorot ?? Math.max(0, Math.floor(Number(freeShippingThreshold) * 100) || 0);
+    insights?.freeShippingThresholdAgorot ??
+    Math.max(DEFAULT_FREE_SHIPPING_THRESHOLD_AGOROT, Math.floor(Number(freeShippingThreshold) * 100) || 0);
+  const deliveryFeeAgorot =
+    typeof insights?.deliveryFeeAgorot === 'number' && insights.deliveryFeeAgorot > 0
+      ? insights.deliveryFeeAgorot
+      : priceAgorot >= freeShippingThresholdAgorot && freeShippingThresholdAgorot > 0
+        ? 0
+        : DEFAULT_DELIVERY_FEE_AGOROT;
   const freeShippingGapAgorot = Math.max(0, freeShippingThresholdAgorot - priceAgorot);
   const sourceLabel = insights?.sourceLabel || storeLabel || currentDraft?.storeLabel || copy.detectedAfterPaste;
   const productName = insights?.title || title || currentDraft?.title || copy.waitingForLink;
