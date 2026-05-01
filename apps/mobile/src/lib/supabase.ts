@@ -30,7 +30,15 @@ export async function invokeFn<T = unknown>(
   body: Record<string, unknown>,
 ): Promise<T> {
   const { data, error } = await supabase.functions.invoke<T>(name, { body });
-  if (error) throw error;
+  if (error) {
+    const message = error.message || String(error);
+    if (/not found|failed to send a request|functionsfetcherror/i.test(message)) {
+      throw new Error(
+        `The ${name} order service is not deployed yet. Deploy the Supabase Edge Function and try again.`,
+      );
+    }
+    throw error;
+  }
   if (!data) throw new Error(`Empty response from ${name}`);
   return data;
 }
