@@ -13,6 +13,26 @@ export function errorJson(err: unknown): Response {
     return json({ error: err.code, message: err.message }, err.status);
   }
   console.error('unhandled', err);
+  if (err && typeof err === 'object') {
+    const obj = err as Record<string, unknown>;
+    const message =
+      typeof obj.message === 'string'
+        ? obj.message
+        : typeof obj.error === 'string'
+          ? obj.error
+          : typeof obj.details === 'string'
+            ? obj.details
+            : 'unknown';
+    return json(
+      {
+        error: typeof obj.code === 'string' ? obj.code : 'internal',
+        message,
+        details: typeof obj.details === 'string' ? obj.details : undefined,
+        hint: typeof obj.hint === 'string' ? obj.hint : undefined,
+      },
+      500,
+    );
+  }
   return json(
     { error: 'internal', message: err instanceof Error ? err.message : 'unknown' },
     500,

@@ -75,32 +75,50 @@ Deno.serve(async (req) => {
     const closesAt = new Date(Date.now() + body.timerMinutes * 60_000);
     const editLocksAt = new Date(closesAt.getTime() - 15_000);
 
-    const { data: order, error: insErr } = await admin
+    const baseOrderInsert = {
+      creator_id: userId,
+      building_id: profile?.building_id ?? null,
+      product_url: body.productUrl,
+      product_title: body.productTitle.trim(),
+      product_image: body.productImage ?? null,
+      product_price_agorot: body.productPriceAgorot,
+      max_participants: body.maxParticipants,
+      stripe_transfer_group: transferGroup,
+      status: 'open',
+    };
+
+    const fullOrderInsert = {
+      ...baseOrderInsert,
+      store_key: storeKey,
+      store_label: storeLabel,
+      estimated_shipping_agorot: body.estimatedShippingAgorot,
+      free_shipping_threshold_agorot: body.freeShippingThresholdAgorot,
+      closes_at: closesAt.toISOString(),
+      edit_locks_at: editLocksAt.toISOString(),
+      founder_checkout_url: body.productUrl,
+      pickup_responsible_user_id: userId,
+      pickup_responsible_name: pickupName || 'Order creator',
+      preferred_pickup_location: pickupLocation,
+    };
+
+    let { data: order, error: insErr } = await admin
       .from('orders')
-      .insert({
-        creator_id: userId,
-        building_id: profile?.building_id ?? null,
-        product_url: body.productUrl,
-        product_title: body.productTitle.trim(),
-        product_image: body.productImage ?? null,
-        product_price_agorot: body.productPriceAgorot,
-        store_key: storeKey,
-        store_label: storeLabel,
-        estimated_shipping_agorot: body.estimatedShippingAgorot,
-        free_shipping_threshold_agorot: body.freeShippingThresholdAgorot,
-        closes_at: closesAt.toISOString(),
-        edit_locks_at: editLocksAt.toISOString(),
-        founder_checkout_url: body.productUrl,
-        max_participants: body.maxParticipants,
-        stripe_transfer_group: transferGroup,
-        pickup_responsible_user_id: userId,
-        pickup_responsible_name: pickupName || 'Order creator',
-        preferred_pickup_location: pickupLocation,
-        status: 'open',
-      })
+      .insert(fullOrderInsert)
       .select('*')
       .single();
+
+    if (insErr && insErr.code === 'PGRST204') {
+      const fallback = await admin
+        .from('orders')
+        .insert(baseOrderInsert)
+        .select('*')
+        .single();
+      order = fallback.data;
+      insErr = fallback.error;
+    }
+
     if (insErr) throw insErr;
+    if (!order) throw httpError(500, 'order_insert_failed');
 
     // Creator is always the first participant.
     const amount = body.productPriceAgorot + body.estimatedShippingAgorot;
