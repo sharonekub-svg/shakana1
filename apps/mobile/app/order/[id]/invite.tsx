@@ -84,15 +84,46 @@ export default function InviteSheet() {
     ? Math.max(0, (order.free_shipping_threshold_agorot ?? 0) - order.product_price_agorot * participantCount)
     : 0;
   const productTitle = order?.product_title ?? (isHebrew ? 'ההזמנה שלי' : 'my order');
-  const smartShareMessage = isHebrew
-    ? `פתחתי הזמנה ב-Shakana: ${productTitle}. אם מצטרפים עכשיו אפשר לחסוך בערך ${formatAgorot(saveByJoining)} בדמי משלוח. חסר ${formatAgorot(freeShippingGap)} למשלוח חינם.`
-    : `I opened a Shakana order for ${productTitle}. Join now and we can save about ${formatAgorot(saveByJoining)} on delivery. Missing ${formatAgorot(freeShippingGap)} for free delivery.`;
+  let smartShareMessage: string;
+  if (isHebrew) {
+    const parts: string[] = ['פתחתי הזמנה קבוצתית ב-Shakana'];
+    if (productTitle && productTitle !== 'ההזמנה שלי') parts.push(`מוצר: ${productTitle}`);
+    if (order?.store_label && order.store_label !== 'Manual store') parts.push(`חנות: ${order.store_label}`);
+    const closesAt = order?.closes_at ? new Date(order.closes_at) : null;
+    if (closesAt && closesAt > new Date()) {
+      const msLeft = closesAt.getTime() - Date.now();
+      const hLeft = Math.floor(msLeft / 3600000);
+      const mLeft = Math.floor((msLeft % 3600000) / 60000);
+      const timeStr = hLeft > 0 ? `${hLeft} שעות ו-${mLeft} דקות` : `${mLeft} דקות`;
+      parts.push(`נסגר בעוד: ${timeStr}`);
+    }
+    if (deliveryFee > 0) parts.push(`דמי משלוח נוכחיים: ₪${Math.ceil(deliveryFee / (participantCount * 100))}`);
+    if (freeShippingGap > 0) parts.push(`חסר למשלוח חינם: ₪${Math.ceil(freeShippingGap / 100)}`);
+    if (participantCount > 1) parts.push(`הצטרפו: ${participantCount} שכנים`);
+    smartShareMessage = parts.join('\n');
+  } else {
+    const parts: string[] = ['I opened a group order on Shakana'];
+    if (productTitle && productTitle !== 'my order') parts.push(`Product: ${productTitle}`);
+    if (order?.store_label && order.store_label !== 'Manual store') parts.push(`Store: ${order.store_label}`);
+    const closesAt = order?.closes_at ? new Date(order.closes_at) : null;
+    if (closesAt && closesAt > new Date()) {
+      const msLeft = closesAt.getTime() - Date.now();
+      const hLeft = Math.floor(msLeft / 3600000);
+      const mLeft = Math.floor((msLeft % 3600000) / 60000);
+      const timeStr = hLeft > 0 ? `${hLeft}h ${mLeft}m` : `${mLeft}m`;
+      parts.push(`Closes in: ${timeStr}`);
+    }
+    if (deliveryFee > 0) parts.push(`Current delivery per person: ₪${Math.ceil(deliveryFee / (participantCount * 100))}`);
+    if (freeShippingGap > 0) parts.push(`Missing for free shipping: ₪${Math.ceil(freeShippingGap / 100)}`);
+    if (participantCount > 1) parts.push(`Joined: ${participantCount} neighbors`);
+    smartShareMessage = parts.join('\n');
+  }
 
   const onShare = async () => {
     if (!token || !id) return;
     try {
       await Share.share({
-        message: `${smartShareMessage}\n\n${universal}\n${appLink}\n\n${copy.shareMessage}`,
+        message: `${smartShareMessage}\n\n${universal}`,
       });
       trackInviteSent(String(id));
     } catch (e) {

@@ -11,13 +11,15 @@ export default function Html({ children }: PropsWithChildren) {
         <meta name="theme-color" content="#9ECAF2" />
         <title>Shakana</title>
         <ScrollViewStyleReset />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet" />
         <style
           dangerouslySetInnerHTML={{
             __html: `
               body {
                 margin: 0;
-                background: #f5f8fb;
-                font-family: Arial, sans-serif;
+                background: #EEF1EE;
+                font-family: 'Rubik', Arial, sans-serif;
               }
               #root {
                 position: relative;
@@ -31,18 +33,19 @@ export default function Html({ children }: PropsWithChildren) {
                 align-items: center;
                 justify-content: center;
                 padding: 24px;
-                background:
-                  radial-gradient(circle at top right, rgba(158, 202, 242, 0.65), transparent 34%),
-                  linear-gradient(135deg, #f7fbff 0%, #eef6ef 100%);
-                color: #071225;
+                background: #EEF1EE;
+                color: #101814;
                 text-align: center;
+                animation: shakana-fade-out 0.4s ease 8s forwards;
+              }
+              @keyframes shakana-fade-out {
+                to { opacity: 0; pointer-events: none; }
               }
               .shakana-fallback-card {
                 width: min(420px, 100%);
-                border: 1px solid rgba(7, 18, 37, 0.1);
+                border: 1px solid #DCE7DE;
                 border-radius: 28px;
-                background: rgba(255, 255, 255, 0.92);
-                box-shadow: 0 20px 60px rgba(7, 18, 37, 0.12);
+                background: #FFFFFF;
                 padding: 28px;
               }
               .shakana-fallback-logo {
@@ -53,7 +56,7 @@ export default function Html({ children }: PropsWithChildren) {
               }
               .shakana-fallback-text {
                 margin: 0;
-                color: #52606d;
+                color: #66746B;
                 font-size: 15px;
                 line-height: 1.7;
               }

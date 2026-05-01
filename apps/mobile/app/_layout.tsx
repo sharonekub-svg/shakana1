@@ -182,8 +182,10 @@ function RootLayoutInner() {
     const inAuth = segments[0] === '(auth)';
     const inCallback = segments[0] === 'auth-callback';
     const inShare = segments[0] === 'share';
+    const inJoin = segments[0] === 'join';
     if (inCallback) return;
     if (inShare) return;
+    if (inJoin && Platform.OS === 'web') return;
     if (session && !profileQuery.isFetched && !profileQuery.isError) return;
     const profileComplete =
       !!profile &&
@@ -194,7 +196,7 @@ function RootLayoutInner() {
       draft.first_name.trim().length > 0 &&
       draft.last_name.trim().length > 0;
 
-    if (!session && !inAuth) {
+    if (!session && !inAuth && !(Platform.OS === 'web' && inJoin)) {
       router.replace('/(auth)/welcome');
     } else if (session && profileComplete && inAuth) {
       void consumePendingInvite().then((pending) => {
