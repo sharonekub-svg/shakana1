@@ -29,6 +29,12 @@ type NewOrderParams = {
 
 const ZARA_START_URL = 'https://www.zara.com/il/';
 const TIMER_UNITS = ['minutes', 'hours', 'days'] as const;
+const TIMER_PRESETS = [
+  { label: '30m', value: '30', unit: 'minutes' },
+  { label: '2h', value: '2', unit: 'hours' },
+  { label: '5h', value: '5', unit: 'hours' },
+  { label: '1d', value: '1', unit: 'days' },
+] as const;
 
 export default function NewOrder() {
   const router = useRouter();
@@ -415,6 +421,20 @@ export default function NewOrder() {
                 </Pressable>
               ))}
             </View>
+          </View>
+          <View style={styles.timerPresetRow}>
+            {TIMER_PRESETS.map((preset) => (
+              <Pressable
+                key={preset.label}
+                style={styles.timerPresetChip}
+                onPress={() => {
+                  setTimerValue(preset.value);
+                  setTimerUnit(preset.unit);
+                }}
+              >
+                <Text style={styles.timerPresetText}>{preset.label}</Text>
+              </Pressable>
+            ))}
           </View>
         </View>
 
@@ -903,6 +923,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 6,
     paddingBottom: 2,
+  },
+  timerPresetRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  timerPresetChip: {
+    minHeight: 38,
+    minWidth: 64,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.limeSoft,
+    borderWidth: 1,
+    borderColor: colors.brBr,
+  },
+  timerPresetText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+    color: colors.navy,
   },
   unitChip: {
     minHeight: 42,

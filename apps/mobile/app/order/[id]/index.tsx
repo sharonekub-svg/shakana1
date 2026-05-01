@@ -10,12 +10,14 @@ import { NumField } from '@/components/primitives/NumField';
 import { colors, radii } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { useAddOrderItem, useCloseOrder, useOrder } from '@/api/orders';
+import { useGenerateInvite } from '@/api/invites';
 import { useAuthStore } from '@/stores/authStore';
 import { useUiStore } from '@/stores/uiStore';
 import { formatAgorot } from '@/utils/format';
 import { formatCompactDuration } from '@/utils/timer';
 import type { Participant } from '@/types/domain';
 import { useLocale } from '@/i18n/locale';
+import { buildInviteUrl } from '@/lib/deeplinks';
 
 function ParticipantTower({
   participants,
@@ -28,7 +30,7 @@ function ParticipantTower({
 }) {
   const { language } = useLocale();
   const isHebrew = language === 'he';
-  const slots = Array.from({ length: total }, (_, i) => participants[i]);
+  const slots = participants;
   return (
     <View style={styles.tower}>
       {slots.map((p, i) => {
@@ -186,11 +188,13 @@ export default function OrderShell() {
   const { data, isLoading, error } = useOrder(id);
   const closeOrder = useCloseOrder();
   const addItem = useAddOrderItem();
+  const generateInvite = useGenerateInvite();
   const [now, setNow] = useState(Date.now());
   const [cartOpen, setCartOpen] = useState(true);
   const [itemTitle, setItemTitle] = useState('');
   const [itemPrice, setItemPrice] = useState('');
   const [itemSize, setItemSize] = useState('');
+  const [itemColor, setItemColor] = useState('');
   const [itemRef, setItemRef] = useState('');
 
   const order = data?.order;
@@ -276,6 +280,8 @@ export default function OrderShell() {
     !editLocked &&
     ['open', 'paying'].includes(order.status) &&
     itemTitle.trim().length > 1 &&
+    itemSize.trim().length > 0 &&
+    itemColor.trim().length > 0 &&
     Number.isFinite(itemPriceAgorot) &&
     itemPriceAgorot > 0;
 
@@ -286,14 +292,28 @@ export default function OrderShell() {
       participantId: me.id,
       title: itemTitle,
       ref: itemRef,
-      size: itemSize,
+      size: `${isHebrew ? 'מידה' : 'Size'}: ${itemSize.trim()} | ${isHebrew ? 'צבע' : 'Color'}: ${itemColor.trim()}`,
       priceAgorot: itemPriceAgorot,
     });
     setItemTitle('');
     setItemPrice('');
     setItemSize('');
+    setItemColor('');
     setItemRef('');
     pushToast(copy.productAdded, 'success');
+  };
+
+  const onShareOrder = async () => {
+    try {
+      const invite = await generateInvite.mutateAsync(order.id);
+      const inviteUrl = buildInviteUrl(invite.token);
+      const message = isHebrew
+        ? `פתחתי הזמנה ב-Shakana: ${order.product_title ?? order.product_url}. דמי משלוח: ${formatAgorot(estimatedShipping)}. חסר למשלוח חינם: ${formatAgorot(cartFreeShippingGap)}. ${inviteUrl}`
+        : `I opened a Shakana order: ${order.product_title ?? order.product_url}. Delivery fee: ${formatAgorot(estimatedShipping)}. Missing for free delivery: ${formatAgorot(cartFreeShippingGap)}. ${inviteUrl}`;
+      await Linking.openURL(`https://wa.me/?text=${encodeURIComponent(message)}`);
+    } catch (e) {
+      pushToast(e instanceof Error ? e.message : isHebrew ? 'לא הצלחנו לפתוח שיתוף.' : 'Could not open sharing.', 'error');
+    }
   };
 
   return (
@@ -337,6 +357,10 @@ export default function OrderShell() {
             <View style={styles.costItem}>
               <Text style={styles.costLabel}>{copy.freeShippingMinimum}</Text>
               <Text style={styles.costValue}>{formatAgorot(freeShippingThreshold)}</Text>
+            </View>
+            <View style={styles.costItem}>
+              <Text style={styles.costLabel}>{copy.missingCart}</Text>
+              <Text style={styles.costValue}>{formatAgorot(cartFreeShippingGap)}</Text>
             </View>
           </View>
           <Text style={styles.costNote}>{copy.costCardNote}</Text>
@@ -423,6 +447,15 @@ export default function OrderShell() {
               <Field label={copy.sizeNote} value={itemSize} onChange={setItemSize} placeholder={copy.sizePlaceholder} />
             </View>
           </View>
+          <Field
+            label={isHebrew ? 'צבע' : 'Color'}
+            value={itemColor}
+            onChange={setItemColor}
+            placeholder={isHebrew ? 'שחור, לבן, כחול...' : 'Black, white, blue...'}
+          />
+          {!itemSize.trim() || !itemColor.trim() ? (
+            <Text style={styles.requiredHint}>{isHebrew ? 'חובה לבחור מידה וצבע לפני הוספה לסל.' : 'Size and color are required before adding to cart.'}</Text>
+          ) : null}
           <Field label={copy.productLink} value={itemRef} onChange={setItemRef} placeholder="https://..." ltr />
           <PrimaryBtn
             label={
@@ -467,7 +500,16 @@ export default function OrderShell() {
               onPress={() => router.push(`/order/${order.id}/escrow`)}
             />
           ) : (
-            <PrimaryBtn label={copy.createInvite} onPress={() => router.push(`/order/${order.id}/invite`)} />
+            <Pressable
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.shareButton, pressed && { transform: [{ scale: 0.98 }] }]}
+              onPress={() => {
+                void onShareOrder();
+              }}
+              disabled={generateInvite.isPending}
+            >
+              <Text style={styles.shareButtonText}>{generateInvite.isPending ? '...' : isHebrew ? 'שתף' : 'Share'}</Text>
+            </Pressable>
           )}
           <SecondaryBtn label={copy.explainOrder} onPress={() => setCartOpen(true)} />
         </View>
@@ -626,6 +668,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     alignItems: 'flex-start',
+  },
+  requiredHint: {
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.acc,
+  },
+  shareButton: {
+    width: '100%',
+    minHeight: 56,
+    borderRadius: radii.pill,
+    backgroundColor: colors.lime,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.acc,
+  },
+  shareButtonText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 17,
+    color: colors.navy,
   },
   loadErrorScreen: {
     alignItems: 'center',
