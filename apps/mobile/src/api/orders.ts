@@ -44,32 +44,11 @@ export function useOrder(orderId: string | undefined) {
     enabled: !!orderId,
     queryFn: async () => {
       if (!orderId) throw new Error('missing orderId');
-      const orderRes = await supabase.from('orders').select('*').eq('id', orderId).single();
-      if (orderRes.error) throw orderRes.error;
-
-      const [partsRes, itemsRes] = await Promise.all([
-        supabase
-          .from('participants')
-          .select('*')
-          .eq('order_id', orderId)
-          .order('joined_at', { ascending: true }),
-        supabase.from('order_items').select('*').eq('order_id', orderId),
-      ]);
-
-      if (partsRes.error) {
-        console.warn('Could not load order participants', partsRes.error.message);
-      }
-      if (itemsRes.error) {
-        console.warn('Could not load order items', itemsRes.error.message);
-      }
-
-      return {
-        order: orderRes.data as Order,
-        participants: partsRes.error ? [] : ((partsRes.data ?? []) as Participant[]),
-        items: itemsRes.error ? [] : ((itemsRes.data ?? []) as OrderItem[]),
-        participantsError: partsRes.error?.message,
-        itemsError: itemsRes.error?.message,
-      };
+      return invokeFn<{
+        order: Order;
+        participants: Participant[];
+        items: OrderItem[];
+      }>('get-order', { orderId });
     },
   });
 
