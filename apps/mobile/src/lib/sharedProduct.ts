@@ -29,6 +29,8 @@ export type SharedProductInsights = {
   sourceLabel: string;
   sourceUrl: string;
   amountMissingForFreeShippingAgorot: number | null;
+  availableSizes: string[];
+  availableColors: string[];
 };
 
 export type ProductPageHtmlFetcher = (url: string) => Promise<string | null>;
@@ -686,8 +688,17 @@ function chooseDeliveryFeeAgorot(html: string, fallbackAgorot: number): number {
     /משלוח[^₪]{0,80}(?<price>₪\s?\d[\d,.]*)/i,
   ];
   for (const pattern of shippingPatterns) {
-    const parsed = parseMoneyToAgorot(text.match(pattern)?.groups?.price ?? null);
-    if (parsed != null) return parsed;
+    const match = pattern.exec(text);
+    const parsed = parseMoneyToAgorot(match?.groups?.price ?? null);
+    if (parsed != null) {
+      const around = match && typeof match.index === 'number'
+        ? text.slice(Math.max(0, match.index - 90), Math.min(text.length, match.index + 140))
+        : '';
+      const looksLikeFreeShippingThreshold =
+        parsed >= 10000 &&
+        /\bfree\b|חינם|from|over|above|מעל|מסכום|משלוח חינם/i.test(around);
+      if (!looksLikeFreeShippingThreshold) return parsed;
+    }
   }
 
   return fallbackAgorot;
@@ -757,6 +768,45 @@ function chooseProductFacts(
   return [...facts].filter(Boolean);
 }
 
+function uniqueLimited(values: Array<string | null | undefined>, limit = 10): string[] {
+  const seen = new Set<string>();
+  const clean: string[] = [];
+  for (const value of values) {
+    const next = String(value ?? '').replace(/\s+/g, ' ').trim();
+    if (!next || next.length > 30) continue;
+    const key = next.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    clean.push(next);
+    if (clean.length >= limit) break;
+  }
+  return clean;
+}
+
+function chooseVariantOptions(html: string): { availableSizes: string[]; availableColors: string[] } {
+  const jsonLd = readFirstJsonLdObject(html);
+  const rawColor = jsonLd && typeof jsonLd.color === 'string' ? jsonLd.color : null;
+  const decoded = html
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&nbsp;/gi, ' ');
+
+  const sizeCandidates = [
+    ...[...decoded.matchAll(/"(?:size|sizeName|displaySize|label)"\s*:\s*"(?<value>XXS|XS|S|M|L|XL|XXL|XXXL|[2-5]?\d(?:\.\d)?)"/gi)].map((m) => m.groups?.value),
+    ...[...decoded.matchAll(/\b(?:XXS|XS|S|M|L|XL|XXL|XXXL)\b/g)].map((m) => m[0]),
+  ];
+
+  const colorCandidates = [
+    rawColor,
+    ...[...decoded.matchAll(/"(?:color|colorName|colour|colourName)"\s*:\s*"(?<value>[^"]{2,30})"/gi)].map((m) => m.groups?.value),
+  ];
+
+  return {
+    availableSizes: uniqueLimited(sizeCandidates, 8),
+    availableColors: uniqueLimited(colorCandidates, 8),
+  };
+}
+
 function deriveDealSummary(priceAgorot: number | null, originalPriceAgorot: number | null): string | null {
   if (!priceAgorot || !originalPriceAgorot || originalPriceAgorot <= priceAgorot) return null;
   const discount = Math.round((1 - priceAgorot / originalPriceAgorot) * 100);
@@ -781,6 +831,7 @@ export function summarizeSharedProduct(draft: SharedProductDraft, html?: string 
   const productFacts = html
     ? chooseProductFacts(html, brandName ?? brandConfig?.brandName ?? null, promotionText, priceAgorot, originalPriceAgorot)
     : [];
+  const variantOptions = html ? chooseVariantOptions(html) : { availableSizes: [], availableColors: [] };
 
   return {
     title: html ? chooseTitle(html, draft.title) : draft.title,
@@ -800,6 +851,8 @@ export function summarizeSharedProduct(draft: SharedProductDraft, html?: string 
     sourceLabel: brandConfig?.displayName ?? draft.storeLabel,
     sourceUrl: draft.url,
     amountMissingForFreeShippingAgorot,
+    availableSizes: variantOptions.availableSizes,
+    availableColors: variantOptions.availableColors,
   };
 }
 

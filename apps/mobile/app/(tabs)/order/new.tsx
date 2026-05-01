@@ -423,18 +423,25 @@ export default function NewOrder() {
             </View>
           </View>
           <View style={styles.timerPresetRow}>
-            {TIMER_PRESETS.map((preset) => (
-              <Pressable
-                key={preset.label}
-                style={styles.timerPresetChip}
-                onPress={() => {
-                  setTimerValue(preset.value);
-                  setTimerUnit(preset.unit);
-                }}
-              >
-                <Text style={styles.timerPresetText}>{preset.label}</Text>
-              </Pressable>
-            ))}
+            {TIMER_PRESETS.map((preset) => {
+              const selected = timerValue === preset.value && timerUnit === preset.unit;
+              return (
+                <Pressable
+                  key={preset.label}
+                  style={[styles.timerPresetChip, selected && styles.timerPresetChipActive]}
+                  onPress={() => {
+                    setTimerValue(preset.value);
+                    setTimerUnit(preset.unit);
+                  }}
+                >
+                  <Text style={[styles.timerPresetText, selected && styles.timerPresetTextActive]}>{preset.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <View style={styles.timerSummaryBox}>
+            <Text style={styles.timerSummaryLabel}>{copy.timerClosesIn}</Text>
+            <Text style={styles.timerSummaryValue}>{timerLabel}</Text>
           </View>
         </View>
 
@@ -939,10 +946,39 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.brBr,
   },
+  timerPresetChipActive: {
+    backgroundColor: colors.acc,
+    borderColor: colors.acc,
+  },
   timerPresetText: {
     fontFamily: fontFamily.bodyBold,
     fontSize: 12,
     color: colors.navy,
+  },
+  timerPresetTextActive: {
+    color: colors.white,
+  },
+  timerSummaryBox: {
+    minHeight: 58,
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: colors.navy,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  timerSummaryLabel: {
+    flex: 1,
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.78)',
+  },
+  timerSummaryValue: {
+    fontFamily: fontFamily.display,
+    fontSize: 22,
+    color: colors.white,
   },
   unitChip: {
     minHeight: 42,

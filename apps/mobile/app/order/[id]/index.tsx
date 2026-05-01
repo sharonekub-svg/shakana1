@@ -18,14 +18,24 @@ import { formatCompactDuration } from '@/utils/timer';
 import type { Participant } from '@/types/domain';
 import { useLocale } from '@/i18n/locale';
 import { buildInviteUrl } from '@/lib/deeplinks';
+import { loadSharedProductInsights, parseSharedProduct } from '@/lib/sharedProduct';
+import { fetchProductPageHtml } from '@/api/productInsights';
+
+const FALLBACK_SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+const FALLBACK_COLOR_OPTIONS = [
+  { he: 'שחור', en: 'Black' },
+  { he: 'לבן', en: 'White' },
+  { he: 'כחול', en: 'Blue' },
+  { he: 'ירוק', en: 'Green' },
+  { he: 'אפור', en: 'Gray' },
+  { he: 'בז׳', en: 'Beige' },
+];
 
 function ParticipantTower({
   participants,
-  total,
   currentUserId,
 }: {
   participants: Participant[];
-  total: number;
   currentUserId: string | undefined;
 }) {
   const { language } = useLocale();
@@ -196,12 +206,16 @@ export default function OrderShell() {
   const [itemSize, setItemSize] = useState('');
   const [itemColor, setItemColor] = useState('');
   const [itemRef, setItemRef] = useState('');
+  const [detectedSizes, setDetectedSizes] = useState<string[]>([]);
+  const [detectedColors, setDetectedColors] = useState<string[]>([]);
 
   const order = data?.order;
   const me = data?.participants.find((p) => p.user_id === userId);
   const participantCount = data?.participants.length ?? 0;
   const cartItems = data?.items ?? [];
   const loadErrorMessage = error instanceof Error ? error.message : typeof error === 'string' ? error : null;
+  const sizeOptions = detectedSizes.length ? detectedSizes : FALLBACK_SIZE_OPTIONS;
+  const colorOptions = detectedColors.length ? detectedColors : FALLBACK_COLOR_OPTIONS.map((color) => (isHebrew ? color.he : color.en));
 
   useEffect(() => {
     if (!order || !me) return;
@@ -220,6 +234,31 @@ export default function OrderShell() {
     setItemPrice((prev) => prev || (order.product_price_agorot / 100).toFixed(2).replace(/\.00$/, ''));
     setItemRef((prev) => prev || order.product_url);
   }, [order]);
+
+  useEffect(() => {
+    if (!order?.product_url) return;
+    const draft = parseSharedProduct({
+      url: order.product_url,
+      title: order.product_title,
+      manualStoreLabel: order.store_label,
+    });
+    if (!draft) return;
+    let active = true;
+    void loadSharedProductInsights(draft, fetchProductPageHtml)
+      .then((insights) => {
+        if (!active) return;
+        setDetectedSizes(insights.availableSizes);
+        setDetectedColors(insights.availableColors);
+      })
+      .catch(() => {
+        if (!active) return;
+        setDetectedSizes([]);
+        setDetectedColors([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [order?.product_title, order?.product_url, order?.store_label]);
 
   useEffect(() => {
     if (!order?.closes_at || !['open', 'paying'].includes(order.status) || closeOrder.isPending) return;
@@ -378,12 +417,11 @@ export default function OrderShell() {
         <View>
           <Text style={styles.sectionTitle}>{copy.participants}</Text>
           <Text style={styles.sectionSub}>
-            {data.participants.length} of {order.max_participants}
+            {isHebrew ? `${data.participants.length} משתתפים בהזמנה` : `${data.participants.length} participants in this order`}
           </Text>
           <View style={{ height: 14 }} />
           <ParticipantTower
             participants={data.participants}
-            total={order.max_participants}
             currentUserId={userId}
           />
         </View>
@@ -443,18 +481,45 @@ export default function OrderShell() {
             <View style={{ flex: 1 }}>
               <NumField label={copy.price} value={itemPrice} onChange={setItemPrice} placeholder="99" />
             </View>
-            <View style={{ flex: 1 }}>
-              <Field label={copy.sizeNote} value={itemSize} onChange={setItemSize} placeholder={copy.sizePlaceholder} />
+          </View>
+          <View style={styles.optionGroup}>
+            <Text style={styles.optionLabel}>{isHebrew ? 'בחר מידה' : 'Choose size'}</Text>
+            <View style={styles.optionRow}>
+              {sizeOptions.map((size) => {
+                const selected = itemSize === size;
+                return (
+                  <Pressable
+                    key={size}
+                    accessibilityRole="button"
+                    style={[styles.optionChip, selected && styles.optionChipActive]}
+                    onPress={() => setItemSize(size)}
+                  >
+                    <Text style={[styles.optionChipText, selected && styles.optionChipTextActive]}>{size}</Text>
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
-          <Field
-            label={isHebrew ? 'צבע' : 'Color'}
-            value={itemColor}
-            onChange={setItemColor}
-            placeholder={isHebrew ? 'שחור, לבן, כחול...' : 'Black, white, blue...'}
-          />
+          <View style={styles.optionGroup}>
+            <Text style={styles.optionLabel}>{isHebrew ? 'בחר צבע' : 'Choose color'}</Text>
+            <View style={styles.optionRow}>
+              {colorOptions.map((color) => {
+                const selected = itemColor === color;
+                return (
+                  <Pressable
+                    key={color}
+                    accessibilityRole="button"
+                    style={[styles.optionChip, selected && styles.optionChipActive]}
+                    onPress={() => setItemColor(color)}
+                  >
+                    <Text style={[styles.optionChipText, selected && styles.optionChipTextActive]}>{color}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
           {!itemSize.trim() || !itemColor.trim() ? (
-            <Text style={styles.requiredHint}>{isHebrew ? 'חובה לבחור מידה וצבע לפני הוספה לסל.' : 'Size and color are required before adding to cart.'}</Text>
+            <Text style={styles.requiredHint}>{isHebrew ? 'חובה לבחור מידה וצבע מהרשימה לפני הוספה לסל.' : 'Choose a size and color from the options before adding to cart.'}</Text>
           ) : null}
           <Field label={copy.productLink} value={itemRef} onChange={setItemRef} placeholder="https://..." ltr />
           <PrimaryBtn
@@ -668,6 +733,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     alignItems: 'flex-start',
+  },
+  optionGroup: {
+    gap: 10,
+  },
+  optionLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
+    color: colors.tx,
+  },
+  optionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  optionChip: {
+    minHeight: 42,
+    minWidth: 58,
+    paddingHorizontal: 14,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.brBr,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+  },
+  optionChipActive: {
+    backgroundColor: colors.acc,
+    borderColor: colors.acc,
+  },
+  optionChipText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
+    color: colors.tx,
+  },
+  optionChipTextActive: {
+    color: colors.white,
   },
   requiredHint: {
     fontFamily: fontFamily.bodySemi,
