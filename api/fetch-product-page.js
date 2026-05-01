@@ -1,5 +1,12 @@
 const MAX_HTML_CHARS = 900_000;
 
+const USER_AGENTS = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15',
+];
+
 function sendJson(res, status, body) {
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json');
@@ -43,6 +50,14 @@ function assertPublicHttpsUrl(rawUrl) {
   return parsed;
 }
 
+function pickUserAgent(hostname) {
+  // Use a deterministic but varied UA per hostname so the same store always
+  // gets the same UA (useful for session caching) but different stores vary.
+  let hash = 0;
+  for (let i = 0; i < hostname.length; i++) hash = (hash * 31 + hostname.charCodeAt(i)) >>> 0;
+  return USER_AGENTS[hash % USER_AGENTS.length];
+}
+
 module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return sendJson(res, 200, { ok: true });
   if (req.method !== 'POST') return sendJson(res, 405, { error: 'method_not_allowed' });
@@ -50,15 +65,26 @@ module.exports = async function handler(req, res) {
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
     const url = assertPublicHttpsUrl(String(body.url || '').trim());
+    const ua = pickUserAgent(url.hostname);
 
     const response = await fetch(url, {
       redirect: 'follow',
       headers: {
-        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
         'Accept-Language': 'he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Accept-Encoding': 'gzip, deflate, br',
         'Cache-Control': 'no-cache',
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36 ShakanaProductFinder/1.0',
+        Pragma: 'no-cache',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Sec-Ch-Ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+        'Sec-Ch-Ua-Mobile': '?0',
+        'Sec-Ch-Ua-Platform': '"Windows"',
+        'User-Agent': ua,
+        Referer: `https://www.google.com/search?q=${encodeURIComponent(url.hostname)}`,
       },
     });
 

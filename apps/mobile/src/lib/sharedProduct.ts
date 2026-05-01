@@ -181,7 +181,9 @@ function sourceFromHostname(hostname: string): string {
 function looksLikeNonProductPage(url: URL): boolean {
   const path = url.pathname.toLowerCase();
   if (!path || path === '/') return true;
-  return /\/(?:cart|basket|checkout|login|account|search|category|categories|wishlist)(?:\/|$)/i.test(path);
+  // Only block pages that are clearly not products.
+  // category/catalog kept: many stores embed them in the product URL path.
+  return /\/(?:cart|basket|checkout|login|account|search|wishlist)(?:\/|$)/i.test(path);
 }
 
 function parseCleanUrl(raw: string): URL | null {
@@ -465,6 +467,54 @@ function sliceAroundPattern(html: string, pattern: RegExp, before = 600, after =
   return html.slice(Math.max(0, match.index - before), Math.min(html.length, match.index + after));
 }
 
+function readSsrJson(html: string): unknown {
+  // Next.js stores the full server-rendered page props in __NEXT_DATA__.
+  // Nuxt and others use __NUXT__ / __INITIAL_STATE__ / __reactiveStore__.
+  const nextMatch = html.match(/<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
+  if (nextMatch?.[1]) {
+    try { return JSON.parse(nextMatch[1]); } catch { /* ignore */ }
+  }
+  const nuxtMatch = html.match(/window\.__NUXT__\s*=\s*(\{[\s\S]{0,200000}\})\s*;?\s*<\/script>/i);
+  if (nuxtMatch?.[1]) {
+    try { return JSON.parse(nuxtMatch[1]); } catch { /* ignore */ }
+  }
+  return null;
+}
+
+function deepFindPriceInObject(obj: unknown, depth = 0): number | null {
+  if (depth > 7 || !obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+  const o = obj as Record<string, unknown>;
+  const priceKeys = ['price', 'finalPrice', 'salePrice', 'currentPrice', 'regularPrice', 'sellingPrice', 'displayPrice', 'priceValue', 'unitPrice', 'offerPrice'];
+  for (const key of priceKeys) {
+    if (key in o) {
+      const val = o[key];
+      const parsed = typeof val === 'object' ? null : parseMoneyToAgorot(val as string | number | null);
+      if (parsed && parsed > 99 && parsed < 50_000_000) return parsed;
+    }
+  }
+  for (const value of Object.values(o)) {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const found = deepFindPriceInObject(value, depth + 1);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function chooseSsrPriceAgorot(html: string): number | null {
+  const data = readSsrJson(html);
+  if (!data || typeof data !== 'object') return null;
+  const obj = data as Record<string, unknown>;
+  // Next.js: props.pageProps contains the product data
+  const pageProps = (obj['props'] as Record<string, unknown> | null)?.['pageProps'];
+  if (pageProps) {
+    const found = deepFindPriceInObject(pageProps);
+    if (found) return found;
+  }
+  // Nuxt / other: search top level
+  return deepFindPriceInObject(obj);
+}
+
 function chooseAmazonScopedPriceAgorot(html: string): number | null {
   const scopes = [
     sliceAroundPattern(html, /id=["']corePrice_feature_div["']/i, 0),
@@ -541,6 +591,9 @@ function choosePriceAgorot(html: string): number | null {
     const direct = readOfferPrice(offers);
     if (direct) return direct;
   }
+
+  const ssrPrice = chooseSsrPriceAgorot(html);
+  if (ssrPrice) return ssrPrice;
 
   const amazonScopedPrice = chooseAmazonScopedPriceAgorot(html);
   if (amazonScopedPrice) return amazonScopedPrice;
@@ -785,10 +838,13 @@ export function parseSharedProduct(input: {
       return url && getBrandConfig(url.hostname);
     }) ??
     candidates.find((candidate) => likelyProductUrl(candidate)) ??
-    (input.text ? extractUrl(input.text) : null);
+    (input.text ? extractUrl(input.text) : null) ??
+    // Last resort: accept any valid HTTPS URL — user knows what they pasted.
+    candidates.find((candidate) => parseCleanUrl(candidate) !== null);
   if (!raw) return null;
 
-  const url = likelyProductUrl(raw);
+  // Prefer the strict check; fall back to any clean URL so unknown stores work.
+  const url = likelyProductUrl(raw) ?? parseCleanUrl(raw);
   if (!url) return null;
 
   const brandConfig = getBrandConfig(url.hostname);
