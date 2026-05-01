@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { ScreenBase } from '@/components/primitives/ScreenBase';
-import { PrimaryBtn } from '@/components/primitives/Button';
+import { PrimaryBtn, SecondaryBtn } from '@/components/primitives/Button';
 import { BackBtn } from '@/components/primitives/BackBtn';
 import { StepDots } from '@/components/primitives/StepDots';
 import { AutoField } from '@/components/primitives/AutoField';
@@ -206,7 +206,28 @@ export default function Address() {
     runStreetSearch(v);
   };
 
-  const submit = async () => {
+  const hasAnyAddressValue = [city, street, building, apt, floor].some((value) => value.trim().length > 0);
+
+  const clearAddress = () => {
+    setCity('');
+    setCityLocked(false);
+    setStreet('');
+    setBuilding('');
+    setApt('');
+    setFloor('');
+    setCitySuggs([]);
+    setStreetSuggs([]);
+  };
+
+  const submit = async (
+    addressOverride?: {
+      city: string;
+      street: string;
+      building: string;
+      apt: string;
+      floor: string | null;
+    },
+  ) => {
     if (!user) {
       router.replace('/(auth)/welcome');
       return;
@@ -217,11 +238,11 @@ export default function Address() {
 
     const updated = {
       ...baseProfile,
-      city: city.trim(),
-      street: street.trim(),
-      building: building.trim(),
-      apt: apt.trim(),
-      floor: floor.trim() || null,
+      city: addressOverride?.city ?? city.trim(),
+      street: addressOverride?.street ?? street.trim(),
+      building: addressOverride?.building ?? building.trim(),
+      apt: addressOverride?.apt ?? apt.trim(),
+      floor: addressOverride ? addressOverride.floor : floor.trim() || null,
     };
     try {
       await upsert.mutateAsync(updated);
@@ -306,10 +327,15 @@ export default function Address() {
             const best = streetSuggs[0];
             if (best) setStreet(best);
           }}
-          placeholder={cityLocked ? t('auth.address.streetSearch', { city }) : t('auth.address.cityFirst')}
+          placeholder={
+            cityLocked
+              ? t('auth.address.streetSearch', { city })
+              : language === 'he'
+                ? 'אפשר להקליד רחוב בלי לבחור עיר'
+                : 'You can type a street without choosing a city'
+          }
           suggestions={streetSuggs}
           loading={streetLoad}
-          disabled={!cityLocked}
           direction={language === 'en' ? 'ltr' : 'rtl'}
         />
 
@@ -344,6 +370,15 @@ export default function Address() {
       </ScrollView>
 
       <View style={styles.footer}>
+        {hasAnyAddressValue ? (
+          <SecondaryBtn
+            label={language === 'he' ? 'מחק כתובת והמשך בלי' : 'Delete address and continue without it'}
+            onPress={() => {
+              clearAddress();
+              void submit({ city: '', street: '', building: '', apt: '', floor: null });
+            }}
+          />
+        ) : null}
         <PrimaryBtn
           label={language === 'he' ? 'שמור והמשך' : t('common.save')}
           onPress={submit}
@@ -420,5 +455,6 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingTop: 16,
+    gap: 10,
   },
 });
