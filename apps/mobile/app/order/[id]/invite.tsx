@@ -83,7 +83,10 @@ export default function InviteSheet() {
   const freeShippingGap = order
     ? Math.max(0, (order.free_shipping_threshold_agorot ?? 0) - order.product_price_agorot * participantCount)
     : 0;
-  const productTitle = order?.product_title ?? (isHebrew ? 'ההזמנה שלי' : 'my order');
+  const rawTitle = order?.product_title ?? null;
+  const productTitle = rawTitle
+    ? rawTitle.replace(/&amp;/g, '&').replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'")
+    : (isHebrew ? 'ההזמנה שלי' : 'my order');
   let smartShareMessage: string;
   if (isHebrew) {
     const parts: string[] = ['פתחתי הזמנה קבוצתית ב-Shakana'];

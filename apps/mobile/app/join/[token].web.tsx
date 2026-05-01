@@ -45,6 +45,17 @@ function formatShekels(agorot: number): string {
   return (agorot / 100).toFixed(0);
 }
 
+function decodeHtml(str: string | null): string | null {
+  if (!str) return str;
+  return str
+    .replace(/&amp;/g, '&')
+    .replace(/&#x27;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
 function Skeleton({ width, height }: { width: number | string; height: number }) {
   return (
     <View
@@ -159,7 +170,8 @@ export default function JoinPreviewWeb() {
     );
   }
 
-  const { order, founder, participants_count, participant_names } = data;
+  const { order: rawOrder, founder, participants_count, participant_names } = data;
+  const order = { ...rawOrder, product_title: decodeHtml(rawOrder.product_title) };
 
   // Countdown
   const isExpiredTimer = secondsLeft !== null && secondsLeft <= 0;
