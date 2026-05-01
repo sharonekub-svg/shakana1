@@ -197,6 +197,7 @@ export default function OrderShell() {
   const me = data?.participants.find((p) => p.user_id === userId);
   const participantCount = data?.participants.length ?? 0;
   const cartItems = data?.items ?? [];
+  const loadErrorMessage = error instanceof Error ? error.message : typeof error === 'string' ? error : null;
 
   useEffect(() => {
     if (!order || !me) return;
@@ -232,8 +233,12 @@ export default function OrderShell() {
   }
   if (error || !data || !order) {
     return (
-      <ScreenBase style={{ alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ color: colors.err, fontFamily: fontFamily.body }}>{copy.unableToLoad}</Text>
+      <ScreenBase style={styles.loadErrorScreen}>
+        <View style={styles.loadErrorCard}>
+          <Text style={styles.loadErrorTitle}>{copy.unableToLoad}</Text>
+          {loadErrorMessage ? <Text style={styles.loadErrorBody}>{loadErrorMessage}</Text> : null}
+          <SecondaryBtn label={isHebrew ? 'חזרה להזמנות' : 'Back to orders'} onPress={() => router.replace('/(tabs)/orders')} />
+        </View>
       </ScreenBase>
     );
   }
@@ -621,6 +626,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     alignItems: 'flex-start',
+  },
+  loadErrorScreen: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  loadErrorCard: {
+    width: '100%',
+    maxWidth: 420,
+    gap: 12,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: colors.brBr,
+    borderRadius: radii.lg,
+    backgroundColor: colors.white,
+  },
+  loadErrorTitle: {
+    fontFamily: fontFamily.display,
+    fontSize: 20,
+    color: colors.err,
+    textAlign: 'center',
+  },
+  loadErrorBody: {
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    lineHeight: 20,
+    color: colors.mu,
+    textAlign: 'center',
   },
   timerCard: {
     gap: 8,
