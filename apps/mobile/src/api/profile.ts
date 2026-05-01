@@ -22,8 +22,19 @@ export function useProfile(userId: string | undefined) {
 export function useUpsertProfile() {
   return useMutation({
     mutationFn: async (p: Profile) => {
-      const { error } = await supabase.from('profiles').upsert(p as never, { onConflict: 'id' });
-      if (error) throw error;
+      const payload = {
+        id: p.id,
+        first_name: p.first_name.trim(),
+        last_name: p.last_name.trim(),
+        phone: p.phone ?? '',
+        city: p.city ?? '',
+        street: p.street ?? '',
+        building: p.building ?? '',
+        apt: p.apt ?? '',
+        floor: p.floor?.trim() || null,
+      };
+      const { error } = await supabase.from('profiles').upsert(payload as never, { onConflict: 'id' });
+      if (error) throw new Error(error.message || 'Could not save profile');
       return p;
     },
   });

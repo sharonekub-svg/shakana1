@@ -30,16 +30,16 @@ export default function Address() {
   const setDraft = useProfileDraftStore((s) => s.setDraft);
   const clearDraft = useProfileDraftStore((s) => s.clearDraft);
 
-  const [city, setCity] = useState(() => draft?.city ?? '');
-  const [cityLocked, setCityLocked] = useState(() => !!draft?.city);
-  const [street, setStreet] = useState(() => draft?.street ?? '');
+  const [city, setCity] = useState('');
+  const [cityLocked, setCityLocked] = useState(false);
+  const [street, setStreet] = useState('');
   const [citySuggs, setCitySuggs] = useState<string[]>([]);
   const [streetSuggs, setStreetSuggs] = useState<string[]>([]);
   const [cityLoad, setCityLoad] = useState(false);
   const [streetLoad, setStreetLoad] = useState(false);
-  const [building, setBuilding] = useState(() => draft?.building ?? '');
-  const [apt, setApt] = useState(() => draft?.apt ?? '');
-  const [floor, setFloor] = useState(() => draft?.floor ?? '');
+  const [building, setBuilding] = useState('');
+  const [apt, setApt] = useState('');
+  const [floor, setFloor] = useState('');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const skipPersistRef = useRef(false);
@@ -48,6 +48,8 @@ export default function Address() {
 
   const getProfileBase = useCallback(() => {
     if (!user) return null;
+    const userDraft = draft?.id === user.id ? draft : null;
+    const userProfile = profile?.id === user.id ? profile : null;
     const emailName = user.email?.split('@')[0]?.replace(/[._-]+/g, ' ').trim();
     const metadataName =
       typeof user.user_metadata?.full_name === 'string'
@@ -56,8 +58,8 @@ export default function Address() {
     const fallbackName = metadataName || emailName || 'Shakana user';
     const [fallbackFirst = 'Shakana', ...fallbackLastParts] = fallbackName.split(/\s+/).filter(Boolean);
     return (
-      draft ??
-      profile ?? {
+      userDraft ??
+      userProfile ?? {
         id: user.id,
         first_name: fallbackFirst,
         last_name: fallbackLastParts.join(' ') || 'User',
@@ -73,7 +75,13 @@ export default function Address() {
 
   useEffect(() => {
     if (hydratedAddressRef.current) return;
-    const savedAddress = draft ?? profile;
+    if (!user) return;
+    const savedAddress =
+      draft?.id === user.id
+        ? draft
+        : profile?.id === user.id
+          ? profile
+          : null;
     if (!savedAddress) return;
 
     hydratedAddressRef.current = true;
@@ -83,7 +91,7 @@ export default function Address() {
     setBuilding(savedAddress.building ?? '');
     setApt(savedAddress.apt ?? '');
     setFloor(savedAddress.floor ?? '');
-  }, [draft, profile]);
+  }, [draft, profile, user]);
 
   useEffect(() => {
     if (skipPersistRef.current) return;
