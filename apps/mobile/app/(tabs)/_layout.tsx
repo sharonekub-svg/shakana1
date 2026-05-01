@@ -46,14 +46,14 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: colors.navy,
-        tabBarInactiveTintColor: colors.mu,
+        tabBarActiveTintColor: colors.tx,
+        tabBarInactiveTintColor: colors.mu2,
         tabBarLabelStyle: { fontFamily: fontFamily.bodyBold, fontSize: 10 },
         tabBarItemStyle: { flex: 1, paddingTop: 4 },
         tabBarStyle: {
           borderTopColor: colors.br,
           borderTopWidth: 1,
-          backgroundColor: 'rgba(250,248,252,0.98)',
+          backgroundColor: 'rgba(247,245,240,0.98)',
           paddingTop: 8,
           paddingBottom: 10,
           height: 82,

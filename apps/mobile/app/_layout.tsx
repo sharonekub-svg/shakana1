@@ -296,6 +296,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.bg,
   },
+  // errorScreen, errorCard etc. use colors.* so auto-update via tokens
   errorScreen: {
     flex: 1,
     alignItems: 'center',

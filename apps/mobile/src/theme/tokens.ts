@@ -1,66 +1,67 @@
+// Wispr Flow — warm cream, sage green, editorial warmth
 export const colors = {
-  bg: '#EEF1EE',
-  s1: '#FFFFFF',
-  s2: '#EEF4EE',
-  s3: '#DDEBDD',
-  tx: '#101814',
-  mu: '#66746B',
-  mu2: '#9AA89F',
-  acc: '#0F7A43',
-  lime: '#B7F36A',
-  limeSoft: '#E8FBD2',
-  accLight: '#E4F5EA',
-  grn: '#0F7A43',
-  err: '#E45B5B',
-  br: '#DCE7DE',
-  brBr: '#C4D4C8',
-  white: '#FFFFFF',
-  ink: '#0F0D1A',
-  pink: '#F5A9C7',
-  card: '#FFFFFF',
-  cardSoft: '#F7FAF6',
-  navy: '#062E1B',
+  bg:        '#F7F5F0', // warm cream background
+  s1:        '#FFFFFF',
+  s2:        '#F2EFE9', // warm surface tint
+  s3:        '#EBE7E0', // warm mid-tone
+  tx:        '#1C1917', // warm near-black
+  mu:        '#78716C', // warm muted
+  mu2:       '#A8A29E', // warm muted 2
+  acc:       '#3D6B4F', // sage green (calm vitality)
+  lime:      '#D4E8C2', // soft sage highlight (replaces neon lime)
+  limeSoft:  '#EDF4EF', // very light sage
+  accLight:  '#EDF4EF', // warm green tint
+  grn:       '#3D6B4F', // same as acc
+  err:       '#DC2626', // warm red
+  br:        '#E8E2DA', // warm border
+  brBr:      '#D4CEC6', // warm border strong
+  white:     '#FFFFFF',
+  ink:       '#1C1917', // warm near-black
+  pink:      '#F5A9C7',
+  card:      '#FFFFFF',
+  cardSoft:  '#F2EFE9', // warm surface tint
+  navy:      '#1C1917', // primary dark (warm charcoal, not cold navy)
 } as const;
 
 export const radii = {
-  sm: 12,
-  md: 18,
-  lg: 24,
-  xl: 28,
-  xxl: 32,
+  sm:  12,
+  md:  16,
+  lg:  20,
+  xl:  24,
+  xxl: 28,
   pill: 999,
 } as const;
 
 export const spacing = {
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 20,
-  xxl: 24,
+  xs:   4,
+  sm:   8,
+  md:   12,
+  lg:   16,
+  xl:   20,
+  xxl:  24,
   xxxl: 32,
 } as const;
 
 export const shadow = {
   card: {
-    shadowColor: '#120F24',
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 4,
+    shadowColor:   '#1C1917',
+    shadowOpacity: 0.07,
+    shadowRadius:  20,
+    shadowOffset:  { width: 0, height: 4 },
+    elevation: 3,
   },
   cta: {
-    shadowColor: '#120F24',
-    shadowOpacity: 0.1,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 5,
+    shadowColor:   '#1C1917',
+    shadowOpacity: 0.10,
+    shadowRadius:  16,
+    shadowOffset:  { width: 0, height: 6 },
+    elevation: 4,
   },
   glass: {
-    shadowColor: '#120F24',
+    shadowColor:   '#1C1917',
     shadowOpacity: 0.05,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
+    shadowRadius:  12,
+    shadowOffset:  { width: 0, height: 3 },
     elevation: 2,
   },
 } as const;

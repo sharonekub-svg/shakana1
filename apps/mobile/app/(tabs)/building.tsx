@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
   },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(183, 243, 106, 0.88)',
+    backgroundColor: 'rgba(28, 25, 23, 0.52)',
   },
   heroContent: {
     padding: 18,
@@ -373,20 +373,20 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodyBold,
     fontSize: 11,
     letterSpacing: 2.4,
-    color: colors.navy,
+    color: 'rgba(255,255,255,0.75)',
   },
   heroTitle: {
     fontFamily: fontFamily.display,
     fontSize: 32,
     lineHeight: 36,
-    color: colors.navy,
+    color: colors.white,
     maxWidth: 260,
   },
   heroBody: {
     fontFamily: fontFamily.body,
     fontSize: 14,
     lineHeight: 22,
-    color: colors.tx,
+    color: 'rgba(255,255,255,0.85)',
     maxWidth: 320,
   },
   heroButton: {

@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   statLabelFeatured: {
-    color: '#CFF4DB',
+    color: 'rgba(237,244,239,0.85)',
   },
   headerBrand: {
     flexDirection: 'row',
