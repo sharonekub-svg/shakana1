@@ -9,14 +9,14 @@ const OPTIONS: Array<{ language: Language; label: string }> = [
   { language: 'en', label: 'English' },
 ];
 
-export function LanguageSwitcher() {
+export function LanguageSwitcher({ dark = false }: { dark?: boolean }) {
   const { language, setLanguage, t } = useLocale();
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, dark && styles.wrapDark]}>
       <View style={styles.textBlock}>
-        <Text style={styles.label}>{t('language.label')}</Text>
-        <Text style={styles.subtitle}>{t('language.subtitle')}</Text>
+        <Text style={[styles.label, dark && styles.labelDark]}>{t('language.label')}</Text>
+        <Text style={[styles.subtitle, dark && styles.subtitleDark]}>{t('language.subtitle')}</Text>
       </View>
       <View style={styles.row}>
         {OPTIONS.map((option) => {
@@ -25,9 +25,9 @@ export function LanguageSwitcher() {
             <Pressable
               key={option.language}
               onPress={() => void setLanguage(option.language)}
-              style={[styles.pill, active && styles.pillActive]}
+              style={[styles.pill, dark && styles.pillDark, active && (dark ? styles.pillActiveDark : styles.pillActive)]}
             >
-              <Text style={[styles.pillText, active && styles.pillTextActive]}>{option.label}</Text>
+              <Text style={[styles.pillText, dark && styles.pillTextDark, active && (dark ? styles.pillTextActiveDark : styles.pillTextActive)]}>{option.label}</Text>
             </Pressable>
           );
         })}
@@ -45,6 +45,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: radii.xl,
   },
+  wrapDark: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.09)',
+  },
   textBlock: {
     gap: 3,
   },
@@ -55,12 +59,14 @@ const styles = StyleSheet.create({
     color: colors.tx,
     textTransform: 'uppercase',
   },
+  labelDark: { color: 'rgba(255,255,255,0.80)' },
   subtitle: {
     fontFamily: fontFamily.body,
     fontSize: 13,
     lineHeight: 20,
     color: colors.mu,
   },
+  subtitleDark: { color: 'rgba(255,255,255,0.50)' },
   row: {
     flexDirection: 'row',
     gap: 8,
@@ -76,16 +82,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  pillDark: {
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
   pillActive: {
     backgroundColor: colors.tx,
     borderColor: colors.tx,
+  },
+  pillActiveDark: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#FFFFFF',
   },
   pillText: {
     fontFamily: fontFamily.bodyBold,
     fontSize: 12,
     color: colors.tx,
   },
+  pillTextDark: { color: 'rgba(255,255,255,0.80)' },
   pillTextActive: {
     color: colors.white,
+  },
+  pillTextActiveDark: {
+    color: '#060A12',
   },
 });

@@ -1,13 +1,11 @@
-import { ImageBackground, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
 import Svg, { Path } from 'react-native-svg';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ScreenBase } from '@/components/primitives/ScreenBase';
-import { PrimaryBtn, SecondaryBtn } from '@/components/primitives/Button';
-import { ShakanaMark } from '@/components/primitives/ShakanaMark';
 import { LanguageSwitcher } from '@/components/primitives/LanguageSwitcher';
-import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
+import { radii } from '@/theme/tokens';
 import { useGoogleSignIn } from '@/api/auth';
 import { useLocale } from '@/i18n/locale';
 import { useUiStore } from '@/stores/uiStore';
@@ -18,6 +16,22 @@ const FLOW_STRIP = {
   he: ['הדבקת קישור', 'זיהוי חנות', 'קריאת מחיר', 'מציאת מבצעים', 'הזמנת חברים', 'סל משותף'],
   en: ['Paste link', 'Detect store', 'Read price', 'Find deals', 'Invite friends', 'Shared cart'],
 };
+
+// Wispr Flow inspired dark palette
+const D = {
+  bg: '#060A12',
+  card: 'rgba(255,255,255,0.05)',
+  cardBorder: 'rgba(255,255,255,0.09)',
+  text: '#FFFFFF',
+  muted: 'rgba(255,255,255,0.50)',
+  accent: '#4B8AFF',
+  accentBg: 'rgba(75,138,255,0.10)',
+  accentBorder: 'rgba(75,138,255,0.20)',
+  pill: 'rgba(255,255,255,0.07)',
+  pillBorder: 'rgba(255,255,255,0.12)',
+  divider: 'rgba(255,255,255,0.10)',
+  orb: 'rgba(75,138,255,0.15)',
+} as const;
 
 function GoogleGlyph() {
   return (
@@ -39,9 +53,11 @@ export default function Welcome() {
   const copy = isHebrew
     ? {
         authTitle: 'כניסה או הרשמה',
-        authBody: 'Google יפתח בחירת חשבון בכל פעם, כדי שתוכל לעבור בין חשבונות בלי להיתקע על החשבון הקודם.',
+        authBody:
+          'Google יפתח בחירת חשבון בכל פעם, כדי שתוכל לעבור בין חשבונות בלי להיתקע על החשבון הקודם.',
         conceptTitle: 'מה Shakana עושה?',
-        conceptBody: 'מדביקים קישור למוצר, בוחרים טיימר, שכנים מצטרפים ומשלמים, ואז מייסד ההזמנה קונה ידנית מהחנות. אין סקרייפינג נסתר ואין רכישה אוטומטית.',
+        conceptBody:
+          'מדביקים קישור למוצר, בוחרים טיימר, שכנים מצטרפים ומשלמים, ואז מייסד ההזמנה קונה ידנית מהחנות. אין סקרייפינג נסתר ואין רכישה אוטומטית.',
         google: 'המשך עם Gmail',
         phone: 'המשך עם טלפון',
         openingGoogle: 'פותחים את Google...',
@@ -49,9 +65,11 @@ export default function Welcome() {
       }
     : {
         authTitle: 'Log in or sign up',
-        authBody: 'Google now asks which account to use, so switching between accounts does not silently reuse the previous one.',
+        authBody:
+          'Google now asks which account to use, so switching between accounts does not silently reuse the previous one.',
         conceptTitle: 'What Shakana does',
-        conceptBody: 'Paste a product link, choose a timer, neighbors join and pay, then the founder buys manually from the store. No hidden scraping and no automatic external purchase.',
+        conceptBody:
+          'Paste a product link, choose a timer, neighbors join and pay, then the founder buys manually from the store. No hidden scraping and no automatic external purchase.',
         google: 'Continue with Gmail',
         phone: 'Continue with phone',
         openingGoogle: 'Opening Google...',
@@ -59,213 +77,285 @@ export default function Welcome() {
       };
 
   return (
-    <ScreenBase style={styles.screen}>
-      <ImageBackground
-        source={{ uri: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1400&q=80' }}
-        style={styles.backdrop}
-        imageStyle={styles.backdropImage}
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <Stack.Screen options={{ contentStyle: { backgroundColor: D.bg } }} />
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.backdropOverlay} />
-        <View style={styles.hero}>
-          <ShakanaMark size={188} />
-          <View style={styles.heroCopy}>
-            <Text style={styles.kicker}>{t('landing.brand')}</Text>
-            <Text style={styles.title}>{t('landing.title')}</Text>
-            <Text style={styles.subtitle}>{t('landing.subtitle')}</Text>
-          </View>
+        {/* Decorative glow orb */}
+        <View style={styles.orbContainer} pointerEvents="none">
+          <View style={styles.orb} />
         </View>
-      </ImageBackground>
 
-      <View style={styles.conceptCard}>
-        <Text style={styles.conceptTitle}>{copy.conceptTitle}</Text>
-        <Text style={styles.conceptBody}>{copy.conceptBody}</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.storeStrip}>
-          {FLOW_STRIP[language].map((store) => (
-            <View key={store} style={styles.storePill}>
-              <Text style={styles.storePillText}>{store}</Text>
+        {/* Hero */}
+        <View style={styles.hero}>
+          <View style={styles.wordmarkChip}>
+            <Text style={styles.wordmark}>shakana</Text>
+          </View>
+          <Text style={styles.heroTitle}>{t('landing.title')}</Text>
+          <Text style={styles.heroSub}>{t('landing.subtitle')}</Text>
+        </View>
+
+        {/* Flow steps strip */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.stripContent}
+        >
+          {FLOW_STRIP[language].map((step, i) => (
+            <View key={step} style={styles.stepPill}>
+              <Text style={styles.stepNum}>{i + 1}</Text>
+              <Text style={styles.stepLabel}>{step}</Text>
             </View>
           ))}
         </ScrollView>
-      </View>
 
-      <View style={styles.card}>
-        <View style={styles.cardRow}>
-          <View style={styles.dot} />
-          <Text style={styles.cardText}>{copy.authTitle}</Text>
+        {/* Concept card */}
+        <View style={styles.glassCard}>
+          <Text style={styles.cardTitle}>{copy.conceptTitle}</Text>
+          <Text style={styles.cardBody}>{copy.conceptBody}</Text>
         </View>
-        <Text style={styles.cardBody}>{copy.authBody}</Text>
-      </View>
 
-      <View style={styles.ctaBlock}>
-        <LanguageSwitcher />
-        <SecondaryBtn
-          label={googleMut.isPending ? copy.openingGoogle : copy.google}
-          leading={<GoogleGlyph />}
-          onPress={() => {
-            googleMut.mutate(undefined, {
-              onError: (error) => {
-                pushToast(error instanceof Error ? error.message : copy.googleError, 'error');
-              },
-            });
-          }}
-        />
-        <View style={styles.divider}>
-          <View style={styles.divLine} />
-          <Text style={styles.divText}>{t('common.or')}</Text>
-          <View style={styles.divLine} />
+        {/* Auth info card */}
+        <View style={[styles.glassCard, styles.accentCard]}>
+          <View style={styles.accentDot} />
+          <View style={styles.accentCardBody}>
+            <Text style={[styles.cardTitle, styles.cardTitleSmall]}>{copy.authTitle}</Text>
+            <Text style={[styles.cardBody, styles.cardBodyTop]}>{copy.authBody}</Text>
+          </View>
         </View>
-        <PrimaryBtn label={copy.phone} onPress={() => router.push('/(auth)/phone')} />
-        <Text style={styles.legal}>
-          {t('landing.legal')}
-          <Text style={styles.link} onPress={() => Linking.openURL(TERMS_URL)}>
-            {t('common.terms')}
-          </Text>{' '}
-          {t('common.and') ?? 'and'}{' '}
-          <Text style={styles.link} onPress={() => Linking.openURL(PRIVACY_URL)}>
-            {t('common.privacy')}
+
+        {/* CTA block */}
+        <View style={styles.ctaBlock}>
+          <LanguageSwitcher dark />
+
+          <Pressable
+            style={({ pressed }) => [styles.btnGlass, pressed && { opacity: 0.75 }]}
+            onPress={() => {
+              googleMut.mutate(undefined, {
+                onError: (error) => {
+                  pushToast(error instanceof Error ? error.message : copy.googleError, 'error');
+                },
+              });
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={copy.google}
+          >
+            <GoogleGlyph />
+            <Text style={styles.btnGlassLabel}>
+              {googleMut.isPending ? copy.openingGoogle : copy.google}
+            </Text>
+          </Pressable>
+
+          <View style={styles.divider}>
+            <View style={styles.divLine} />
+            <Text style={styles.divText}>{t('common.or')}</Text>
+            <View style={styles.divLine} />
+          </View>
+
+          <Pressable
+            style={({ pressed }) => [styles.btnPrimary, pressed && { opacity: 0.90 }]}
+            onPress={() => router.push('/(auth)/phone')}
+            accessibilityRole="button"
+            accessibilityLabel={copy.phone}
+          >
+            <Text style={styles.btnPrimaryLabel}>{copy.phone}</Text>
+          </Pressable>
+
+          <Text style={styles.legal}>
+            {t('landing.legal')}
+            <Text style={styles.legalLink} onPress={() => Linking.openURL(TERMS_URL)}>
+              {t('common.terms')}
+            </Text>
+            {' '}
+            {t('common.and') ?? 'and'}
+            {' '}
+            <Text style={styles.legalLink} onPress={() => Linking.openURL(PRIVACY_URL)}>
+              {t('common.privacy')}
+            </Text>
+            .
           </Text>
-          .
-        </Text>
-      </View>
-    </ScreenBase>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    justifyContent: 'space-between',
-    paddingTop: 18,
-    paddingBottom: 34,
-    gap: 18,
+  safe: {
+    flex: 1,
+    backgroundColor: D.bg,
   },
-  backdrop: {
-    minHeight: 330,
-    justifyContent: 'flex-end',
-    borderRadius: 34,
-    overflow: 'hidden',
+  scroll: { flex: 1 },
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 44,
+    gap: 16,
   },
-  backdropImage: {
-    borderRadius: 34,
+  orbContainer: {
+    position: 'absolute',
+    top: -100,
+    alignSelf: 'center',
+    width: 380,
+    height: 380,
+    pointerEvents: 'none',
   },
-  backdropOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(7, 18, 37, 0.42)',
+  orb: {
+    width: 380,
+    height: 380,
+    borderRadius: 190,
+    backgroundColor: D.orb,
+    opacity: 0.7,
   },
   hero: {
+    paddingTop: 48,
+    paddingBottom: 8,
+    gap: 14,
     alignItems: 'center',
-    gap: 16,
-    paddingVertical: 26,
-    paddingHorizontal: 16,
   },
-  heroCopy: {
-    alignItems: 'center',
-    gap: 10,
+  wordmarkChip: {
+    paddingHorizontal: 18,
+    paddingVertical: 9,
+    borderRadius: radii.pill,
+    backgroundColor: D.pill,
+    borderWidth: 1,
+    borderColor: D.pillBorder,
   },
-  kicker: {
+  wordmark: {
     fontFamily: fontFamily.bodyBold,
-    fontSize: 10,
-    letterSpacing: 2.4,
-    color: colors.s1,
+    fontSize: 13,
+    color: D.text,
+    letterSpacing: 2,
   },
-  title: {
+  heroTitle: {
     fontFamily: fontFamily.display,
-    fontSize: 34,
-    color: colors.white,
-    letterSpacing: -0.4,
+    fontSize: 36,
+    color: D.text,
+    letterSpacing: -0.6,
     textAlign: 'center',
+    lineHeight: 44,
   },
-  subtitle: {
+  heroSub: {
     fontFamily: fontFamily.body,
     fontSize: 15,
-    color: 'rgba(255,255,255,0.88)',
-    maxWidth: 290,
+    color: D.muted,
     textAlign: 'center',
     lineHeight: 24,
+    maxWidth: 300,
   },
-  conceptCard: {
-    backgroundColor: colors.white,
-    borderRadius: 28,
-    padding: 18,
-    borderColor: colors.br,
-    borderWidth: 1,
-    gap: 12,
-    ...shadow.card,
-  },
-  conceptTitle: {
-    fontFamily: fontFamily.display,
-    fontSize: 22,
-    color: colors.tx,
-  },
-  conceptBody: {
-    fontFamily: fontFamily.body,
-    fontSize: 14,
-    lineHeight: 22,
-    color: colors.mu,
-  },
-  storeStrip: {
+  stripContent: {
     gap: 8,
     paddingRight: 4,
   },
-  storePill: {
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: radii.pill,
-    backgroundColor: colors.accLight,
-    borderWidth: 1,
-    borderColor: colors.brBr,
-  },
-  storePillText: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 12,
-    color: colors.acc,
-  },
-  card: {
-    backgroundColor: colors.white,
-    borderRadius: 28,
-    padding: 18,
-    borderColor: colors.br,
-    borderWidth: 1,
-    gap: 10,
-    ...shadow.card,
-  },
-  cardRow: {
+  stepPill: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: radii.pill,
+    backgroundColor: D.pill,
+    borderWidth: 1,
+    borderColor: D.pillBorder,
+  },
+  stepNum: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 10,
+    color: D.accent,
+  },
+  stepLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+    color: D.text,
+  },
+  glassCard: {
+    backgroundColor: D.card,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: D.cardBorder,
+    padding: 20,
     gap: 10,
   },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: radii.pill,
-    backgroundColor: colors.pink,
+  accentCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    backgroundColor: D.accentBg,
+    borderColor: D.accentBorder,
   },
-  cardText: {
+  accentDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: D.accent,
+    marginTop: 6,
+    flexShrink: 0,
+  },
+  accentCardBody: { flex: 1, gap: 6 },
+  cardTitle: {
     fontFamily: fontFamily.bodyBold,
-    fontSize: 13,
-    letterSpacing: 1,
-    color: colors.tx,
+    fontSize: 17,
+    color: D.text,
   },
+  cardTitleSmall: { fontSize: 13, letterSpacing: 0.8 },
   cardBody: {
     fontFamily: fontFamily.body,
     fontSize: 14,
+    color: D.muted,
     lineHeight: 22,
-    color: colors.mu,
   },
-  ctaBlock: { gap: 12 },
+  cardBodyTop: { marginTop: 0 },
+  ctaBlock: { gap: 12, marginTop: 4 },
+  btnGlass: {
+    width: '100%',
+    minHeight: 52,
+    borderRadius: radii.pill,
+    backgroundColor: D.pill,
+    borderWidth: 1,
+    borderColor: D.pillBorder,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingHorizontal: 20,
+  },
+  btnGlassLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 16,
+    color: D.text,
+  },
   divider: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  divLine: { flex: 1, height: 1, backgroundColor: colors.br },
+  divLine: { flex: 1, height: 1, backgroundColor: D.divider },
   divText: {
     fontSize: 12,
-    color: colors.mu,
+    color: D.muted,
     fontFamily: fontFamily.bodyBold,
     letterSpacing: 1.6,
   },
+  btnPrimary: {
+    width: '100%',
+    minHeight: 54,
+    borderRadius: radii.pill,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  btnPrimaryLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 16,
+    color: '#060A12',
+    letterSpacing: 0.2,
+  },
   legal: {
     fontSize: 12,
-    color: colors.mu,
+    color: D.muted,
     textAlign: 'center',
     fontFamily: fontFamily.body,
     lineHeight: 20,
   },
-  link: { color: colors.acc, fontFamily: fontFamily.bodyBold },
+  legalLink: { color: D.accent, fontFamily: fontFamily.bodyBold },
 });
