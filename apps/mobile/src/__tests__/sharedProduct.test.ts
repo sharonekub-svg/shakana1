@@ -280,6 +280,31 @@ describe('sharedProduct', () => {
     expect(insights.amountMissingForFreeShippingAgorot).toBe(0);
   });
 
+  it('does not confuse free-shipping threshold with the delivery fee', () => {
+    const draft = {
+      url: 'https://shop.cool-brand.co.il/products/green-shirt',
+      title: 'Green Shirt',
+      source: 'cool-brand',
+      storeLabel: 'Cool Brand',
+    };
+
+    const insights = summarizeSharedProduct(draft, `
+      <html>
+        <head>
+          <meta property="product:price:amount" content="129.90" />
+        </head>
+        <body>
+          Free shipping from ₪199
+        </body>
+      </html>
+    `);
+
+    expect(insights.priceAgorot).toBe(12990);
+    expect(insights.freeShippingThresholdAgorot).toBe(19900);
+    expect(insights.amountMissingForFreeShippingAgorot).toBe(6910);
+    expect(insights.deliveryFeeAgorot).toBe(3000);
+  });
+
   it('cleans Amazon links and infers the product name from the title slug', () => {
     const draft = parseSharedProduct({
       url: 'https://www.amazon.com/-/he/%D7%9E%D7%97%D7%A9%D7%91-%D7%A0%D7%99%D7%99%D7%93-%D7%92%D7%99%D7%99%D7%9E%D7%99%D7%A0%D7%92-ASUS-Strix/dp/B0DZZWMB2L/ref=sr_1_1?_encoding=UTF8&keywords=gaming&qid=1777482031&sr=8-1&th=1',

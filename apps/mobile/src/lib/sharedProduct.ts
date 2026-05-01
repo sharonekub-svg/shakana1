@@ -664,6 +664,16 @@ function choosePriceAgorot(html: string): number | null {
 
 function chooseDeliveryFeeAgorot(html: string, fallbackAgorot: number): number {
   const text = stripTags(html).replace(/\s+/g, ' ').slice(0, 20000);
+  const thresholdMention =
+    /\bfree\s+(?:delivery|shipping)\s+(?:from|over|above|on\s+orders\s+(?:from|over|above))[^.]{0,90}\d[\d,.]*/i.test(text) ||
+    /(?:משלוח|delivery|shipping)\s+(?:חינם|free)\s+(?:מ|מעל|from|over|above)[^.]{0,90}\d[\d,.]*/i.test(text);
+  if (thresholdMention) {
+    const explicitFee =
+      text.match(/(?:shipping|delivery)\s+(?:fee|cost|price)[^$€£₪\d]{0,80}(?<price>[$€£₪]\s?\d[\d,.]*)/i)?.groups?.price ??
+      text.match(/(?:דמי|עלות|מחיר)\s+משלוח[^₪\d]{0,80}(?<price>₪\s?\d[\d,.]*)/i)?.groups?.price;
+    const parsedExplicitFee = parseMoneyToAgorot(explicitFee ?? null);
+    return parsedExplicitFee ?? fallbackAgorot;
+  }
   if (/\bfree\s+(?:delivery|shipping)\b/i.test(text) || /משלוח\s+חינם/i.test(text)) return 0;
 
   const shippingPatterns = [
@@ -846,6 +856,7 @@ export function parseSharedProduct(input: {
   // Prefer the strict check; fall back to any clean URL so unknown stores work.
   const url = likelyProductUrl(raw) ?? parseCleanUrl(raw);
   if (!url) return null;
+  if (looksLikeNonProductPage(url)) return null;
 
   const brandConfig = getBrandConfig(url.hostname);
   const cleanUrl = stripTrackingParams(url);
