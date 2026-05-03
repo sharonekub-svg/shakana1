@@ -37,8 +37,11 @@ export function ErrorBoundary({ error, retry }: { error: Error; retry: () => voi
   return (
     <SafeAreaProvider>
       <View style={styles.errorScreen}>
+        <View style={styles.errorHalo} />
         <View style={styles.errorCard}>
-          <Text style={styles.errorLogo}>shakana</Text>
+          <View style={styles.errorLogoPill}>
+            <Text style={styles.errorLogo}>shakana</Text>
+          </View>
           <Text style={styles.errorTitle}>משהו נתקע בטעינת המסך</Text>
           <Text style={styles.errorBody}>
             תיקנו את המנגנון כדי שלא תישאר על מסך לבן. נסה לטעון שוב, ואם זה חוזר נמשיך מהשגיאה המדויקת.
@@ -304,19 +307,41 @@ const styles = StyleSheet.create({
     padding: 24,
     backgroundColor: colors.bg,
   },
+  errorHalo: {
+    position: 'absolute',
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: colors.limeSoft,
+    opacity: 0.9,
+    transform: [{ translateY: -42 }],
+  },
   errorCard: {
     width: '100%',
-    maxWidth: 430,
-    borderRadius: 30,
-    padding: 24,
+    maxWidth: 420,
+    borderRadius: 36,
+    padding: 28,
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.br,
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
+    shadowColor: colors.navy,
+    shadowOpacity: 0.08,
+    shadowRadius: 30,
+    shadowOffset: { width: 0, height: 18 },
+    elevation: 6,
+  },
+  errorLogoPill: {
+    minHeight: 44,
+    paddingHorizontal: 18,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.lime,
   },
   errorLogo: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: '800',
     color: colors.navy,
     letterSpacing: -1,
@@ -336,9 +361,9 @@ const styles = StyleSheet.create({
   errorButton: {
     marginTop: 8,
     borderRadius: 999,
-    backgroundColor: colors.acc,
-    paddingHorizontal: 24,
-    paddingVertical: 13,
+    backgroundColor: colors.navy,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
   },
   errorButtonText: {
     color: colors.white,

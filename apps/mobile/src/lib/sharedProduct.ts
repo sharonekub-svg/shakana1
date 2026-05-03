@@ -783,6 +783,17 @@ function uniqueLimited(values: Array<string | null | undefined>, limit = 10): st
   return clean;
 }
 
+function looksLikeRealSize(value: string): boolean {
+  const text = value.trim();
+  if (!text || text.length > 40) return false;
+  return (
+    /^(?:XXS|XS|S|M|L|XL|XXL|XXXL)$/i.test(text) ||
+    /^(?:Twin|Full|Queen|King|California King|Single|Double)$/i.test(text) ||
+    /^\d{1,3}(?:\.\d)?(?:\s?(?:cm|mm|m|in|inch|inches|ft|feet|["']))?(?:\s?[xX×]\s?\d{1,3}(?:\.\d)?(?:\s?(?:cm|mm|m|in|inch|inches|ft|feet|["']))?){0,2}$/i.test(text) ||
+    /^\d{1,2}(?:\.\d)?\s?(?:US|UK|EU)$/i.test(text)
+  );
+}
+
 function chooseVariantOptions(html: string): { availableSizes: string[]; availableColors: string[] } {
   const jsonLd = readFirstJsonLdObject(html);
   const rawColor = jsonLd && typeof jsonLd.color === 'string' ? jsonLd.color : null;
@@ -791,10 +802,14 @@ function chooseVariantOptions(html: string): { availableSizes: string[]; availab
     .replace(/&#39;|&apos;/gi, "'")
     .replace(/&nbsp;/gi, ' ');
 
-  const sizeCandidates = [
-    ...[...decoded.matchAll(/"(?:size|sizeName|displaySize|label)"\s*:\s*"(?<value>XXS|XS|S|M|L|XL|XXL|XXXL|[2-5]?\d(?:\.\d)?)"/gi)].map((m) => m.groups?.value),
-    ...[...decoded.matchAll(/\b(?:XXS|XS|S|M|L|XL|XXL|XXXL)\b/g)].map((m) => m[0]),
-  ];
+  const explicitSizeValues = [...decoded.matchAll(/"(?:size|sizeName|displaySize|selectedSize|variationSize|dimensions?)"\s*:\s*"(?<value>[^"]{1,40})"/gi)]
+    .map((m) => m.groups?.value)
+    .filter((value): value is string => Boolean(value && looksLikeRealSize(value)));
+  const dimensionValues = [...decoded.matchAll(/\b(?<value>\d{1,3}(?:\.\d)?\s?(?:cm|mm|m|in|inch|inches|ft|feet|["'])?\s?[xX×]\s?\d{1,3}(?:\.\d)?\s?(?:cm|mm|m|in|inch|inches|ft|feet|["'])?(?:\s?[xX×]\s?\d{1,3}(?:\.\d)?\s?(?:cm|mm|m|in|inch|inches|ft|feet|["'])?)?)\b/gi)]
+    .map((m) => m.groups?.value);
+  const namedSizeValues = [...decoded.matchAll(/\b(?<value>Twin|Full|Queen|King|California King|Single|Double)\b/gi)]
+    .map((m) => m.groups?.value);
+  const sizeCandidates = [...explicitSizeValues, ...dimensionValues, ...namedSizeValues];
 
   const colorCandidates = [
     rawColor,

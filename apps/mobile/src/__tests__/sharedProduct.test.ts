@@ -305,6 +305,47 @@ describe('sharedProduct', () => {
     expect(insights.deliveryFeeAgorot).toBe(3000);
   });
 
+  it('does not invent clothing sizes for non-apparel product pages', () => {
+    const draft = {
+      url: 'https://www.amazon.com/example-bed/dp/B000000000',
+      title: 'Storage Bed',
+      source: 'amazon' as const,
+      storeLabel: 'Amazon',
+    };
+
+    const insights = summarizeSharedProduct(draft, `
+      <html>
+        <head><meta property="product:price:amount" content="899" /></head>
+        <body>
+          Storage bed with metal frame. This script has random letters S M L but no variant data.
+        </body>
+      </html>
+    `);
+
+    expect(insights.availableSizes).toEqual([]);
+  });
+
+  it('reads real product variant sizes when the store publishes them', () => {
+    const draft = {
+      url: 'https://www.amazon.com/example-bed/dp/B000000001',
+      title: 'Storage Bed',
+      source: 'amazon' as const,
+      storeLabel: 'Amazon',
+    };
+
+    const insights = summarizeSharedProduct(draft, `
+      <html>
+        <body>
+          {"dimensions":"Queen","colorName":"Walnut"}
+          {"dimensions":"King","colorName":"Black"}
+        </body>
+      </html>
+    `);
+
+    expect(insights.availableSizes).toEqual(expect.arrayContaining(['Queen', 'King']));
+    expect(insights.availableColors).toEqual(expect.arrayContaining(['Walnut', 'Black']));
+  });
+
   it('cleans Amazon links and infers the product name from the title slug', () => {
     const draft = parseSharedProduct({
       url: 'https://www.amazon.com/-/he/%D7%9E%D7%97%D7%A9%D7%91-%D7%A0%D7%99%D7%99%D7%93-%D7%92%D7%99%D7%99%D7%9E%D7%99%D7%A0%D7%92-ASUS-Strix/dp/B0DZZWMB2L/ref=sr_1_1?_encoding=UTF8&keywords=gaming&qid=1777482031&sr=8-1&th=1',
