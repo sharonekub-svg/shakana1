@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
 
   try {
-    await authedUserId(req);
+    const userId = await authedUserId(req);
     const body = await readJson<Body>(req);
     if (!body.orderId) throw httpError(400, 'missing_orderId');
 
@@ -29,7 +29,10 @@ Deno.serve(async (req) => {
     if (order.status !== 'open' && order.status !== 'paying') {
       return json({ order, changed: false });
     }
-    if (!order.closes_at || new Date(order.closes_at).getTime() > Date.now()) {
+    if (!order.closes_at) {
+      // No-timer order: only the creator can close manually
+      if (order.creator_id !== userId) throw httpError(403, 'only_creator_can_close');
+    } else if (new Date(order.closes_at).getTime() > Date.now()) {
       throw httpError(409, 'timer_still_open');
     }
 

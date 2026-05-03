@@ -43,7 +43,8 @@ Deno.serve(async (req) => {
     ) {
       throw httpError(400, 'invalid_participants');
     }
-    if (!Number.isInteger(body.timerMinutes) || body.timerMinutes < 5 || body.timerMinutes > 10080) {
+    // 0 = no timer (manual close); positive = timer minutes (5–10080)
+    if (body.timerMinutes !== 0 && (!Number.isInteger(body.timerMinutes) || body.timerMinutes < 5 || body.timerMinutes > 10080)) {
       throw httpError(400, 'invalid_timer');
     }
     if (!Number.isInteger(body.estimatedShippingAgorot) || body.estimatedShippingAgorot < 0) {
@@ -72,10 +73,11 @@ Deno.serve(async (req) => {
     const pickupName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim();
 
     const transferGroup = `order_${crypto.randomUUID()}`;
-    const closesAt = new Date(Date.now() + body.timerMinutes * 60_000);
-    const editLocksAt = new Date(closesAt.getTime() - 15_000);
+    const hasTimer = body.timerMinutes > 0;
+    const closesAt = hasTimer ? new Date(Date.now() + body.timerMinutes * 60_000) : null;
+    const editLocksAt = closesAt ? new Date(closesAt.getTime() - 15_000) : null;
 
-    const baseOrderInsert = {
+    const orderInsert = {
       creator_id: userId,
       building_id: profile?.building_id ?? null,
       product_url: body.productUrl,
@@ -85,37 +87,23 @@ Deno.serve(async (req) => {
       max_participants: body.maxParticipants,
       stripe_transfer_group: transferGroup,
       status: 'open',
-    };
-
-    const fullOrderInsert = {
-      ...baseOrderInsert,
       store_key: storeKey,
       store_label: storeLabel,
       estimated_shipping_agorot: body.estimatedShippingAgorot,
       free_shipping_threshold_agorot: body.freeShippingThresholdAgorot,
-      closes_at: closesAt.toISOString(),
-      edit_locks_at: editLocksAt.toISOString(),
+      closes_at: closesAt?.toISOString() ?? null,
+      edit_locks_at: editLocksAt?.toISOString() ?? null,
       founder_checkout_url: body.productUrl,
       pickup_responsible_user_id: userId,
       pickup_responsible_name: pickupName || 'Order creator',
       preferred_pickup_location: pickupLocation,
     };
 
-    let { data: order, error: insErr } = await admin
+    const { data: order, error: insErr } = await admin
       .from('orders')
-      .insert(fullOrderInsert)
+      .insert(orderInsert)
       .select('*')
       .single();
-
-    if (insErr && insErr.code === 'PGRST204') {
-      const fallback = await admin
-        .from('orders')
-        .insert(baseOrderInsert)
-        .select('*')
-        .single();
-      order = fallback.data;
-      insErr = fallback.error;
-    }
 
     if (insErr) throw insErr;
     if (!order) throw httpError(500, 'order_insert_failed');

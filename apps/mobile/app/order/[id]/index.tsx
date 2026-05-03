@@ -131,6 +131,11 @@ export default function OrderShell() {
         skippedProgress: 'התשלום מדולג: הצג התקדמות הזמנה',
         createInvite: 'צור קישור הזמנה',
         explainOrder: 'הסבר את ההזמנה',
+        noTimer: 'ללא טיימר',
+        noTimerOrder: 'הזמנה ידנית',
+        noTimerBody: 'ההזמנה פתוחה עד שתסגור אותה ידנית.',
+        closeOrder: 'סגור הזמנה',
+        closingOrder: 'סוגר...',
       }
     : {
         unableToLoad: 'Unable to load order.',
@@ -194,6 +199,11 @@ export default function OrderShell() {
         skippedProgress: 'Payment skipped: view order progress',
         createInvite: 'Create invite link',
         explainOrder: 'Explain this order',
+        noTimer: 'No timer',
+        noTimerOrder: 'Manual order',
+        noTimerBody: 'Order stays open until you close it manually.',
+        closeOrder: 'Close order',
+        closingOrder: 'Closing...',
       };
   const actionCopy = {
     changeTimer: isHebrew ? 'שנה' : 'Change',
@@ -438,8 +448,10 @@ export default function OrderShell() {
         <View style={styles.timerCard}>
           <View style={styles.timerHeader}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.kicker}>{copy.timerOrder}</Text>
-              <Text style={styles.timerValue}>{order.status === 'locked' ? copy.locked : timerLabel}</Text>
+              <Text style={styles.kicker}>{order.closes_at ? copy.timerOrder : copy.noTimerOrder}</Text>
+              <Text style={styles.timerValue}>
+                {order.status === 'locked' ? copy.locked : order.closes_at ? timerLabel : copy.noTimer}
+              </Text>
             </View>
             <Pressable
               accessibilityRole="button"
@@ -466,7 +478,7 @@ export default function OrderShell() {
               <Text style={styles.timerMetricValue}>{formatAgorot(freeShippingThreshold)}</Text>
             </View>
           </View>
-          <Text style={styles.timerBody}>{copy.timerBody}</Text>
+          <Text style={styles.timerBody}>{order.closes_at ? copy.timerBody : copy.noTimerBody}</Text>
           <Text style={styles.timerNote}>
             {editLocked || order.status === 'locked' ? copy.editsLocked : copy.editsOpen}
           </Text>
@@ -641,6 +653,16 @@ export default function OrderShell() {
             </Pressable>
           )}
           {!canShareOrder ? <Text style={styles.shareHint}>{actionCopy.shareHint}</Text> : null}
+          {!order.closes_at && order.creator_id === userId && ['open', 'paying'].includes(order.status) ? (
+            <SecondaryBtn
+              label={closeOrder.isPending ? copy.closingOrder : copy.closeOrder}
+              onPress={() => {
+                void closeOrder.mutateAsync(order.id).catch((e: unknown) => {
+                  pushToast(e instanceof Error ? e.message : copy.closingOrder, 'error');
+                });
+              }}
+            />
+          ) : null}
           <SecondaryBtn label={copy.explainOrder} onPress={() => setCartOpen(true)} />
         </View>
       </ScrollView>

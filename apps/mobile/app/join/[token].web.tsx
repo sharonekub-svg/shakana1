@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Image,
   Pressable,
   ScrollView,
@@ -9,6 +10,8 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { stashPendingInvite } from '@/lib/deeplinks';
+import { useAuthStore } from '@/stores/authStore';
+import { useClaimInvite } from '@/api/invites';
 
 const C = {
   bg: '#EEF1EE',
@@ -72,11 +75,30 @@ function Skeleton({ width, height }: { width: number | string; height: number })
 export default function JoinPreviewWeb() {
   const { token } = useLocalSearchParams<{ token: string }>();
   const router = useRouter();
+  const session = useAuthStore((s) => s.session);
+  const claim = useClaimInvite();
+  const [claiming, setClaiming] = useState(false);
+  const [claimError, setClaimError] = useState<string | null>(null);
   const [data, setData] = useState<OrderPreview | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Authenticated user arriving here (post-login redirect): skip preview, claim immediately.
+  useEffect(() => {
+    if (!token || !session || claiming) return;
+    setClaiming(true);
+    claim.mutateAsync(String(token))
+      .then((res) => {
+        router.replace(`/order/${res.orderId}` as any);
+      })
+      .catch((e: unknown) => {
+        setClaiming(false);
+        setClaimError(e instanceof Error ? e.message : 'invite_error');
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, session]);
 
   useEffect(() => {
     if (!token) return;
@@ -84,7 +106,7 @@ export default function JoinPreviewWeb() {
     fetch(url)
       .then((r) => r.json())
       .then((json: OrderPreview & { error?: string }) => {
-        if (json.error) {
+        if (json.error || !json.order) {
           setFetchError(true);
         } else {
           setData(json as OrderPreview);
@@ -121,6 +143,27 @@ export default function JoinPreviewWeb() {
     router.replace('/(auth)/phone' as any);
   };
 
+  if (claiming && !claimError) {
+    return (
+      <View style={[styles.root, styles.centerContent]}>
+        <Text style={styles.wordmark}>shakana</Text>
+        <ActivityIndicator color={C.acc} />
+      </View>
+    );
+  }
+
+  if (claimError) {
+    return (
+      <View style={[styles.root, styles.centerContent]}>
+        <Text style={styles.wordmark}>shakana</Text>
+        <Text style={styles.closedTitle}>ההזמנה הזאת נסגרה או לא קיימת</Text>
+        <Pressable style={styles.secondaryBtn} onPress={() => router.replace('/')}>
+          <Text style={styles.secondaryBtnText}>פתח הזמנה חדשה</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   if (loading) {
     return (
       <View style={styles.root}>
@@ -146,7 +189,7 @@ export default function JoinPreviewWeb() {
     );
   }
 
-  if (fetchError || !data) {
+  if (fetchError || !data || !data.order) {
     return (
       <View style={[styles.root, styles.centerContent]}>
         <Text style={styles.wordmark}>shakana</Text>

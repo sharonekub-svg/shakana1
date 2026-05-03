@@ -7,6 +7,7 @@ import { ScreenBase } from '@/components/primitives/ScreenBase';
 import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { useAuthStore } from '@/stores/authStore';
+import { consumePendingInvite } from '@/lib/deeplinks';
 import { consumePendingSharedProduct, peekPendingSharedProduct } from '@/lib/sharedProduct';
 import { useLocale } from '@/i18n/locale';
 
@@ -18,6 +19,11 @@ export default function Success() {
   useEffect(() => {
     const timer = setTimeout(() => {
       (async () => {
+        const pendingInvite = await consumePendingInvite();
+        if (pendingInvite) {
+          router.replace(`/join/${pendingInvite}` as any);
+          return;
+        }
         const shared = await peekPendingSharedProduct();
         if (shared) {
           await consumePendingSharedProduct().catch(() => {});

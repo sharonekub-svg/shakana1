@@ -110,6 +110,8 @@ export default function NewOrder() {
         pickupLocation: 'מיקום איסוף מועדף',
         pickupPlaceholder: 'לובי הבניין, נקודת איסוף, או הדירה שלך',
         pickupUncertain: 'מיקום האיסוף עשוי להשתנות לפי החנות או חברת המשלוחים',
+        noTimerLabel: 'ללא טיימר',
+        noTimerDesc: 'ההזמנה תישאר פתוחה עד שתסגור אותה ידנית.',
         min: 'דק׳',
         hr: 'שעה',
         day: 'יום',
@@ -180,6 +182,8 @@ export default function NewOrder() {
         pickupLocation: 'Preferred pickup location',
         pickupPlaceholder: 'Building lobby, pickup point, or your apartment',
         pickupUncertain: 'Pickup location may vary depending on the store/shipping provider',
+        noTimerLabel: 'No timer',
+        noTimerDesc: 'The order stays open until you close it manually.',
         min: 'min',
         hr: 'hr',
         day: 'day',
@@ -194,6 +198,7 @@ export default function NewOrder() {
   const [storeLabel, setStoreLabel] = useState(() => initialDraft?.storeLabel ?? (typeof params.store === 'string' ? params.store : ''));
   const [title, setTitle] = useState(() => initialDraft?.title ?? '');
   const [price, setPrice] = useState('');
+  const [noTimer, setNoTimer] = useState(false);
   const [timerValue, setTimerValue] = useState('30');
   const [timerUnit, setTimerUnit] = useState<(typeof TIMER_UNITS)[number]>('minutes');
   const [freeShippingThreshold, setFreeShippingThreshold] = useState('199');
@@ -323,7 +328,7 @@ export default function NewOrder() {
         storeLabel: sourceLabel.trim(),
         estimatedShippingAgorot: deliveryFeeAgorot,
         freeShippingThresholdAgorot,
-        timerMinutes: timerMinutesNumber,
+        timerMinutes: noTimer ? 0 : timerMinutesNumber,
         maxParticipants: participantCount,
         pickupResponsibleUserId: user!.id,
         preferredPickupLocation: pickupLocation.trim(),
@@ -412,32 +417,21 @@ export default function NewOrder() {
               <Text style={styles.stepBody}>{copy.timerShippingBody}</Text>
             </View>
           </View>
-          <View style={styles.timerPickRow}>
-            <View style={{ flex: 1 }}>
-              <NumField label={copy.timer} value={timerValue} onChange={setTimerValue} placeholder="30" />
-            </View>
-            <View style={styles.timerUnitWrap}>
-              {TIMER_UNITS.map((unit) => (
-                <Pressable
-                  key={unit}
-                  style={[styles.unitChip, timerUnit === unit && styles.unitChipActive]}
-                  onPress={() => setTimerUnit(unit)}
-                >
-                  <Text style={[styles.unitChipText, timerUnit === unit && styles.unitChipTextActive]}>
-                    {unit === 'minutes' ? copy.min : unit === 'hours' ? copy.hr : copy.day}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
           <View style={styles.timerPresetRow}>
+            <Pressable
+              style={[styles.timerPresetChip, noTimer && styles.timerPresetChipActive]}
+              onPress={() => setNoTimer(true)}
+            >
+              <Text style={[styles.timerPresetText, noTimer && styles.timerPresetTextActive]}>{copy.noTimerLabel}</Text>
+            </Pressable>
             {TIMER_PRESETS.map((preset) => {
-              const selected = timerValue === preset.value && timerUnit === preset.unit;
+              const selected = !noTimer && timerValue === preset.value && timerUnit === preset.unit;
               return (
                 <Pressable
                   key={preset.label}
                   style={[styles.timerPresetChip, selected && styles.timerPresetChipActive]}
                   onPress={() => {
+                    setNoTimer(false);
                     setTimerValue(preset.value);
                     setTimerUnit(preset.unit);
                   }}
@@ -447,10 +441,36 @@ export default function NewOrder() {
               );
             })}
           </View>
-          <View style={styles.timerSummaryBox}>
-            <Text style={styles.timerSummaryLabel}>{copy.timerClosesIn}</Text>
-            <Text style={styles.timerSummaryValue}>{timerLabel}</Text>
-          </View>
+          {noTimer ? (
+            <View style={styles.timerSummaryBox}>
+              <Text style={styles.timerSummaryLabel}>{copy.noTimerDesc}</Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.timerPickRow}>
+                <View style={{ flex: 1 }}>
+                  <NumField label={copy.timer} value={timerValue} onChange={setTimerValue} placeholder="30" />
+                </View>
+                <View style={styles.timerUnitWrap}>
+                  {TIMER_UNITS.map((unit) => (
+                    <Pressable
+                      key={unit}
+                      style={[styles.unitChip, timerUnit === unit && styles.unitChipActive]}
+                      onPress={() => setTimerUnit(unit)}
+                    >
+                      <Text style={[styles.unitChipText, timerUnit === unit && styles.unitChipTextActive]}>
+                        {unit === 'minutes' ? copy.min : unit === 'hours' ? copy.hr : copy.day}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+              <View style={styles.timerSummaryBox}>
+                <Text style={styles.timerSummaryLabel}>{copy.timerClosesIn}</Text>
+                <Text style={styles.timerSummaryValue}>{timerLabel}</Text>
+              </View>
+            </>
+          )}
         </View>
 
         <View style={styles.productCard}>
@@ -530,7 +550,7 @@ export default function NewOrder() {
           <Text style={styles.planIntro}>{copy.timerPlanIntro}</Text>
           <View style={styles.planRow}>
             <Text style={styles.planLabel}>{copy.timerClosesIn}</Text>
-            <Text style={styles.planValue}>{timerLabel}</Text>
+            <Text style={styles.planValue}>{noTimer ? copy.noTimerLabel : timerLabel}</Text>
           </View>
           <View style={styles.planRow}>
             <Text style={styles.planLabel}>{copy.missingFreeDelivery}</Text>
