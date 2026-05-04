@@ -791,18 +791,37 @@ function chooseVariantOptions(html: string): { availableSizes: string[]; availab
     .replace(/&#39;|&apos;/gi, "'")
     .replace(/&nbsp;/gi, ' ');
 
+  const BED_SIZES_RE = /\b(Twin XL|California King|Cal King|Twin|Full|Double|Queen|King|Single|Euro King|Euro)\b/gi;
+  const SCREEN_SIZES_RE = /\b(32|40|43|50|55|65|75|85|98)\s*(?:"|inch|inches|״)\b/gi;
+
   const sizeCandidates = [
-    ...[...decoded.matchAll(/"(?:size|sizeName|displaySize|label)"\s*:\s*"(?<value>XXS|XS|S|M|L|XL|XXL|XXXL|[2-5]?\d(?:\.\d)?)"/gi)].map((m) => m.groups?.value),
-    ...[...decoded.matchAll(/\b(?:XXS|XS|S|M|L|XL|XXL|XXXL)\b/g)].map((m) => m[0]),
+    // JSON structured: explicit size fields
+    ...[...decoded.matchAll(/"(?:size|sizeName|displaySize|label|value|name)"\s*:\s*"(?<value>XXS|XS|S|M|L|XL|XXL|XXXL|[2-5][0-9](?:\.[05])?|Twin XL|California King|Cal King|Twin|Full|Double|Queen|King|Single)"/gi)].map((m) => m.groups?.value),
+    // Standalone clothing sizes (only unambiguous ones)
+    ...[...decoded.matchAll(/\b(XXS|XS|XL|XXL|XXXL)\b/g)].map((m) => m[0]),
+    // S, M, L only in JSON key-value context
+    ...[...decoded.matchAll(/"(?:size|sizeName|label)"\s*:\s*"([SML])"/gi)].map((m) => m[1]),
+    // Bed/furniture sizes
+    ...[...decoded.matchAll(BED_SIZES_RE)].map((m) => m[0]),
+    // Screen sizes (TV, monitor)
+    ...[...decoded.matchAll(SCREEN_SIZES_RE)].map((m) => m[1] + '"'),
+    // Shoe sizes EU 35–50
+    ...[...decoded.matchAll(/\b([3-5][0-9](?:\.5)?)\b/g)]
+      .map((m) => m[1])
+      .filter((v) => { const n = parseFloat(v); return n >= 35 && n <= 50; }),
+    // data-size, data-value attributes
+    ...[...decoded.matchAll(/data-(?:size|option-value)=["']([^"']{1,20})["']/gi)].map((m) => m[1]),
   ];
 
   const colorCandidates = [
     rawColor,
-    ...[...decoded.matchAll(/"(?:color|colorName|colour|colourName)"\s*:\s*"(?<value>[^"]{2,30})"/gi)].map((m) => m.groups?.value),
+    ...[...decoded.matchAll(/"(?:color|colorName|colour|colourName|swatchName|swatchLabel|colorLabel)"\s*:\s*"(?<value>[^"]{2,30})"/gi)].map((m) => m.groups?.value),
+    ...[...decoded.matchAll(/data-(?:color|colour|swatch|color-name|color-value)=["'](?<value>[^"']{2,30})["']/gi)].map((m) => m.groups?.value),
+    ...[...decoded.matchAll(/aria-label=["'][^"']*(?:color|colour)\s*[:/]\s*(?<value>[^"',]{2,25})["']/gi)].map((m) => m.groups?.value),
   ];
 
   return {
-    availableSizes: uniqueLimited(sizeCandidates, 8),
+    availableSizes: uniqueLimited(sizeCandidates, 10),
     availableColors: uniqueLimited(colorCandidates, 8),
   };
 }

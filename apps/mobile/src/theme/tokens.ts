@@ -18,6 +18,8 @@ export const colors = {
   white:     '#FFFFFF',
   ink:       '#1C1917', // warm near-black
   pink:      '#F5A9C7',
+  gold:      '#C9A84C',
+  goldLight: '#FBF4E0',
   card:      '#FFFFFF',
   cardSoft:  '#F2EFE9', // warm surface tint
   navy:      '#1C1917', // primary dark (warm charcoal, not cold navy)

@@ -30,7 +30,7 @@ export function PrimaryBtn({ onPress, disabled, loading, label, testID }: Props)
         styles.primary,
         shadow.cta,
         isOff && styles.primaryOff,
-        pressed && !isOff && { transform: [{ scale: 0.97 }] },
+        pressed && !isOff && { transform: [{ scale: 0.97 }], opacity: 0.82 },
       ]}
     >
       {loading && <ActivityIndicator size="small" color={colors.mu} style={{ marginEnd: 8 }} />}
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     width: '100%',
     minHeight: 54,
     borderRadius: radii.pill,
-    backgroundColor: colors.navy,
+    backgroundColor: colors.gold,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
