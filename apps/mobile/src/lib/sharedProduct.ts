@@ -803,6 +803,15 @@ function looksLikeRealSize(value: string): boolean {
   );
 }
 
+function looksLikeRealVariant(value: string): boolean {
+  const text = value.trim();
+  if (!text || text.length > 36) return false;
+  if (/^(?:true|false|null|undefined|default|select|choose|none|yes|no)$/i.test(text)) return false;
+  if (/^\d+$/.test(text) && text.length > 3) return false;
+  if (/https?:\/\//i.test(text)) return false;
+  return /[a-zא-ת]/i.test(text);
+}
+
 function chooseVariantOptions(html: string): { availableSizes: string[]; availableColors: string[] } {
   const jsonLd = readFirstJsonLdObject(html);
   const rawColor = jsonLd && typeof jsonLd.color === 'string' ? jsonLd.color : null;
@@ -824,10 +833,18 @@ function chooseVariantOptions(html: string): { availableSizes: string[]; availab
     rawColor,
     ...[...decoded.matchAll(/"(?:color|colorName|colour|colourName)"\s*:\s*"(?<value>[^"]{2,30})"/gi)].map((m) => m.groups?.value),
   ];
+  const flavorCandidates = [
+    ...[...decoded.matchAll(/"(?:flavor|flavour|flavorName|flavourName|taste|scent|variant|variantName|option|optionName|optionValue|variationName)"\s*:\s*"(?<value>[^"]{2,36})"/gi)]
+      .map((m) => m.groups?.value),
+    ...[...decoded.matchAll(/<(?:option|button)[^>]*(?:data-option|data-value|value|aria-label)=["'](?<value>[^"']{2,36})["'][^>]*>/gi)]
+      .map((m) => m.groups?.value),
+    ...[...decoded.matchAll(/(?:flavor|flavour|taste|טעם|טעמים)[^<>"']{0,80}<[^>]+>(?<value>[^<]{2,36})<\/[^>]+>/gi)]
+      .map((m) => m.groups?.value),
+  ].filter((value): value is string => Boolean(value && looksLikeRealVariant(value)));
 
   return {
     availableSizes: uniqueLimited(sizeCandidates, 8),
-    availableColors: uniqueLimited(colorCandidates, 8),
+    availableColors: uniqueLimited([...colorCandidates, ...flavorCandidates], 10),
   };
 }
 

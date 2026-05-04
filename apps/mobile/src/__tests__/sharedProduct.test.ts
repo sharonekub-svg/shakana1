@@ -361,6 +361,28 @@ describe('sharedProduct', () => {
     expect(insights.availableColors).toEqual(expect.arrayContaining(['Walnut', 'Black']));
   });
 
+  it('reads flavor options for drinks and supplements without inventing sizes', () => {
+    const draft = {
+      url: 'https://shop.cool-brand.co.il/products/energy-drink',
+      title: 'Energy Drink',
+      source: 'cool-brand',
+      storeLabel: 'Cool Brand',
+    };
+
+    const insights = summarizeSharedProduct(draft, `
+      <html>
+        <body>
+          {"flavorName":"Mango Passion"}
+          {"flavorName":"Blue Raspberry"}
+          {"variantName":"Zero Sugar"}
+        </body>
+      </html>
+    `);
+
+    expect(insights.availableSizes).toEqual([]);
+    expect(insights.availableColors).toEqual(expect.arrayContaining(['Mango Passion', 'Blue Raspberry', 'Zero Sugar']));
+  });
+
   it('cleans Amazon links and infers the product name from the title slug', () => {
     const draft = parseSharedProduct({
       url: 'https://www.amazon.com/-/he/%D7%9E%D7%97%D7%A9%D7%91-%D7%A0%D7%99%D7%99%D7%93-%D7%92%D7%99%D7%99%D7%9E%D7%99%D7%A0%D7%92-ASUS-Strix/dp/B0DZZWMB2L/ref=sr_1_1?_encoding=UTF8&keywords=gaming&qid=1777482031&sr=8-1&th=1',

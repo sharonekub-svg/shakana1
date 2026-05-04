@@ -207,7 +207,7 @@ export default function OrderShell() {
     wrongStore: isHebrew ? 'הלינק חייב להיות מאותה חנות של ההזמנה.' : 'The link must be from the same store as this order.',
     noOptionsFound: isHebrew ? 'לא נמצאו מידות או צבעים בדף הזה, אז אין צורך לבחור.' : 'No sizes or colors were found on this product page, so no option is required.',
     chooseSize: isHebrew ? 'בחר מידה' : 'Choose size',
-    chooseColor: isHebrew ? 'בחר צבע' : 'Choose color',
+    chooseColor: isHebrew ? 'בחר צבע / טעם / אפשרות' : 'Choose color / flavor / option',
     optionRequired: isHebrew ? 'בחר את האפשרויות שנמצאו בדף לפני הוספה לסל.' : 'Choose the options found on the page before adding to cart.',
   };
   const userId = useAuthStore((s) => s.user?.id);
@@ -416,7 +416,7 @@ export default function OrderShell() {
       ref: itemRef,
       size: [
         itemSize.trim() ? `${isHebrew ? 'מידה' : 'Size'}: ${itemSize.trim()}` : null,
-        itemColor.trim() ? `${isHebrew ? 'צבע' : 'Color'}: ${itemColor.trim()}` : null,
+        itemColor.trim() ? `${isHebrew ? 'צבע/טעם' : 'Color/flavor'}: ${itemColor.trim()}` : null,
       ].filter(Boolean).join(' | ') || null,
       priceAgorot: itemPriceAgorot,
     });
@@ -603,8 +603,12 @@ export default function OrderShell() {
           <View style={styles.storeBanner}>
             <Text style={styles.storeBannerLabel}>{actionCopy.requiredStore}</Text>
             <Text style={styles.storeBannerName}>{order.store_label ?? copy.store}</Text>
+            <Text style={styles.storeBannerBody}>{actionCopy.addLinkFirst}</Text>
           </View>
-          <Text style={styles.pickupBody}>{actionCopy.addLinkFirst}</Text>
+          <View style={styles.savingsStrip}>
+            <Text style={styles.savingsStripLabel}>{copy.shippingSaved}</Text>
+            <Text style={styles.savingsStripValue}>{formatAgorot(shippingSaved)}</Text>
+          </View>
           <Field label={copy.productLink} value={itemRef} onChange={setItemRef} placeholder="https://..." ltr />
           {itemInsightsLoading ? <Text style={styles.requiredHint}>{actionCopy.readingItem}</Text> : null}
           {itemStoreError ? <Text style={styles.errorInline}>{itemStoreError}</Text> : null}
@@ -794,11 +798,11 @@ const styles = StyleSheet.create({
   slotText: { fontFamily: fontFamily.bodySemi, fontSize: 14, color: colors.tx },
   slotEmpty: { fontFamily: fontFamily.body, fontSize: 14, color: colors.mu },
   pickupCard: {
-    gap: 8,
-    padding: 16,
+    gap: 10,
+    padding: 18,
     borderWidth: 1,
-    borderColor: colors.brBr,
-    borderRadius: radii.lg,
+    borderColor: colors.br,
+    borderRadius: 24,
     backgroundColor: colors.white,
   },
   costCard: {
@@ -896,9 +900,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   storeBanner: {
-    gap: 4,
-    padding: 16,
-    borderRadius: radii.lg,
+    gap: 8,
+    padding: 20,
+    borderRadius: 26,
     backgroundColor: colors.navy,
   },
   storeBannerLabel: {
@@ -910,9 +914,39 @@ const styles = StyleSheet.create({
   },
   storeBannerName: {
     fontFamily: fontFamily.display,
-    fontSize: 30,
+    fontSize: 42,
+    lineHeight: 48,
     color: colors.white,
-    letterSpacing: -1,
+    letterSpacing: -1.6,
+  },
+  storeBannerBody: {
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 13,
+    lineHeight: 20,
+    color: 'rgba(255,255,255,0.78)',
+  },
+  savingsStrip: {
+    minHeight: 76,
+    borderRadius: 22,
+    backgroundColor: colors.lime,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.acc,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  savingsStripLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
+    color: colors.tx,
+    flex: 1,
+  },
+  savingsStripValue: {
+    fontFamily: fontFamily.display,
+    fontSize: 28,
+    color: colors.tx,
   },
   detectedProductCard: {
     gap: 5,
