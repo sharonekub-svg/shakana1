@@ -728,7 +728,7 @@ export default function OrderShell() {
                 {generateInvite.isPending ? '...' : canShareOrder ? actionCopy.shareAction : actionCopy.chooseBeforeShare}
               </Text>
             </Pressable>
-          )}
+          ) : null}
           {!canShareOrder ? <Text style={styles.shareHint}>{actionCopy.shareHint}</Text> : null}
           {!order.closes_at && order.creator_id === userId && ['open', 'paying'].includes(order.status) ? (
             <SecondaryBtn
