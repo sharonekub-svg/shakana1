@@ -197,9 +197,30 @@ function looksLikeNonProductPage(url: URL): boolean {
   return /\/(?:cart|basket|checkout|login|account|search|wishlist)(?:\/|$)/i.test(path);
 }
 
+function looksLikeGenericProductPage(url: URL): boolean {
+  if (looksLikeNonProductPage(url)) return false;
+  const path = decodeURIComponent(url.pathname).toLowerCase();
+  const segments = path.split('/').filter(Boolean);
+  if (segments.length === 0) return false;
+
+  if (/\/(?:p|product|products|item|items|sku|catalog|shop|goods|prod)(?:\/|-|_|\.)/i.test(path)) return true;
+  if (/\b(?:product|item|sku|model|pid|variant|id)\b/i.test(url.search)) return true;
+  if (segments.some((segment) => /(?:^|[-_])(?:p|sku|item)\d{3,}|[a-z0-9-_%]+-\d{3,}$/i.test(segment))) return true;
+  if (segments.length >= 2 && /[a-zא-ת]/i.test(segments[segments.length - 1] ?? '')) return true;
+
+  return false;
+}
+
 function parseCleanUrl(raw: string): URL | null {
   try {
-    const url = new URL(cleanRawUrl(raw));
+    const cleaned = cleanRawUrl(raw);
+    const withProtocol = /^https?:\/\//i.test(cleaned)
+      ? cleaned
+      : /^(?:www\.)?[a-z0-9][a-z0-9.-]+\.[a-z]{2,}(?:\/|$)/i.test(cleaned)
+        ? `https://${cleaned}`
+        : cleaned;
+    const url = new URL(withProtocol);
+    if (url.protocol === 'http:') url.protocol = 'https:';
     if (url.protocol !== 'https:') return null;
     return url;
   } catch {
@@ -210,14 +231,14 @@ function parseCleanUrl(raw: string): URL | null {
 function safeProductUrl(raw: string): URL | null {
   const url = parseCleanUrl(raw);
   if (!url) return null;
+  if (looksLikeNonProductPage(url)) return null;
   const brand = getBrandConfig(url.hostname);
-  if (!brand) return url;
-  return brand.productPathTest(url) ? url : null;
+  if (!brand) return looksLikeGenericProductPage(url) ? url : null;
+  return brand.productPathTest(url) || looksLikeGenericProductPage(url) ? url : null;
 }
 
 function likelyProductUrl(raw: string): URL | null {
   const url = safeProductUrl(raw);
-  if (!url || looksLikeNonProductPage(url)) return null;
   return url;
 }
 
@@ -257,7 +278,7 @@ function cleanRawUrl(raw: string): string {
 }
 
 function getCandidateUrls(text: string): string[] {
-  const matches = text.match(/https?:\/\/[^\s<>"']+/gi) ?? [];
+  const matches = text.match(/(?:https?:\/\/|www\.)[^\s<>"']+/gi) ?? [];
   const decodedMatches = matches.flatMap((candidate) => {
     try {
       const url = new URL(cleanRawUrl(candidate));

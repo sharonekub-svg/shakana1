@@ -151,6 +151,40 @@ describe('sharedProduct', () => {
     });
   });
 
+  it('accepts product-looking links from any store, not only configured stores', () => {
+    expect(
+      parseSharedProduct({
+        url: 'www.random-store.example/products/sour-energy-mango-330ml?utm_source=ad&variant=blue',
+      }),
+    ).toEqual({
+      url: 'https://www.random-store.example/products/sour-energy-mango-330ml?variant=blue',
+      title: 'Sour Energy Mango 330ml',
+      source: 'random-store',
+      storeLabel: 'Random Store',
+      rawText: undefined,
+    });
+  });
+
+  it('lets configured stores fall back to generic product detection', () => {
+    expect(
+      parseSharedProduct({
+        url: 'https://www.zara.com/il/he/products/special-drop-shirt-12345?utm_medium=share',
+      }),
+    ).toEqual({
+      url: 'https://www.zara.com/il/he/products/special-drop-shirt-12345',
+      title: 'Special Drop Shirt',
+      source: 'zara',
+      storeLabel: 'Zara',
+      rawText: undefined,
+    });
+  });
+
+  it('still rejects obvious non-product pages from any store', () => {
+    expect(parseSharedProduct({ url: 'https://shop.cool-brand.co.il/cart' })).toBeNull();
+    expect(parseSharedProduct({ url: 'https://shop.cool-brand.co.il/search?q=shirt' })).toBeNull();
+    expect(parseSharedProduct({ url: 'https://shop.cool-brand.co.il/' })).toBeNull();
+  });
+
   it('detects KSP product links and does not use the app-shell title as the product name', () => {
     const draft = parseSharedProduct({
       url: 'https://ksp.co.il/web/item/330386?utm_source=share&ref=abc',
