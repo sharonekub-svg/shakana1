@@ -14,15 +14,16 @@ import { useAuthStore } from '@/stores/authStore';
 import { useClaimInvite } from '@/api/invites';
 
 const C = {
-  bg: '#EEF1EE',
-  tx: '#101814',
-  mu: '#66746B',
-  acc: '#0F7A43',
-  accLight: '#E4F5EA',
-  br: '#DCE7DE',
+  bg: '#F8F7F2',
+  tx: '#111111',
+  mu: '#68635D',
+  acc: '#0B6B3A',
+  accLight: '#EAF4E7',
+  lime: '#DDF8B7',
+  br: '#E6E0D7',
   white: '#FFFFFF',
   err: '#E45B5B',
-  skel: '#E8EDEB',
+  skel: '#F1EEE8',
 };
 
 type OrderPreview = {
@@ -253,6 +254,14 @@ export default function JoinPreviewWeb() {
           <Text style={styles.storeName}>{order.store_label}</Text>
         </View>
 
+        <View style={styles.storeSign}>
+          <Text style={styles.storeSignKicker}>החנות של ההזמנה</Text>
+          <Text style={styles.storeSignName}>{order.store_label || 'Store'}</Text>
+          <Text style={styles.storeSignBody}>
+            כדי להצטרף נכון, הדבק כאן רק לינק מוצר מאותה חנות. Shakana תבדוק את המחיר, המשלוח והאפשרויות לפי הלינק.
+          </Text>
+        </View>
+
         {/* Product card */}
         <View style={styles.productCard}>
           {order.product_image ? (
@@ -357,13 +366,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 32,
     paddingBottom: 100,
-    maxWidth: 480,
+    maxWidth: 620,
     width: '100%',
     alignSelf: 'center',
     gap: 20,
   },
   header: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 4,
   },
   wordmark: {
@@ -378,11 +387,40 @@ const styles = StyleSheet.create({
     color: C.mu,
     fontFamily: 'Rubik',
   },
+  storeSign: {
+    backgroundColor: C.tx,
+    borderRadius: 24,
+    padding: 20,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#24211D',
+  },
+  storeSignKicker: {
+    color: 'rgba(255,255,255,0.68)',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1,
+    fontFamily: 'Rubik',
+  },
+  storeSignName: {
+    color: C.white,
+    fontSize: 42,
+    lineHeight: 48,
+    fontWeight: '800',
+    letterSpacing: -1.5,
+    fontFamily: 'Rubik',
+  },
+  storeSignBody: {
+    color: 'rgba(255,255,255,0.78)',
+    fontSize: 14,
+    lineHeight: 21,
+    fontFamily: 'Rubik',
+  },
   productCard: {
     backgroundColor: C.white,
     borderWidth: 1,
     borderColor: C.br,
-    borderRadius: 16,
+    borderRadius: 24,
     overflow: 'hidden',
   },
   productImage: {
@@ -499,7 +537,7 @@ const styles = StyleSheet.create({
   ctaBtn: {
     width: '100%',
     maxWidth: 480,
-    backgroundColor: C.acc,
+    backgroundColor: C.tx,
     borderRadius: 999,
     paddingVertical: 16,
     alignItems: 'center',

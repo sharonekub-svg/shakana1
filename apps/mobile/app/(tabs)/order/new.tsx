@@ -224,7 +224,6 @@ export default function NewOrder() {
   const urlCheck = productUrlSchema.safeParse(url);
   const parsedPriceAgorot = Math.floor(Number(price) * 100);
   const priceAgorot = insights?.priceAgorot ?? (Number.isFinite(parsedPriceAgorot) && parsedPriceAgorot > 0 ? parsedPriceAgorot : 0);
-  const participantCount = insights?.recommendedParticipants ?? 3;
   const rawTimerValue = Math.max(1, Math.floor(Number(timerValue)) || 30);
   const timerMinutesNumber = Math.max(5, Math.min(10080, timerUnitToMinutes(rawTimerValue, timerUnit)));
   const timerLabel = formatCompactDuration(timerMinutesNumber * 60_000);
@@ -247,12 +246,12 @@ export default function NewOrder() {
     freeShippingThresholdAgorot > 0 ? formatAgorot(freeShippingGapAgorot) : copy.unknownThreshold;
   const dealLabel = insights?.promotionText || insights?.dealSummary || copy.noDeal;
   const deliveryFeeLabel = insightsLoading ? copy.readingProduct : formatAgorot(deliveryFeeAgorot);
+  const fallbackPickupLocation = language === 'he' ? 'יתואם אחרי פתיחת ההזמנה' : 'Will be coordinated after opening the order';
   const valid =
     urlCheck.success &&
     sourceLabel.trim().length > 1 &&
     productName.trim().length > 1 &&
     priceAgorot > 0 &&
-    pickupLocation.trim().length > 2 &&
     Boolean(user?.id);
 
   useEffect(() => {
@@ -329,9 +328,9 @@ export default function NewOrder() {
         estimatedShippingAgorot: deliveryFeeAgorot,
         freeShippingThresholdAgorot,
         timerMinutes: noTimer ? 0 : timerMinutesNumber,
-        maxParticipants: participantCount,
+        maxParticipants: 12,
         pickupResponsibleUserId: user!.id,
-        preferredPickupLocation: pickupLocation.trim(),
+        preferredPickupLocation: pickupLocation.trim() || fallbackPickupLocation,
       });
       router.replace(`/order/${order.id}`);
     } catch (e) {

@@ -9,6 +9,7 @@ import { fontFamily } from '@/theme/fonts';
 import { useAuthStore } from '@/stores/authStore';
 import { useUserOrders } from '@/api/orders';
 import { formatAgorot } from '@/utils/format';
+import { formatCompactDuration } from '@/utils/timer';
 import { track } from '@/lib/posthog';
 import { useLocale } from '@/i18n/locale';
 
@@ -32,6 +33,13 @@ export default function OrdersTab() {
   const { data: orders = [], isLoading } = useUserOrders(user?.id);
   const openOrders = orders.filter((order) => !['completed', 'cancelled'].includes(order.status)).length;
   const completedOrders = orders.filter((order) => order.status === 'completed').length;
+  const orderTimingLabel = (closesAt?: string | null) => {
+    if (!closesAt) return language === 'he' ? 'ללא טיימר' : 'No timer';
+    const remaining = new Date(closesAt).getTime() - Date.now();
+    return remaining > 0
+      ? `${language === 'he' ? 'נסגר בעוד' : 'closes in'} ${formatCompactDuration(remaining)}`
+      : language === 'he' ? 'הטיימר הסתיים' : 'timer ended';
+  };
 
   const STATUS_LABEL: Record<string, Record<string, string>> = {
     open: { he: 'פתוחה', en: 'OPEN' },
@@ -114,7 +122,7 @@ export default function OrdersTab() {
                 {item.product_title ?? item.product_url}
               </Text>
               <Text style={styles.rowSub}>
-                {formatAgorot(item.product_price_agorot)} · {item.max_participants} {t('tabs.orders.seats')}
+                {formatAgorot(item.product_price_agorot)} · {orderTimingLabel(item.closes_at)}
                 {item.estimated_shipping_agorot ? ` · ${formatAgorot(item.estimated_shipping_agorot)} ${language === 'he' ? 'משלוח' : 'shipping'}` : ''}
               </Text>
             </Pressable>

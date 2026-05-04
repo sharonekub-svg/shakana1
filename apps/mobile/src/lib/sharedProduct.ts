@@ -69,6 +69,15 @@ const CURRENCY_TO_ILS_AGOROT: Record<string, number> = {
   GBP: 424,
 };
 
+const SHEKEL_MARKERS = ['₪', 'ש"ח', 'ש״ח', 'ILS', 'NIS'];
+
+function normalizeCurrencyMarkers(raw: string | number): string {
+  return String(raw)
+    .replace(/&#8362;|&shekel;/gi, '₪')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/ש["״׳']?ח/g, 'ש"ח');
+}
+
 type BrandConfig = {
   source: string;
   brandName: string;
@@ -430,8 +439,8 @@ function chooseImage(html: string): string | null {
 }
 
 function detectCurrency(raw: string | number): keyof typeof CURRENCY_TO_ILS_AGOROT {
-  const text = String(raw);
-  if (/₪|ש["״]?ח|NIS|ILS/i.test(text)) return 'ILS';
+  const text = normalizeCurrencyMarkers(raw);
+  if (SHEKEL_MARKERS.some((marker) => text.toUpperCase().includes(marker.toUpperCase()))) return 'ILS';
   if (/€|EUR/i.test(text)) return 'EUR';
   if (/£|GBP/i.test(text)) return 'GBP';
   if (/\$|USD/i.test(text)) return 'USD';
@@ -441,7 +450,7 @@ function detectCurrency(raw: string | number): keyof typeof CURRENCY_TO_ILS_AGOR
 function parseMoneyToAgorot(raw: string | number | null | undefined): number | null {
   if (raw == null) return null;
   const currency = detectCurrency(raw);
-  const text = String(raw).replace(/[^\d.,-]/g, '');
+  const text = normalizeCurrencyMarkers(raw).replace(/[^\d.,-]/g, '');
   if (!text) return null;
   const normalized = (() => {
     if (text.includes(',') && text.includes('.')) return text.replace(/,/g, '');
@@ -783,6 +792,26 @@ function uniqueLimited(values: Array<string | null | undefined>, limit = 10): st
   return clean;
 }
 
+function looksLikeRealSize(value: string): boolean {
+  const text = value.trim();
+  if (!text || text.length > 40) return false;
+  return (
+    /^(?:XXS|XS|S|M|L|XL|XXL|XXXL)$/i.test(text) ||
+    /^(?:Twin|Full|Queen|King|California King|Single|Double)$/i.test(text) ||
+    /^\d{1,3}(?:\.\d)?(?:\s?(?:cm|mm|m|in|inch|inches|ft|feet|["']))?(?:\s?[xX×]\s?\d{1,3}(?:\.\d)?(?:\s?(?:cm|mm|m|in|inch|inches|ft|feet|["']))?){0,2}$/i.test(text) ||
+    /^\d{1,2}(?:\.\d)?\s?(?:US|UK|EU)$/i.test(text)
+  );
+}
+
+function looksLikeRealVariant(value: string): boolean {
+  const text = value.trim();
+  if (!text || text.length > 36) return false;
+  if (/^(?:true|false|null|undefined|default|select|choose|none|yes|no)$/i.test(text)) return false;
+  if (/^\d+$/.test(text) && text.length > 3) return false;
+  if (/https?:\/\//i.test(text)) return false;
+  return /[a-zא-ת]/i.test(text);
+}
+
 function chooseVariantOptions(html: string): { availableSizes: string[]; availableColors: string[] } {
   const jsonLd = readFirstJsonLdObject(html);
   const rawColor = jsonLd && typeof jsonLd.color === 'string' ? jsonLd.color : null;
@@ -791,27 +820,19 @@ function chooseVariantOptions(html: string): { availableSizes: string[]; availab
     .replace(/&#39;|&apos;/gi, "'")
     .replace(/&nbsp;/gi, ' ');
 
-  const BED_SIZES_RE = /\b(Twin XL|California King|Cal King|Twin|Full|Double|Queen|King|Single|Euro King|Euro)\b/gi;
-  const SCREEN_SIZES_RE = /\b(32|40|43|50|55|65|75|85|98)\s*(?:"|inch|inches|״)\b/gi;
-
-  const sizeCandidates = [
-    // JSON structured: explicit size fields
-    ...[...decoded.matchAll(/"(?:size|sizeName|displaySize|label|value|name)"\s*:\s*"(?<value>XXS|XS|S|M|L|XL|XXL|XXXL|[2-5][0-9](?:\.[05])?|Twin XL|California King|Cal King|Twin|Full|Double|Queen|King|Single)"/gi)].map((m) => m.groups?.value),
-    // Standalone clothing sizes (only unambiguous ones)
-    ...[...decoded.matchAll(/\b(XXS|XS|XL|XXL|XXXL)\b/g)].map((m) => m[0]),
-    // S, M, L only in JSON key-value context
-    ...[...decoded.matchAll(/"(?:size|sizeName|label)"\s*:\s*"([SML])"/gi)].map((m) => m[1]),
-    // Bed/furniture sizes
-    ...[...decoded.matchAll(BED_SIZES_RE)].map((m) => m[0]),
-    // Screen sizes (TV, monitor)
-    ...[...decoded.matchAll(SCREEN_SIZES_RE)].map((m) => m[1] + '"'),
-    // Shoe sizes EU 35–50
-    ...[...decoded.matchAll(/\b([3-5][0-9](?:\.5)?)\b/g)]
-      .map((m) => m[1])
-      .filter((v) => { const n = parseFloat(v); return n >= 35 && n <= 50; }),
-    // data-size, data-value attributes
-    ...[...decoded.matchAll(/data-(?:size|option-value)=["']([^"']{1,20})["']/gi)].map((m) => m[1]),
-  ];
+  const explicitSizeValues = [...decoded.matchAll(/"(?:size|sizeName|displaySize|selectedSize|variationSize|dimensions?)"\s*:\s*"(?<value>[^"]{1,40})"/gi)]
+    .map((m) => m.groups?.value)
+    .filter((value): value is string => Boolean(value && looksLikeRealSize(value)));
+  const dimensionValues = [...decoded.matchAll(/\b(?<value>\d{1,3}(?:\.\d)?\s?(?:cm|mm|m|in|inch|inches|ft|feet|["'])?\s?[xX×]\s?\d{1,3}(?:\.\d)?\s?(?:cm|mm|m|in|inch|inches|ft|feet|["'])?(?:\s?[xX×]\s?\d{1,3}(?:\.\d)?\s?(?:cm|mm|m|in|inch|inches|ft|feet|["'])?)?)\b/gi)]
+    .map((m) => m.groups?.value);
+  const namedSizeValues = [...decoded.matchAll(/\b(?<value>Twin XL|California King|Cal King|Twin|Full|Queen|King|Single|Double|Euro King|Euro)\b/gi)]
+    .map((m) => m.groups?.value);
+  const screenSizeValues = [...decoded.matchAll(/\b(32|40|43|50|55|65|75|85|98)\s*(?:"|inch|inches|״)\b/gi)]
+    .map((m) => m[1] + '"');
+  const dataSizeValues = [...decoded.matchAll(/data-(?:size|option-value)=["']([^"']{1,20})["']/gi)]
+    .map((m) => m[1])
+    .filter((v) => looksLikeRealSize(v));
+  const sizeCandidates = [...explicitSizeValues, ...dimensionValues, ...namedSizeValues, ...screenSizeValues, ...dataSizeValues];
 
   const colorCandidates = [
     rawColor,
@@ -819,10 +840,18 @@ function chooseVariantOptions(html: string): { availableSizes: string[]; availab
     ...[...decoded.matchAll(/data-(?:color|colour|swatch|color-name|color-value)=["'](?<value>[^"']{2,30})["']/gi)].map((m) => m.groups?.value),
     ...[...decoded.matchAll(/aria-label=["'][^"']*(?:color|colour)\s*[:/]\s*(?<value>[^"',]{2,25})["']/gi)].map((m) => m.groups?.value),
   ];
+  const flavorCandidates = [
+    ...[...decoded.matchAll(/"(?:flavor|flavour|flavorName|flavourName|taste|scent|variant|variantName|option|optionName|optionValue|variationName)"\s*:\s*"(?<value>[^"]{2,36})"/gi)]
+      .map((m) => m.groups?.value),
+    ...[...decoded.matchAll(/<(?:option|button)[^>]*(?:data-option|data-value|value|aria-label)=["'](?<value>[^"']{2,36})["'][^>]*>/gi)]
+      .map((m) => m.groups?.value),
+    ...[...decoded.matchAll(/(?:flavor|flavour|taste|טעם|טעמים)[^<>"']{0,80}<[^>]+>(?<value>[^<]{2,36})<\/[^>]+>/gi)]
+      .map((m) => m.groups?.value),
+  ].filter((value): value is string => Boolean(value && looksLikeRealVariant(value)));
 
   return {
     availableSizes: uniqueLimited(sizeCandidates, 10),
-    availableColors: uniqueLimited(colorCandidates, 8),
+    availableColors: uniqueLimited([...colorCandidates, ...flavorCandidates], 10),
   };
 }
 

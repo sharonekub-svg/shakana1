@@ -249,6 +249,21 @@ describe('sharedProduct', () => {
     expect(insights.priceAgorot).toBe(104900);
   });
 
+  it('reads Israeli price formats with shekel text and HTML entities', () => {
+    const draft = {
+      url: 'https://shop.cool-brand.co.il/products/local-price',
+      title: 'Local Price',
+      source: 'cool-brand',
+      storeLabel: 'Cool Brand',
+    };
+
+    const shekelText = summarizeSharedProduct(draft, '<p>מחיר מוצר: 1,299 ש"ח</p>');
+    const shekelEntity = summarizeSharedProduct(draft, '<p>Price: &#8362;899.90</p>');
+
+    expect(shekelText.priceAgorot).toBe(129900);
+    expect(shekelEntity.priceAgorot).toBe(89990);
+  });
+
   it('reads generic JSON-LD offer arrays and delivery fees', () => {
     const draft = {
       url: 'https://shop.cool-brand.co.il/products/noise-cancelling-headphones',
@@ -303,6 +318,69 @@ describe('sharedProduct', () => {
     expect(insights.freeShippingThresholdAgorot).toBe(19900);
     expect(insights.amountMissingForFreeShippingAgorot).toBe(6910);
     expect(insights.deliveryFeeAgorot).toBe(3000);
+  });
+
+  it('does not invent clothing sizes for non-apparel product pages', () => {
+    const draft = {
+      url: 'https://www.amazon.com/example-bed/dp/B000000000',
+      title: 'Storage Bed',
+      source: 'amazon' as const,
+      storeLabel: 'Amazon',
+    };
+
+    const insights = summarizeSharedProduct(draft, `
+      <html>
+        <head><meta property="product:price:amount" content="899" /></head>
+        <body>
+          Storage bed with metal frame. This script has random letters S M L but no variant data.
+        </body>
+      </html>
+    `);
+
+    expect(insights.availableSizes).toEqual([]);
+  });
+
+  it('reads real product variant sizes when the store publishes them', () => {
+    const draft = {
+      url: 'https://www.amazon.com/example-bed/dp/B000000001',
+      title: 'Storage Bed',
+      source: 'amazon' as const,
+      storeLabel: 'Amazon',
+    };
+
+    const insights = summarizeSharedProduct(draft, `
+      <html>
+        <body>
+          {"dimensions":"Queen","colorName":"Walnut"}
+          {"dimensions":"King","colorName":"Black"}
+        </body>
+      </html>
+    `);
+
+    expect(insights.availableSizes).toEqual(expect.arrayContaining(['Queen', 'King']));
+    expect(insights.availableColors).toEqual(expect.arrayContaining(['Walnut', 'Black']));
+  });
+
+  it('reads flavor options for drinks and supplements without inventing sizes', () => {
+    const draft = {
+      url: 'https://shop.cool-brand.co.il/products/energy-drink',
+      title: 'Energy Drink',
+      source: 'cool-brand',
+      storeLabel: 'Cool Brand',
+    };
+
+    const insights = summarizeSharedProduct(draft, `
+      <html>
+        <body>
+          {"flavorName":"Mango Passion"}
+          {"flavorName":"Blue Raspberry"}
+          {"variantName":"Zero Sugar"}
+        </body>
+      </html>
+    `);
+
+    expect(insights.availableSizes).toEqual([]);
+    expect(insights.availableColors).toEqual(expect.arrayContaining(['Mango Passion', 'Blue Raspberry', 'Zero Sugar']));
   });
 
   it('cleans Amazon links and infers the product name from the title slug', () => {

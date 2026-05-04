@@ -18,7 +18,7 @@ import { formatCompactDuration } from '@/utils/timer';
 import type { Participant } from '@/types/domain';
 import { useLocale } from '@/i18n/locale';
 import { buildInviteUrl } from '@/lib/deeplinks';
-import { loadSharedProductInsights, parseSharedProduct } from '@/lib/sharedProduct';
+import { loadSharedProductInsights, parseSharedProduct, type SharedProductInsights } from '@/lib/sharedProduct';
 import { fetchProductPageHtml } from '@/api/productInsights';
 
 const DEFAULT_DELIVERY_FEE_AGOROT = 3000;
@@ -62,7 +62,6 @@ export default function OrderShell() {
   const copy = isHebrew
     ? {
         unableToLoad: 'לא הצלחנו לטעון את ההזמנה.',
-        noTimer: 'אין טיימר',
         mainProduct: 'המוצר הראשי',
         productAdded: 'המוצר נוסף לסל המשותף.',
         order: 'הזמנה',
@@ -130,7 +129,6 @@ export default function OrderShell() {
       }
     : {
         unableToLoad: 'Unable to load order.',
-        noTimer: 'No timer',
         mainProduct: 'Main product',
         productAdded: 'Product added to the shared cart.',
         order: 'Order',
@@ -203,6 +201,14 @@ export default function OrderShell() {
       ? 'בחר מידה וצבע כדי שהקישור לוואטסאפ יישלח עם פרטי הזמנה נכונים.'
       : 'Choose size and color so the WhatsApp link includes the correct order details.',
     shareAction: isHebrew ? 'שתף ב-WhatsApp' : 'Share on WhatsApp',
+    requiredStore: isHebrew ? 'החנות להזמנה הזאת' : 'Store for this order',
+    addLinkFirst: isHebrew ? 'אפשר להדביק לינק מוצר נוסף מאותה חנות' : 'Paste another product link from the same store',
+    readingItem: isHebrew ? 'קורא את הלינק...' : 'Reading link...',
+    wrongStore: isHebrew ? 'הלינק חייב להיות מאותה חנות של ההזמנה.' : 'The link must be from the same store as this order.',
+    noOptionsFound: isHebrew ? 'לא נמצאו מידות או צבעים בדף הזה, אז אין צורך לבחור.' : 'No sizes or colors were found on this product page, so no option is required.',
+    chooseSize: isHebrew ? 'בחר מידה' : 'Choose size',
+    chooseColor: isHebrew ? 'בחר צבע / טעם / אפשרות' : 'Choose color / flavor / option',
+    optionRequired: isHebrew ? 'בחר את האפשרויות שנמצאו בדף לפני הוספה לסל.' : 'Choose the options found on the page before adding to cart.',
   };
   const userId = useAuthStore((s) => s.user?.id);
   const pushToast = useUiStore((s) => s.pushToast);
@@ -219,12 +225,17 @@ export default function OrderShell() {
   const [itemRef, setItemRef] = useState('');
   const [detectedSizes, setDetectedSizes] = useState<string[]>([]);
   const [detectedColors, setDetectedColors] = useState<string[]>([]);
+  const [itemInsights, setItemInsights] = useState<SharedProductInsights | null>(null);
+  const [itemInsightsLoading, setItemInsightsLoading] = useState(false);
+  const [itemStoreError, setItemStoreError] = useState('');
 
   const order = data?.order;
   const me = data?.participants.find((p) => p.user_id === userId);
   const participantCount = data?.participants.length ?? 0;
   const cartItems = data?.items ?? [];
   const loadErrorMessage = error instanceof Error ? error.message : typeof error === 'string' ? error : null;
+  const sizeOptions = detectedSizes;
+  const colorOptions = detectedColors;
 
   useEffect(() => {
     if (!order || !me) return;
@@ -270,6 +281,55 @@ export default function OrderShell() {
   }, [order?.product_title, order?.product_url, order?.store_label]);
 
   useEffect(() => {
+    const draft = parseSharedProduct({
+      url: itemRef,
+      title: itemTitle,
+      manualStoreLabel: order?.store_label,
+    });
+    if (!draft || !order) {
+      setItemStoreError('');
+      setItemInsights(null);
+      return;
+    }
+
+    const sameStore = !order.store_key || order.store_key === 'manual' || draft.source === order.store_key;
+    if (!sameStore) {
+      setItemStoreError(actionCopy.wrongStore);
+      setItemInsights(null);
+      setDetectedSizes([]);
+      setDetectedColors([]);
+      return;
+    }
+
+    let active = true;
+    setItemStoreError('');
+    setItemInsightsLoading(true);
+
+    void loadSharedProductInsights(draft, fetchProductPageHtml)
+      .then((insights) => {
+        if (!active) return;
+        setItemInsights(insights);
+        setDetectedSizes(insights.availableSizes);
+        setDetectedColors(insights.availableColors);
+        setItemTitle((prev) => prev.trim() ? prev : insights.title);
+        if (insights.priceAgorot) {
+          setItemPrice((insights.priceAgorot / 100).toFixed(2).replace(/\.00$/, ''));
+        }
+      })
+      .catch(() => {
+        if (!active) return;
+        setItemInsights(null);
+      })
+      .finally(() => {
+        if (active) setItemInsightsLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [actionCopy.wrongStore, itemRef, order?.store_key, order?.store_label]);
+
+  useEffect(() => {
     if (!order?.closes_at || !['open', 'paying'].includes(order.status) || closeOrder.isPending) return;
     if (new Date(order.closes_at).getTime() <= now) {
       void closeOrder.mutateAsync(order.id).catch(() => {});
@@ -308,8 +368,7 @@ export default function OrderShell() {
   const sharedOrderTotal = order.product_price_agorot * participantCount;
   const freeShippingGap = Math.max(0, freeShippingThreshold - sharedOrderTotal);
   const shippingSaved = Math.max(0, estimatedShipping * Math.max(0, participantCount - 1));
-  const perPerson = Math.ceil((order.product_price_agorot + estimatedShipping / Math.max(1, participantCount || order.max_participants)));
-  const neighborsToInvite = Math.max(0, order.max_participants - participantCount);
+  const perPerson = Math.ceil(order.product_price_agorot + estimatedShipping / Math.max(1, participantCount));
   const closesAtMs = order.closes_at ? new Date(order.closes_at).getTime() : null;
   const editLocksAtMs = order.edit_locks_at ? new Date(order.edit_locks_at).getTime() : null;
   const remainingMs = closesAtMs ? Math.max(0, closesAtMs - now) : null;
@@ -331,16 +390,20 @@ export default function OrderShell() {
   const cartTotal = visibleCartItems.reduce((sum, item) => sum + item.price_agorot, 0);
   const cartFreeShippingGap = Math.max(0, freeShippingThreshold - cartTotal);
   const hasSavedOptions = cartItems.some((item) => Boolean(item.size?.trim()));
-  const hasSelectedOptions = itemSize.trim().length > 0 || itemColor.trim().length > 0;
-  const canShareOrder = hasSavedOptions || hasSelectedOptions;
+  const requiresSize = sizeOptions.length > 0;
+  const requiresColor = colorOptions.length > 0;
+  const hasSelectedOptions = (!requiresSize || itemSize.trim().length > 0) && (!requiresColor || itemColor.trim().length > 0);
+  const needsAnyOptions = requiresSize || requiresColor;
+  const canShareOrder = hasSavedOptions || !needsAnyOptions || hasSelectedOptions;
   const itemPriceAgorot = Math.floor(Number(itemPrice) * 100);
   const canAddItem =
     Boolean(me?.id) &&
     !editLocked &&
     ['open', 'paying'].includes(order.status) &&
     itemTitle.trim().length > 1 &&
-    (detectedSizes.length === 0 || itemSize.trim().length > 0) &&
-    (detectedColors.length === 0 || itemColor.trim().length > 0) &&
+    (!requiresSize || itemSize.trim().length > 0) &&
+    (!requiresColor || itemColor.trim().length > 0) &&
+    !itemStoreError &&
     Number.isFinite(itemPriceAgorot) &&
     itemPriceAgorot > 0;
 
@@ -357,7 +420,10 @@ export default function OrderShell() {
       participantId: me.id,
       title: itemTitle,
       ref: itemRef,
-      size: optionParts.join(' | ') || null,
+      size: [
+        itemSize.trim() ? `${isHebrew ? 'מידה' : 'Size'}: ${itemSize.trim()}` : null,
+        itemColor.trim() ? `${isHebrew ? 'צבע/טעם' : 'Color/flavor'}: ${itemColor.trim()}` : null,
+      ].filter(Boolean).join(' | ') || null,
       priceAgorot: itemPriceAgorot,
     });
     setItemTitle('');
@@ -488,7 +554,7 @@ export default function OrderShell() {
           <Text style={styles.pickupBody}>{copy.shippingSaved}: {formatAgorot(shippingSaved)}</Text>
           <Text style={styles.pickupBody}>{copy.missingParticipants}: {formatAgorot(freeShippingGap)}</Text>
           <Text style={styles.pickupBody}>{copy.missingCart}: {formatAgorot(cartFreeShippingGap)}</Text>
-          <Text style={styles.pickupBody}>{copy.neighborsCanJoin}: {neighborsToInvite}</Text>
+          <Text style={styles.pickupBody}>{copy.neighborsCanJoin}: {order.closes_at ? timerLabel : copy.noTimer}</Text>
           <Text style={styles.pickupNote}>{copy.dealNote}</Text>
         </View>
 
@@ -526,18 +592,36 @@ export default function OrderShell() {
 
         <View style={styles.pickupCard}>
           <Text style={styles.kicker}>{copy.addProduct}</Text>
-          <Text style={styles.pickupBody}>{copy.addProductBody}</Text>
+          <View style={styles.storeBanner}>
+            <Text style={styles.storeBannerLabel}>{actionCopy.requiredStore}</Text>
+            <Text style={styles.storeBannerName}>{order.store_label ?? copy.store}</Text>
+            <Text style={styles.storeBannerBody}>{actionCopy.addLinkFirst}</Text>
+          </View>
+          <View style={styles.savingsStrip}>
+            <Text style={styles.savingsStripLabel}>{copy.shippingSaved}</Text>
+            <Text style={styles.savingsStripValue}>{formatAgorot(shippingSaved)}</Text>
+          </View>
+          <Field label={copy.productLink} value={itemRef} onChange={setItemRef} placeholder="https://..." ltr />
+          {itemInsightsLoading ? <Text style={styles.requiredHint}>{actionCopy.readingItem}</Text> : null}
+          {itemStoreError ? <Text style={styles.errorInline}>{itemStoreError}</Text> : null}
+          {itemInsights ? (
+            <View style={styles.detectedProductCard}>
+              <Text style={styles.detectedStore}>{itemInsights.sourceLabel}</Text>
+              <Text style={styles.detectedTitle}>{itemInsights.title}</Text>
+              <Text style={styles.detectedMeta}>{formatAgorot(itemInsights.priceAgorot ?? itemPriceAgorot)}</Text>
+            </View>
+          ) : null}
           <Field label={copy.productName} value={itemTitle} onChange={setItemTitle} placeholder={copy.productPlaceholder} />
           <View style={styles.addRow}>
             <View style={{ flex: 1 }}>
               <NumField label={copy.price} value={itemPrice} onChange={setItemPrice} placeholder="99" />
             </View>
           </View>
-          {detectedSizes.length > 0 ? (
+          {requiresSize ? (
             <View style={styles.optionGroup}>
-              <Text style={styles.optionLabel}>{isHebrew ? 'בחר מידה' : 'Choose size'}</Text>
+              <Text style={styles.optionLabel}>{actionCopy.chooseSize}</Text>
               <View style={styles.optionRow}>
-                {detectedSizes.map((size) => {
+                {sizeOptions.map((size) => {
                   const selected = itemSize === size;
                   return (
                     <Pressable
@@ -560,11 +644,11 @@ export default function OrderShell() {
               placeholder={isHebrew ? 'M, Queen, 42, XL...' : 'M, Queen, 42, XL...'}
             />
           )}
-          {detectedColors.length > 0 ? (
+          {requiresColor ? (
             <View style={styles.optionGroup}>
-              <Text style={styles.optionLabel}>{isHebrew ? 'בחר צבע' : 'Choose color'}</Text>
+              <Text style={styles.optionLabel}>{actionCopy.chooseColor}</Text>
               <View style={styles.optionRow}>
-                {detectedColors.map((color) => {
+                {colorOptions.map((color) => {
                   const selected = itemColor === color;
                   return (
                     <Pressable
@@ -587,10 +671,9 @@ export default function OrderShell() {
               placeholder={isHebrew ? 'שחור, עץ אלון, לבן...' : 'Black, oak wood, white...'}
             />
           )}
-          {((detectedSizes.length > 0 && !itemSize.trim()) || (detectedColors.length > 0 && !itemColor.trim())) ? (
-            <Text style={styles.requiredHint}>{isHebrew ? 'חובה לבחור מידה וצבע מהרשימה לפני הוספה לסל.' : 'Choose size and color from the list before adding to cart.'}</Text>
+          {needsAnyOptions && !hasSelectedOptions ? (
+            <Text style={styles.requiredHint}>{actionCopy.optionRequired}</Text>
           ) : null}
-          <Field label={copy.productLink} value={itemRef} onChange={setItemRef} placeholder="https://..." ltr />
           <PrimaryBtn
             label={
               editLocked || order.status === 'locked'
@@ -713,11 +796,11 @@ const styles = StyleSheet.create({
   slotText: { fontFamily: fontFamily.bodySemi, fontSize: 14, color: colors.tx },
   slotEmpty: { fontFamily: fontFamily.body, fontSize: 14, color: colors.mu },
   pickupCard: {
-    gap: 8,
-    padding: 16,
+    gap: 10,
+    padding: 18,
     borderWidth: 1,
-    borderColor: colors.brBr,
-    borderRadius: radii.lg,
+    borderColor: colors.br,
+    borderRadius: 24,
     backgroundColor: colors.white,
   },
   costCard: {
@@ -814,6 +897,79 @@ const styles = StyleSheet.create({
     gap: 10,
     alignItems: 'flex-start',
   },
+  storeBanner: {
+    gap: 8,
+    padding: 20,
+    borderRadius: 26,
+    backgroundColor: colors.navy,
+  },
+  storeBannerLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 11,
+    letterSpacing: 1,
+    color: 'rgba(255,255,255,0.66)',
+    textTransform: 'uppercase',
+  },
+  storeBannerName: {
+    fontFamily: fontFamily.display,
+    fontSize: 42,
+    lineHeight: 48,
+    color: colors.white,
+    letterSpacing: -1.6,
+  },
+  storeBannerBody: {
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 13,
+    lineHeight: 20,
+    color: 'rgba(255,255,255,0.78)',
+  },
+  savingsStrip: {
+    minHeight: 76,
+    borderRadius: 22,
+    backgroundColor: colors.lime,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.acc,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  savingsStripLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
+    color: colors.tx,
+    flex: 1,
+  },
+  savingsStripValue: {
+    fontFamily: fontFamily.display,
+    fontSize: 28,
+    color: colors.tx,
+  },
+  detectedProductCard: {
+    gap: 5,
+    padding: 14,
+    borderRadius: radii.md,
+    backgroundColor: colors.cardSoft,
+    borderWidth: 1,
+    borderColor: colors.br,
+  },
+  detectedStore: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 11,
+    color: colors.acc,
+    textTransform: 'uppercase',
+  },
+  detectedTitle: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+    color: colors.tx,
+  },
+  detectedMeta: {
+    fontFamily: fontFamily.display,
+    fontSize: 18,
+    color: colors.navy,
+  },
   optionGroup: {
     gap: 10,
   },
@@ -855,6 +1011,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     color: colors.acc,
+  },
+  optionEmptyHint: {
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.mu,
+  },
+  errorInline: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.err,
   },
   shareButton: {
     width: '100%',
