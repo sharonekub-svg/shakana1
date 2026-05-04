@@ -464,143 +464,43 @@ export default function OrderShell() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={{ gap: 18, paddingBottom: 24 }}>
-        <View style={styles.product}>
-          {order.product_image ? (
-            <Image source={{ uri: order.product_image }} style={styles.productImg} />
-          ) : (
-            <View style={[styles.productImg, styles.productPlaceholder]}>
-              <Text style={styles.placeholderText}>{copy.item}</Text>
-            </View>
-          )}
-          <View style={{ flex: 1 }}>
-            <Text style={styles.productTitle} numberOfLines={2}>
-              {order.product_title ?? order.product_url}
-            </Text>
-            <Text style={styles.productPrice}>
-              {order.store_label ?? copy.store} | {formatAgorot(order.product_price_agorot)}
-            </Text>
-          </View>
-        </View>
+      <ScrollView contentContainerStyle={{ gap: 16, paddingBottom: 32 }}>
 
-        <View style={styles.costCard}>
-          <Text style={styles.costKicker}>{copy.importantCosts}</Text>
-          <View style={styles.costGrid}>
-            <View style={styles.costItem}>
-              <Text style={styles.costLabel}>{copy.productCost}</Text>
-              <Text style={styles.costValue}>{formatAgorot(order.product_price_agorot)}</Text>
+        {/* ── HERO: Add your product ── */}
+        <View style={styles.heroCard}>
+          {/* Store badge + timer row */}
+          <View style={styles.heroTopRow}>
+            <View style={styles.storeBadge}>
+              <Text style={styles.storeBadgeText}>{order.store_label ?? copy.store}</Text>
             </View>
-            <View style={styles.costItem}>
-              <Text style={styles.costLabel}>{copy.shippingFee}</Text>
-              <Text style={styles.costValue}>{formatAgorot(estimatedShipping)}</Text>
-            </View>
-            <View style={styles.costItem}>
-              <Text style={styles.costLabel}>{copy.freeShippingMinimum}</Text>
-              <Text style={styles.costValue}>{formatAgorot(freeShippingThreshold)}</Text>
-            </View>
-            <View style={styles.costItem}>
-              <Text style={styles.costLabel}>{copy.missingCart}</Text>
-              <Text style={styles.costValue}>{formatAgorot(cartFreeShippingGap)}</Text>
-            </View>
-          </View>
-          <Text style={styles.costNote}>{copy.costCardNote}</Text>
-        </View>
-
-        <View style={styles.timerCard}>
-          <View style={styles.timerHeader}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.kicker}>{order.closes_at ? copy.timerOrder : copy.noTimerOrder}</Text>
-              <Text style={styles.timerValue}>
+            <View style={styles.timerPill}>
+              <Text style={styles.timerPillLabel}>{isHebrew ? 'טיימר' : 'Timer'}</Text>
+              <Text style={styles.timerPillValue}>
                 {order.status === 'locked' ? copy.locked : order.closes_at ? timerLabel : copy.noTimer}
               </Text>
             </View>
+          </View>
+
+          {/* Shipping savings strip */}
+          <View style={styles.savingsRow}>
+            <View style={styles.savingsCell}>
+              <Text style={styles.savingsCellLabel}>{isHebrew ? 'חיסכון משלוח' : 'Shipping saved'}</Text>
+              <Text style={styles.savingsCellValue}>{formatAgorot(shippingSaved)}</Text>
             </View>
-          <View style={styles.timerMetricRow}>
-            <View style={styles.timerMetric}>
-              <Text style={styles.timerMetricLabel}>{copy.shippingFee}</Text>
-              <Text style={styles.timerMetricValue}>{formatAgorot(estimatedShipping)}</Text>
+            <View style={styles.savingsDivider} />
+            <View style={styles.savingsCell}>
+              <Text style={styles.savingsCellLabel}>{isHebrew ? 'חסר למשלוח חינם' : 'Missing for free ship.'}</Text>
+              <Text style={styles.savingsCellValue}>{formatAgorot(cartFreeShippingGap)}</Text>
             </View>
-            <View style={styles.timerMetric}>
-              <Text style={styles.timerMetricLabel}>{copy.freeShippingMinimum}</Text>
-              <Text style={styles.timerMetricValue}>{formatAgorot(freeShippingThreshold)}</Text>
+            <View style={styles.savingsDivider} />
+            <View style={styles.savingsCell}>
+              <Text style={styles.savingsCellLabel}>{isHebrew ? 'דמי משלוח' : 'Delivery fee'}</Text>
+              <Text style={styles.savingsCellValue}>{formatAgorot(estimatedShipping)}</Text>
             </View>
           </View>
-          <Text style={styles.timerBody}>{order.closes_at ? copy.timerBody : copy.noTimerBody}</Text>
-          <Text style={styles.timerNote}>
-            {editLocked || order.status === 'locked' ? copy.editsLocked : copy.editsOpen}
-          </Text>
-        </View>
 
-        <View>
-          <Text style={styles.sectionTitle}>{copy.participants}</Text>
-          <Text style={styles.sectionSub}>
-            {isHebrew ? `${data.participants.length} משתתפים בהזמנה` : `${data.participants.length} participants in this order`}
-          </Text>
-          <View style={{ height: 14 }} />
-          <ParticipantTower
-            participants={data.participants}
-            currentUserId={userId}
-          />
-        </View>
-
-        <View style={styles.pickupCard}>
-          <Text style={styles.kicker}>{copy.finderSummary}</Text>
-          <Text style={styles.pickupBody}>{copy.whatItIs}: {order.product_title ?? copy.notDetected}</Text>
-          <Text style={styles.pickupBody}>{copy.whereFrom}: {order.store_label ?? copy.detectedFromLink}</Text>
-          <Text style={styles.pickupBody}>{copy.productPriceDetected}: {formatAgorot(order.product_price_agorot)}</Text>
-          <Text style={styles.pickupBody}>{copy.estimatedShipping}: {formatAgorot(estimatedShipping)}</Text>
-          <Text style={styles.pickupBody}>{copy.freeDeliveryNeeds}: {formatAgorot(freeShippingThreshold)}</Text>
-          <Text style={styles.pickupBody}>{copy.approxEach}: {formatAgorot(perPerson)}</Text>
-          <Text style={styles.pickupBody}>{copy.shippingSaved}: {formatAgorot(shippingSaved)}</Text>
-          <Text style={styles.pickupBody}>{copy.missingParticipants}: {formatAgorot(freeShippingGap)}</Text>
-          <Text style={styles.pickupBody}>{copy.missingCart}: {formatAgorot(cartFreeShippingGap)}</Text>
-          <Text style={styles.pickupBody}>{copy.neighborsCanJoin}: {order.closes_at ? timerLabel : copy.noTimer}</Text>
-          <Text style={styles.pickupNote}>{copy.dealNote}</Text>
-        </View>
-
-        <View style={styles.cartHeader}>
-          <View>
-            <Text style={styles.sectionTitle}>{copy.fullCart}</Text>
-            <Text style={styles.sectionSub}>
-              {visibleCartItems.length} {copy.items} | {formatAgorot(cartTotal)}
-            </Text>
-          </View>
-          <Pressable style={styles.cartToggle} onPress={() => setCartOpen((open) => !open)}>
-            <Text style={styles.cartToggleText}>{cartOpen ? copy.hide : copy.show}</Text>
-          </Pressable>
-        </View>
-
-        {cartOpen ? (
-          <View style={styles.pickupCard}>
-            {visibleCartItems.map((item, index) => (
-              <View key={item.id} style={styles.cartItem}>
-                <View style={styles.cartIndex}>
-                  <Text style={styles.cartIndexText}>{index + 1}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.cartItemTitle}>{item.title}</Text>
-                  <Text style={styles.cartItemMeta}>
-                    {item.size ? `${copy.size}: ${item.size} | ` : ''}
-                    {item.ref ? copy.productLinkSaved : copy.manualItem}
-                  </Text>
-                </View>
-                <Text style={styles.cartItemPrice}>{formatAgorot(item.price_agorot)}</Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
-
-        <View style={styles.pickupCard}>
-          <Text style={styles.kicker}>{copy.addProduct}</Text>
-          <View style={styles.storeBanner}>
-            <Text style={styles.storeBannerLabel}>{actionCopy.requiredStore}</Text>
-            <Text style={styles.storeBannerName}>{order.store_label ?? copy.store}</Text>
-            <Text style={styles.storeBannerBody}>{actionCopy.addLinkFirst}</Text>
-          </View>
-          <View style={styles.savingsStrip}>
-            <Text style={styles.savingsStripLabel}>{copy.shippingSaved}</Text>
-            <Text style={styles.savingsStripValue}>{formatAgorot(shippingSaved)}</Text>
-          </View>
+          {/* Add product form */}
+          <Text style={styles.heroSectionTitle}>{copy.addProduct}</Text>
           <Field label={copy.productLink} value={itemRef} onChange={setItemRef} placeholder="https://..." ltr />
           {itemInsightsLoading ? <Text style={styles.requiredHint}>{actionCopy.readingItem}</Text> : null}
           {itemStoreError ? <Text style={styles.errorInline}>{itemStoreError}</Text> : null}
@@ -612,11 +512,7 @@ export default function OrderShell() {
             </View>
           ) : null}
           <Field label={copy.productName} value={itemTitle} onChange={setItemTitle} placeholder={copy.productPlaceholder} />
-          <View style={styles.addRow}>
-            <View style={{ flex: 1 }}>
-              <NumField label={copy.price} value={itemPrice} onChange={setItemPrice} placeholder="99" />
-            </View>
-          </View>
+          <NumField label={copy.price} value={itemPrice} onChange={setItemPrice} placeholder="99" />
           {requiresSize ? (
             <View style={styles.optionGroup}>
               <Text style={styles.optionLabel}>{actionCopy.chooseSize}</Text>
@@ -624,12 +520,9 @@ export default function OrderShell() {
                 {sizeOptions.map((size) => {
                   const selected = itemSize === size;
                   return (
-                    <Pressable
-                      key={size}
-                      accessibilityRole="button"
+                    <Pressable key={size} accessibilityRole="button"
                       style={[styles.optionChip, selected && styles.optionChipActive]}
-                      onPress={() => setItemSize(size)}
-                    >
+                      onPress={() => setItemSize(size)}>
                       <Text style={[styles.optionChipText, selected && styles.optionChipTextActive]}>{size}</Text>
                     </Pressable>
                   );
@@ -639,8 +532,7 @@ export default function OrderShell() {
           ) : (
             <Field
               label={isHebrew ? 'מידה / גרסה (אם רלוונטי)' : 'Size / variant (if applicable)'}
-              value={itemSize}
-              onChange={setItemSize}
+              value={itemSize} onChange={setItemSize}
               placeholder={isHebrew ? 'M, Queen, 42, XL...' : 'M, Queen, 42, XL...'}
             />
           )}
@@ -651,12 +543,9 @@ export default function OrderShell() {
                 {colorOptions.map((color) => {
                   const selected = itemColor === color;
                   return (
-                    <Pressable
-                      key={color}
-                      accessibilityRole="button"
+                    <Pressable key={color} accessibilityRole="button"
                       style={[styles.optionChip, selected && styles.optionChipActive]}
-                      onPress={() => setItemColor(color)}
-                    >
+                      onPress={() => setItemColor(color)}>
                       <Text style={[styles.optionChipText, selected && styles.optionChipTextActive]}>{color}</Text>
                     </Pressable>
                   );
@@ -666,8 +555,7 @@ export default function OrderShell() {
           ) : (
             <Field
               label={isHebrew ? 'צבע / הערה (אם רלוונטי)' : 'Color / note (if applicable)'}
-              value={itemColor}
-              onChange={setItemColor}
+              value={itemColor} onChange={setItemColor}
               placeholder={isHebrew ? 'שחור, עץ אלון, לבן...' : 'Black, oak wood, white...'}
             />
           )}
@@ -678,50 +566,56 @@ export default function OrderShell() {
             label={
               editLocked || order.status === 'locked'
                 ? copy.cartLocked
-                : addItem.isPending
-                  ? copy.adding
-                  : copy.addToCart
+                : addItem.isPending ? copy.adding : copy.addToCart
             }
-            onPress={() => {
-              void onAddItem().catch((error) => {
-                pushToast(error instanceof Error ? error.message : copy.couldNotAdd, 'error');
-              });
-            }}
+            onPress={() => void onAddItem().catch((e) => pushToast(e instanceof Error ? e.message : copy.couldNotAdd, 'error'))}
             disabled={!canAddItem}
             loading={addItem.isPending}
           />
         </View>
 
+        {/* ── What's been ordered ── */}
+        <Text style={styles.sectionTitle}>{isHebrew ? 'מה הוזמן' : 'What\'s been ordered'}</Text>
+        <View style={styles.cartCard}>
+          {visibleCartItems.map((item, index) => (
+            <View key={item.id} style={[styles.cartItem, index < visibleCartItems.length - 1 && styles.cartItemBorder]}>
+              <View style={styles.cartIndex}>
+                <Text style={styles.cartIndexText}>{index + 1}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cartItemTitle}>{item.title}</Text>
+                {item.size ? <Text style={styles.cartItemMeta}>{item.size}</Text> : null}
+              </View>
+              <Text style={styles.cartItemPrice}>{formatAgorot(item.price_agorot)}</Text>
+            </View>
+          ))}
+          <View style={styles.cartTotalRow}>
+            <Text style={styles.cartTotalLabel}>{isHebrew ? 'סך הכל' : 'Total'}</Text>
+            <Text style={styles.cartTotalValue}>{formatAgorot(cartTotal)}</Text>
+          </View>
+        </View>
+
+        {/* ── Participants ── */}
+        <Text style={styles.sectionTitle}>{copy.participants}</Text>
+        <ParticipantTower participants={data.participants} currentUserId={userId} />
+
+        {/* ── Pickup ── */}
         <View style={styles.pickupCard}>
           <Text style={styles.kicker}>{copy.pickupPlan}</Text>
           <Text style={styles.pickupTitle}>{order.pickup_responsible_name || copy.pickupManager}</Text>
-          <Text style={styles.pickupBody}>
-            {copy.preferredLocation}: {order.preferred_pickup_location || copy.creatorWillAdd}
-          </Text>
-          <Text style={styles.pickupNote}>
-            {order.pickup_location_note || copy.pickupMayVary}
-          </Text>
+          <Text style={styles.pickupBody}>{copy.preferredLocation}: {order.preferred_pickup_location || copy.creatorWillAdd}</Text>
+          <Text style={styles.pickupNote}>{order.pickup_location_note || copy.pickupMayVary}</Text>
         </View>
 
+        {/* ── Actions ── */}
         <View style={{ gap: 10 }}>
           {order.status === 'locked' && order.creator_id === userId ? (
-            <PrimaryBtn
-              label={copy.founderCheckout}
-              onPress={() => {
-                void Linking.openURL(order.founder_checkout_url || order.product_url);
-              }}
-            />
+            <PrimaryBtn label={copy.founderCheckout} onPress={() => void Linking.openURL(order.founder_checkout_url || order.product_url)} />
           ) : order.status !== 'locked' ? (
             <Pressable
               accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.shareButton,
-                !canShareOrder && styles.shareButtonDisabled,
-                pressed && canShareOrder && { transform: [{ scale: 0.98 }] },
-              ]}
-              onPress={() => {
-                void onShareOrder();
-              }}
+              style={({ pressed }) => [styles.shareButton, !canShareOrder && styles.shareButtonDisabled, pressed && canShareOrder && { transform: [{ scale: 0.98 }] }]}
+              onPress={() => void onShareOrder()}
               disabled={generateInvite.isPending}
             >
               <Text style={styles.shareButtonText}>
@@ -729,15 +623,11 @@ export default function OrderShell() {
               </Text>
             </Pressable>
           ) : null}
-          {!canShareOrder ? <Text style={styles.shareHint}>{actionCopy.shareHint}</Text> : null}
+          {!canShareOrder && order.status !== 'locked' ? <Text style={styles.shareHint}>{actionCopy.shareHint}</Text> : null}
           {!order.closes_at && order.creator_id === userId && ['open', 'paying'].includes(order.status) ? (
             <SecondaryBtn
               label={closeOrder.isPending ? copy.closingOrder : copy.closeOrder}
-              onPress={() => {
-                void closeOrder.mutateAsync(order.id).catch((e: unknown) => {
-                  pushToast(e instanceof Error ? e.message : copy.closingOrder, 'error');
-                });
-              }}
+              onPress={() => void closeOrder.mutateAsync(order.id).catch((e: unknown) => pushToast(e instanceof Error ? e.message : copy.closingOrder, 'error'))}
             />
           ) : null}
         </View>
@@ -876,9 +766,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.br,
+    paddingVertical: 12,
   },
   cartIndex: {
     width: 30,
@@ -1134,4 +1022,123 @@ const styles = StyleSheet.create({
   },
   timerBody: { fontFamily: fontFamily.body, fontSize: 13, color: 'rgba(255,255,255,0.86)', lineHeight: 20 },
   timerNote: { fontFamily: fontFamily.bodySemi, fontSize: 12, color: colors.s1, lineHeight: 18 },
+  heroCard: {
+    gap: 16,
+    padding: 20,
+    borderRadius: radii.xl,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.br,
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  storeBadge: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: radii.pill,
+    backgroundColor: colors.accLight,
+    borderWidth: 1,
+    borderColor: colors.acc,
+  },
+  storeBadgeText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+    color: colors.acc,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  timerPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: radii.pill,
+    backgroundColor: colors.s2,
+    borderWidth: 1,
+    borderColor: colors.brBr,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  timerPillLabel: {
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 11,
+    color: colors.mu,
+    textTransform: 'uppercase',
+  },
+  timerPillValue: {
+    fontFamily: fontFamily.display,
+    fontSize: 14,
+    color: colors.tx,
+  },
+  savingsRow: {
+    flexDirection: 'row',
+    backgroundColor: colors.limeSoft,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.acc,
+    overflow: 'hidden',
+  },
+  savingsCell: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    gap: 3,
+  },
+  savingsCellLabel: {
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 10,
+    color: colors.mu,
+    textAlign: 'center',
+  },
+  savingsCellValue: {
+    fontFamily: fontFamily.display,
+    fontSize: 16,
+    color: colors.tx,
+    textAlign: 'center',
+  },
+  savingsDivider: {
+    width: 1,
+    backgroundColor: colors.br,
+    marginVertical: 8,
+  },
+  heroSectionTitle: {
+    fontFamily: fontFamily.display,
+    fontSize: 18,
+    color: colors.tx,
+    marginTop: 4,
+  },
+  cartCard: {
+    backgroundColor: colors.white,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.br,
+    overflow: 'hidden',
+    paddingHorizontal: 16,
+    paddingTop: 4,
+  },
+  cartItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.br,
+  },
+  cartTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    borderTopWidth: 1,
+    borderTopColor: colors.brBr,
+  },
+  cartTotalLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+    color: colors.tx,
+  },
+  cartTotalValue: {
+    fontFamily: fontFamily.display,
+    fontSize: 18,
+    color: colors.tx,
+  },
 });
