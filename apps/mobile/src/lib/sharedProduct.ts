@@ -69,6 +69,15 @@ const CURRENCY_TO_ILS_AGOROT: Record<string, number> = {
   GBP: 424,
 };
 
+const SHEKEL_MARKERS = ['₪', 'ש"ח', 'ש״ח', 'ILS', 'NIS'];
+
+function normalizeCurrencyMarkers(raw: string | number): string {
+  return String(raw)
+    .replace(/&#8362;|&shekel;/gi, '₪')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/ש["״׳']?ח/g, 'ש"ח');
+}
+
 type BrandConfig = {
   source: string;
   brandName: string;
@@ -430,8 +439,8 @@ function chooseImage(html: string): string | null {
 }
 
 function detectCurrency(raw: string | number): keyof typeof CURRENCY_TO_ILS_AGOROT {
-  const text = String(raw);
-  if (/₪|ש["״]?ח|NIS|ILS/i.test(text)) return 'ILS';
+  const text = normalizeCurrencyMarkers(raw);
+  if (SHEKEL_MARKERS.some((marker) => text.toUpperCase().includes(marker.toUpperCase()))) return 'ILS';
   if (/€|EUR/i.test(text)) return 'EUR';
   if (/£|GBP/i.test(text)) return 'GBP';
   if (/\$|USD/i.test(text)) return 'USD';
@@ -441,7 +450,7 @@ function detectCurrency(raw: string | number): keyof typeof CURRENCY_TO_ILS_AGOR
 function parseMoneyToAgorot(raw: string | number | null | undefined): number | null {
   if (raw == null) return null;
   const currency = detectCurrency(raw);
-  const text = String(raw).replace(/[^\d.,-]/g, '');
+  const text = normalizeCurrencyMarkers(raw).replace(/[^\d.,-]/g, '');
   if (!text) return null;
   const normalized = (() => {
     if (text.includes(',') && text.includes('.')) return text.replace(/,/g, '');

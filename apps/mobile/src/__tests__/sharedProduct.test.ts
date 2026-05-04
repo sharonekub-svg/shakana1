@@ -249,6 +249,21 @@ describe('sharedProduct', () => {
     expect(insights.priceAgorot).toBe(104900);
   });
 
+  it('reads Israeli price formats with shekel text and HTML entities', () => {
+    const draft = {
+      url: 'https://shop.cool-brand.co.il/products/local-price',
+      title: 'Local Price',
+      source: 'cool-brand',
+      storeLabel: 'Cool Brand',
+    };
+
+    const shekelText = summarizeSharedProduct(draft, '<p>מחיר מוצר: 1,299 ש"ח</p>');
+    const shekelEntity = summarizeSharedProduct(draft, '<p>Price: &#8362;899.90</p>');
+
+    expect(shekelText.priceAgorot).toBe(129900);
+    expect(shekelEntity.priceAgorot).toBe(89990);
+  });
+
   it('reads generic JSON-LD offer arrays and delivery fees', () => {
     const draft = {
       url: 'https://shop.cool-brand.co.il/products/noise-cancelling-headphones',

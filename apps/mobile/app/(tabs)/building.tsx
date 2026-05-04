@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useProfile } from '@/api/profile';
 import { useUserOrders } from '@/api/orders';
 import { formatAgorot } from '@/utils/format';
+import { formatCompactDuration } from '@/utils/timer';
 import { useLocale } from '@/i18n/locale';
 
 const SHOPPING_FLOWS = [
@@ -164,6 +165,12 @@ export default function BuildingTab() {
   const completedOrders = orders.filter((order) => order.status === 'completed').length;
   const openOrders = orders.filter((order) => !['completed', 'cancelled'].includes(order.status));
   const topOrders = orders.slice(0, 3);
+  const orderMeta = (order: (typeof orders)[number]) => {
+    const timing = order.closes_at
+      ? `${isHebrew ? 'נסגר בעוד' : 'closes in'} ${formatCompactDuration(Math.max(0, new Date(order.closes_at).getTime() - Date.now()))}`
+      : isHebrew ? 'ללא טיימר' : 'No timer';
+    return `${formatAgorot(order.product_price_agorot)} · ${timing}`;
+  };
   const dashboardStats = [
     { value: String(openOrders.length), label: t('tabs.home.openOrders'), featured: true },
     { value: String(completedOrders), label: t('tabs.home.completed') },
@@ -266,7 +273,7 @@ export default function BuildingTab() {
                   title={order.product_title ?? t('tabs.home.noOrdersTitle')}
                   subtitle={order.product_url}
                   status={order.status.toUpperCase()}
-                  meta={`${formatAgorot(order.product_price_agorot)} · ${order.max_participants} ${homeCopy.seats}`}
+                  meta={orderMeta(order)}
                   actionLabel={isHebrew ? 'פתח' : 'OPEN'}
                   onPress={() => router.push(`/order/${order.id}`)}
                 />

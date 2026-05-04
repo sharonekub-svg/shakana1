@@ -62,7 +62,6 @@ export default function OrderShell() {
   const copy = isHebrew
     ? {
         unableToLoad: 'לא הצלחנו לטעון את ההזמנה.',
-        noTimer: 'אין טיימר',
         mainProduct: 'המוצר הראשי',
         productAdded: 'המוצר נוסף לסל המשותף.',
         order: 'הזמנה',
@@ -130,7 +129,6 @@ export default function OrderShell() {
       }
     : {
         unableToLoad: 'Unable to load order.',
-        noTimer: 'No timer',
         mainProduct: 'Main product',
         productAdded: 'Product added to the shared cart.',
         order: 'Order',
@@ -329,7 +327,7 @@ export default function OrderShell() {
     return () => {
       active = false;
     };
-  }, [itemRef, itemTitle, order]);
+  }, [actionCopy.wrongStore, itemRef, order?.store_key, order?.store_label]);
 
   useEffect(() => {
     if (!order?.closes_at || !['open', 'paying'].includes(order.status) || closeOrder.isPending) return;
@@ -370,8 +368,7 @@ export default function OrderShell() {
   const sharedOrderTotal = order.product_price_agorot * participantCount;
   const freeShippingGap = Math.max(0, freeShippingThreshold - sharedOrderTotal);
   const shippingSaved = Math.max(0, estimatedShipping * Math.max(0, participantCount - 1));
-  const perPerson = Math.ceil((order.product_price_agorot + estimatedShipping / Math.max(1, participantCount || order.max_participants)));
-  const neighborsToInvite = Math.max(0, order.max_participants - participantCount);
+  const perPerson = Math.ceil(order.product_price_agorot + estimatedShipping / Math.max(1, participantCount));
   const closesAtMs = order.closes_at ? new Date(order.closes_at).getTime() : null;
   const editLocksAtMs = order.edit_locks_at ? new Date(order.edit_locks_at).getTime() : null;
   const remainingMs = closesAtMs ? Math.max(0, closesAtMs - now) : null;
@@ -565,7 +562,7 @@ export default function OrderShell() {
           <Text style={styles.pickupBody}>{copy.shippingSaved}: {formatAgorot(shippingSaved)}</Text>
           <Text style={styles.pickupBody}>{copy.missingParticipants}: {formatAgorot(freeShippingGap)}</Text>
           <Text style={styles.pickupBody}>{copy.missingCart}: {formatAgorot(cartFreeShippingGap)}</Text>
-          <Text style={styles.pickupBody}>{copy.neighborsCanJoin}: {neighborsToInvite}</Text>
+          <Text style={styles.pickupBody}>{copy.neighborsCanJoin}: {order.closes_at ? timerLabel : copy.noTimer}</Text>
           <Text style={styles.pickupNote}>{copy.dealNote}</Text>
         </View>
 
