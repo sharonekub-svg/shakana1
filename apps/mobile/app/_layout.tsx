@@ -21,6 +21,7 @@ import { useProfile } from '@/api/profile';
 import { loadStoredLanguage, useLocaleStore } from '@/i18n/locale';
 import { useProfileDraftStore } from '@/stores/profileDraftStore';
 import { ToastLayer } from '@/components/primitives/ToastLayer';
+import { hydrateDemoStore } from '@/demo/store';
 
 import '../global.css';
 
@@ -199,6 +200,11 @@ function RootLayoutInner() {
       draft.first_name.trim().length > 0 &&
       draft.last_name.trim().length > 0;
 
+    const inDemo =
+      segments[0] === 'login' ||
+      segments[0] === 'user' ||
+      segments[0] === 'store';
+    if (inDemo) return;
     if (!session && !inAuth && !(Platform.OS === 'web' && inJoin)) {
       router.replace('/(auth)/welcome');
     } else if (session && profileComplete && inAuth) {
@@ -246,6 +252,7 @@ function RootLayoutInner() {
     if (Platform.OS === 'web') {
       SplashScreen.hideAsync().catch(() => {});
     }
+    return hydrateDemoStore();
   }, []);
 
   useEffect(() => {
@@ -271,6 +278,12 @@ function RootLayoutInner() {
         <Stack.Screen name="order" />
         <Stack.Screen name="profile" />
         <Stack.Screen name="share" />
+        <Stack.Screen name="login" />
+        <Stack.Screen name="user/index" />
+        <Stack.Screen name="user/store/[brand]" />
+        <Stack.Screen name="user/group/[id]" />
+        <Stack.Screen name="store/index" />
+        <Stack.Screen name="store/orders/[orderId]" />
       </Stack>
       {showSplash ? <View pointerEvents="none" style={styles.splashOverlay} /> : null}
       <ToastLayer />
