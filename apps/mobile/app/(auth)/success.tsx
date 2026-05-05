@@ -8,7 +8,6 @@ import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { useAuthStore } from '@/stores/authStore';
 import { consumePendingInvite } from '@/lib/deeplinks';
-import { consumePendingSharedProduct, peekPendingSharedProduct } from '@/lib/sharedProduct';
 import { useLocale } from '@/i18n/locale';
 
 export default function Success() {
@@ -22,19 +21,6 @@ export default function Success() {
         const pendingInvite = await consumePendingInvite();
         if (pendingInvite) {
           router.replace(`/join/${pendingInvite}` as any);
-          return;
-        }
-        const shared = await peekPendingSharedProduct();
-        if (shared) {
-          await consumePendingSharedProduct().catch(() => {});
-          router.replace({
-            pathname: '/order/new',
-            params: {
-              url: shared.url,
-              title: shared.title,
-              source: shared.source,
-            },
-          });
           return;
         }
         router.replace('/(tabs)/building');

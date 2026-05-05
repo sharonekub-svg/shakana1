@@ -18,12 +18,6 @@ export const addressSchema = z.object({
   floor: z.string().trim().optional(),
 });
 
-export const productUrlSchema = z
-  .string()
-  .trim()
-  .url('כתובת לא תקינה')
-  .refine((u) => /^https?:\/\//.test(u), 'חייב להיות קישור תקין');
-
 export const otpSchema = z
   .string()
   .regex(/^\d{6}$/, 'קוד האימות חייב להיות 6 ספרות');

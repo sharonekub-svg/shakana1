@@ -59,7 +59,7 @@ export default function OrdersTab() {
 
   const newOrder = () => {
     track('start_order_clicked');
-    router.push('/order/new');
+    router.push('/user');
   };
 
   return (

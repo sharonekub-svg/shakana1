@@ -209,7 +209,7 @@ export default function BuildingTab() {
                 <Text style={styles.heroBody}>
                   {profile ? t('tabs.home.heroSigned', { first: first ? `, ${first}` : '' }) : t('tabs.home.heroGuest')}
                 </Text>
-                <Pressable style={styles.heroButton} onPress={() => router.push('/order/new')}>
+                <Pressable style={styles.heroButton} onPress={() => router.push('/user')}>
                   <Text style={styles.heroButtonText}>{t('tabs.home.createOrder')}</Text>
                 </Pressable>
               </View>
@@ -230,7 +230,7 @@ export default function BuildingTab() {
               <Pressable
                 key={category.enName}
                 style={[styles.categoryChip, index === 0 && styles.categoryChipActive]}
-                onPress={() => router.push(`/order/new?store=${encodeURIComponent(category.enName.toLowerCase())}`)}
+                onPress={() => router.push('/user')}
               >
                 <Text style={[styles.categoryChipText, index === 0 && styles.categoryChipTextActive]}>
                   {isHebrew ? category.heName : category.enName}
@@ -255,7 +255,7 @@ export default function BuildingTab() {
                 note={isHebrew ? store.heNote : store.enNote}
                 image={store.image}
                 tone={store.tone}
-                onPress={() => router.push('/order/new')}
+                onPress={() => router.push('/user')}
               />
             ))}
           </View>
@@ -282,7 +282,7 @@ export default function BuildingTab() {
               <View style={styles.emptyBlock}>
                 <Text style={styles.emptyTitle}>{t('tabs.home.noOrdersTitle')}</Text>
                 <Text style={styles.emptyBody}>{t('tabs.home.noOrdersBody')}</Text>
-                <Pressable style={styles.emptyButton} onPress={() => router.push('/order/new')}>
+                <Pressable style={styles.emptyButton} onPress={() => router.push('/user')}>
                   <Text style={styles.emptyButtonText}>{t('common.newOrder')}</Text>
                 </Pressable>
               </View>

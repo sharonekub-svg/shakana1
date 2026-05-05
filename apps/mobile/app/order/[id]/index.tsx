@@ -18,8 +18,14 @@ import { formatCompactDuration } from '@/utils/timer';
 import type { Participant } from '@/types/domain';
 import { useLocale } from '@/i18n/locale';
 import { buildInviteUrl } from '@/lib/deeplinks';
-import { loadSharedProductInsights, parseSharedProduct, type SharedProductInsights } from '@/lib/sharedProduct';
-import { fetchProductPageHtml } from '@/api/productInsights';
+
+type SharedProductInsights = {
+  title: string;
+  priceAgorot: number | null;
+  availableSizes: string[];
+  availableColors: string[];
+  sourceLabel: string;
+};
 
 const DEFAULT_DELIVERY_FEE_AGOROT = 3000;
 const DEFAULT_FREE_SHIPPING_THRESHOLD_AGOROT = 19900;
@@ -256,78 +262,12 @@ export default function OrderShell() {
   }, [order]);
 
   useEffect(() => {
-    if (!order?.product_url) return;
-    const draft = parseSharedProduct({
-      url: order.product_url,
-      title: order.product_title,
-      manualStoreLabel: order.store_label,
-    });
-    if (!draft) return;
-    let active = true;
-    void loadSharedProductInsights(draft, fetchProductPageHtml)
-      .then((insights) => {
-        if (!active) return;
-        setDetectedSizes(insights.availableSizes);
-        setDetectedColors(insights.availableColors);
-      })
-      .catch(() => {
-        if (!active) return;
-        setDetectedSizes([]);
-        setDetectedColors([]);
-      });
-    return () => {
-      active = false;
-    };
-  }, [order?.product_title, order?.product_url, order?.store_label]);
-
-  useEffect(() => {
-    const draft = parseSharedProduct({
-      url: itemRef,
-      title: itemTitle,
-      manualStoreLabel: order?.store_label,
-    });
-    if (!draft || !order) {
-      setItemStoreError('');
-      setItemInsights(null);
-      return;
-    }
-
-    const sameStore = !order.store_key || order.store_key === 'manual' || draft.source === order.store_key;
-    if (!sameStore) {
-      setItemStoreError(actionCopy.wrongStore);
-      setItemInsights(null);
-      setDetectedSizes([]);
-      setDetectedColors([]);
-      return;
-    }
-
-    let active = true;
     setItemStoreError('');
-    setItemInsightsLoading(true);
-
-    void loadSharedProductInsights(draft, fetchProductPageHtml)
-      .then((insights) => {
-        if (!active) return;
-        setItemInsights(insights);
-        setDetectedSizes(insights.availableSizes);
-        setDetectedColors(insights.availableColors);
-        setItemTitle((prev) => prev.trim() ? prev : insights.title);
-        if (insights.priceAgorot) {
-          setItemPrice((insights.priceAgorot / 100).toFixed(2).replace(/\.00$/, ''));
-        }
-      })
-      .catch(() => {
-        if (!active) return;
-        setItemInsights(null);
-      })
-      .finally(() => {
-        if (active) setItemInsightsLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [actionCopy.wrongStore, itemRef, order?.store_key, order?.store_label]);
+    setItemInsights(null);
+    setDetectedSizes([]);
+    setDetectedColors([]);
+    setItemInsightsLoading(false);
+  }, []);
 
   useEffect(() => {
     if (!order?.closes_at || !['open', 'paying'].includes(order.status) || closeOrder.isPending) return;
