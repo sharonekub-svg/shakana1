@@ -1,15 +1,18 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   BrandPill,
   Card,
+  CelebrationBanner,
   DemoButton,
   DemoPage,
   EmptyNotice,
   ProgressBar,
   SavingsPanel,
+  SavingsTracker,
   SectionTitle,
+  TimerRing,
   StatusRail,
   demoStyles,
 } from '@/components/demo/DemoPrimitives';
@@ -27,12 +30,20 @@ import { fontFamily } from '@/theme/fonts';
 export default function StoreDashboardScreen() {
   const router = useRouter();
   const orders = useDemoCommerceStore((state) => state.orders);
+  const lastPulse = useDemoCommerceStore((state) => state.lastPulse);
   const setDemoRole = useDemoCommerceStore((state) => state.setDemoRole);
+  const activeParticipantId = useDemoCommerceStore((state) => state.activeParticipantId);
+  const [nowMs, setNowMs] = useState(Date.now());
 
   useEffect(() => {
     initDemoCommerceSync();
     setDemoRole('store');
   }, [setDemoRole]);
+
+  useEffect(() => {
+    const interval = globalThis.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => globalThis.clearInterval(interval);
+  }, []);
 
   const activeOrders = orders.filter((order) => order.status !== 'Shipped');
 
@@ -50,6 +61,7 @@ export default function StoreDashboardScreen() {
           </View>
         </View>
 
+        <CelebrationBanner pulse={lastPulse} />
         <View style={styles.metricsGrid}>
           <Metric label="Incoming orders" value={String(activeOrders.length)} />
           <Metric
@@ -93,7 +105,14 @@ export default function StoreDashboardScreen() {
                         <Text style={styles.muted}>{store.name} | {minutesLeft} min left</Text>
                       </View>
                     </View>
-                    <Text style={[styles.statusBadge, { borderColor: store.accent }]}>{order.status}</Text>
+                    <View style={styles.orderHeaderRight}>
+                      <TimerRing
+                        remainingMs={Math.max(0, order.closesAt - nowMs)}
+                        totalMs={15 * 60 * 1000}
+                        label="left"
+                      />
+                      <Text style={[styles.statusBadge, { borderColor: store.accent }]}>{order.status}</Text>
+                    </View>
                   </View>
                   <View style={styles.orderStats}>
                     <Stat label="Participants" value={String(order.participants.length)} />
@@ -113,6 +132,7 @@ export default function StoreDashboardScreen() {
         )}
 
         {orders[0] ? <SavingsPanel order={orders[0]} compact /> : null}
+        <SavingsTracker orders={orders} activeParticipantId={activeParticipantId} />
       </DemoPage>
     </ScrollView>
   );
@@ -190,6 +210,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   brandHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  orderHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   orderId: { color: '#171412', fontFamily: fontFamily.bodyBold, fontSize: 18 },
   statusBadge: {
     borderWidth: 1,

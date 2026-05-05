@@ -1,5 +1,15 @@
-import type { ReactNode } from 'react';
-import { Image, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import { useEffect, useRef, type ReactNode } from 'react';
+import {
+  Animated,
+  Image,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type ViewStyle,
+} from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
 import { colors, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import {
@@ -11,13 +21,18 @@ import {
 import {
   getGoalProgress,
   getGroupSavings,
+  getDemoOrderStats,
   getOrderTotal,
   getPersonalSavings,
   getRemainingToGoal,
   getSharedDeliveryFee,
+  getParticipantSuccessCount,
+  type DemoPulse,
   type DemoOrder,
   type OrderStatus,
 } from '@/stores/demoCommerceStore';
+
+const glassWebStyle = Platform.OS === 'web' ? ({ backdropFilter: 'blur(24px)' } as any) : null;
 
 export function DemoPage({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
   return (
@@ -82,7 +97,7 @@ export function Card({
   style?: ViewStyle;
   padded?: boolean;
 }) {
-  return <View style={[styles.card, padded && styles.cardPad, style]}>{children}</View>;
+  return <View style={[styles.card, glassWebStyle, padded && styles.cardPad, style]}>{children}</View>;
 }
 
 export function SectionTitle({ title, kicker }: { title: string; kicker?: string }) {
@@ -119,6 +134,130 @@ export function ProgressBar({ progress, accent = colors.acc }: { progress: numbe
     <View style={styles.progressOuter}>
       <View style={[styles.progressInner, { width: `${Math.max(4, Math.min(100, progress))}%`, backgroundColor: accent }]} />
     </View>
+  );
+}
+
+export function TimerRing({
+  remainingMs,
+  totalMs,
+  label = 'left',
+}: {
+  remainingMs: number;
+  totalMs: number;
+  label?: string;
+}) {
+  const size = 72;
+  const stroke = 7;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const pct = Math.max(0, Math.min(1, remainingMs / totalMs));
+  const strokeDashoffset = circumference * (1 - pct);
+  const tone = remainingMs > 5 * 60 * 1000 ? '#2D7D46' : remainingMs > 2 * 60 * 1000 ? '#B87915' : '#C0392B';
+  const mins = Math.floor(remainingMs / 60000);
+  const secs = Math.floor((remainingMs % 60000) / 1000)
+    .toString()
+    .padStart(2, '0');
+
+  return (
+    <View style={styles.timerWrap}>
+      <Svg width={size} height={size}>
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="#E8DED2"
+          strokeWidth={stroke}
+          fill="none"
+        />
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke={tone}
+          strokeWidth={stroke}
+          fill="none"
+          strokeDasharray={`${circumference} ${circumference}`}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          rotation={-90}
+          originX={size / 2}
+          originY={size / 2}
+        />
+      </Svg>
+      <View style={styles.timerCenter} pointerEvents="none">
+        <Text style={styles.timerValue}>{mins}:{secs}</Text>
+        <Text style={styles.timerLabel}>{label}</Text>
+      </View>
+    </View>
+  );
+}
+
+export function CelebrationBanner({ pulse }: { pulse: DemoPulse | null }) {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!pulse) return;
+    anim.setValue(0);
+    Animated.sequence([
+      Animated.timing(anim, { toValue: 1, duration: 220, useNativeDriver: true }),
+      Animated.timing(anim, { toValue: 0.82, duration: 260, useNativeDriver: true }),
+    ]).start();
+  }, [anim, pulse?.id]);
+
+  if (!pulse) return null;
+
+  const translateY = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [10, 0],
+  });
+  const opacity = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
+
+  return (
+    <Animated.View style={[styles.celebration, { opacity, transform: [{ translateY }] }]}>
+      <Text style={styles.celebrationSpark}>✦</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.celebrationTitle}>Live update</Text>
+        <Text style={styles.celebrationBody}>{pulse.message}</Text>
+      </View>
+    </Animated.View>
+  );
+}
+
+export function SavingsTracker({
+  orders,
+  activeParticipantId,
+}: {
+  orders: DemoOrder[];
+  activeParticipantId: string;
+}) {
+  const stats = getDemoOrderStats(orders);
+  const personalWins = getParticipantSuccessCount(orders, activeParticipantId);
+  const yearlySavings = Math.round(stats.totalSavings);
+  return (
+    <Card style={styles.trackerCard}>
+      <View style={styles.rowBetween}>
+        <View>
+          <Text style={styles.kicker}>Trust & savings</Text>
+          <Text style={styles.h3}>You have saved ₪{yearlySavings} this year</Text>
+        </View>
+        <View style={styles.badgeStack}>
+          <View style={styles.socialBadge}>
+            <Text style={styles.socialBadgeValue}>{personalWins}</Text>
+            <Text style={styles.socialBadgeLabel}>verified saves</Text>
+          </View>
+          <View style={[styles.socialBadge, styles.neutralBadge]}>
+            <Text style={styles.socialBadgeValue}>{stats.totalParticipants || 1}</Text>
+            <Text style={styles.socialBadgeLabel}>trusted neighbors</Text>
+          </View>
+        </View>
+      </View>
+      <Text style={styles.muted}>
+        Quick join, exact variants, and privacy mode keep the flow fast without exposing items you want to keep private.
+      </Text>
+    </Card>
   );
 }
 
@@ -203,9 +342,9 @@ const styles = StyleSheet.create({
     maxWidth: 1320,
   },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.92)',
+    backgroundColor: 'rgba(255,255,255,0.78)',
     borderWidth: 1,
-    borderColor: 'rgba(70,55,40,0.12)',
+    borderColor: 'rgba(70,55,40,0.10)',
     borderRadius: 8,
     ...shadow.card,
   },
@@ -311,6 +450,93 @@ const styles = StyleSheet.create({
   progressInner: {
     height: '100%',
     borderRadius: 99,
+  },
+  timerWrap: {
+    width: 72,
+    height: 72,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timerCenter: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timerValue: {
+    color: '#171412',
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+    lineHeight: 16,
+  },
+  timerLabel: {
+    color: '#6D6258',
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 10,
+    textTransform: 'uppercase',
+  },
+  celebration: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(181,126,47,0.35)',
+    backgroundColor: 'rgba(255,244,215,0.95)',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    shadowColor: '#B57E2F',
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
+  },
+  celebrationSpark: {
+    color: '#B57E2F',
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 18,
+  },
+  celebrationTitle: {
+    color: '#7D5424',
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+    textTransform: 'uppercase',
+  },
+  celebrationBody: {
+    color: '#171412',
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 14,
+  },
+  trackerCard: {
+    gap: 10,
+  },
+  badgeStack: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+  },
+  socialBadge: {
+    minWidth: 94,
+    borderRadius: 8,
+    backgroundColor: '#EDF7E8',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  neutralBadge: {
+    backgroundColor: '#F6EFE8',
+  },
+  socialBadgeValue: {
+    color: '#171412',
+    fontFamily: fontFamily.display,
+    fontSize: 26,
+    lineHeight: 28,
+  },
+  socialBadgeLabel: {
+    color: '#6D6258',
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 11,
+    textTransform: 'uppercase',
   },
   savingsBig: {
     color: '#171412',

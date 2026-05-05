@@ -1,14 +1,17 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   BrandPill,
   Card,
+  CelebrationBanner,
   DemoButton,
   DemoPage,
   EmptyNotice,
   SavingsPanel,
+  SavingsTracker,
   SectionTitle,
+  TimerRing,
   StatusRail,
 } from '@/components/demo/DemoPrimitives';
 import { demoStores } from '@/demo/catalog';
@@ -30,11 +33,19 @@ export default function StoreOrderDetailScreen() {
   const orders = useDemoCommerceStore((state) => state.orders);
   const updateStatus = useDemoCommerceStore((state) => state.updateStatus);
   const setDemoRole = useDemoCommerceStore((state) => state.setDemoRole);
+  const lastPulse = useDemoCommerceStore((state) => state.lastPulse);
+  const activeParticipantId = useDemoCommerceStore((state) => state.activeParticipantId);
+  const [nowMs, setNowMs] = useState(Date.now());
 
   useEffect(() => {
     initDemoCommerceSync();
     setDemoRole('store');
   }, [setDemoRole]);
+
+  useEffect(() => {
+    const interval = globalThis.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => globalThis.clearInterval(interval);
+  }, []);
 
   const order = orders.find((candidate) => candidate.id === params.orderId);
 
@@ -73,12 +84,23 @@ export default function StoreOrderDetailScreen() {
           </View>
         </View>
 
+        <CelebrationBanner pulse={lastPulse} />
         <Card style={styles.summary}>
           <View style={styles.summaryGrid}>
             <Metric label="Status" value={order.status} />
             <Metric label="Participants" value={String(order.participants.length)} />
             <Metric label="Total items" value={String(getOrderItemCount(order))} />
             <Metric label="Total price" value={`₪${getOrderTotal(order)}`} />
+          </View>
+          <View style={styles.timerRow}>
+            <TimerRing
+              remainingMs={Math.max(0, order.closesAt - nowMs)}
+              totalMs={15 * 60 * 1000}
+              label="left"
+            />
+            <Text style={styles.timerCopy}>
+              {Math.max(0, Math.ceil((order.closesAt - nowMs) / 60000))} min until the group closes.
+            </Text>
           </View>
           <StatusRail status={order.status} />
           <Text style={styles.muted}>{order.lastEvent}</Text>
@@ -153,6 +175,7 @@ export default function StoreOrderDetailScreen() {
         </View>
 
         <SavingsPanel order={order} />
+        <SavingsTracker orders={orders} activeParticipantId={activeParticipantId} />
       </DemoPage>
     </ScrollView>
   );
@@ -183,6 +206,8 @@ const styles = StyleSheet.create({
   title: { color: '#171412', fontFamily: fontFamily.display, fontSize: 36 },
   muted: { color: '#6D6258', fontFamily: fontFamily.body, fontSize: 14, lineHeight: 21 },
   summary: { gap: 14 },
+  timerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' },
+  timerCopy: { color: '#171412', fontFamily: fontFamily.bodySemi, fontSize: 14 },
   summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   metric: {
     flexGrow: 1,

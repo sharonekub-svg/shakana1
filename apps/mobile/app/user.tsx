@@ -1,20 +1,25 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   BrandPill,
   Card,
+  CelebrationBanner,
   DemoButton,
   DemoPage,
   EmptyNotice,
   ProductImage,
   SavingsPanel,
+  SavingsTracker,
   SectionTitle,
+  TimerRing,
   StatusRail,
   demoStyles,
 } from '@/components/demo/DemoPrimitives';
 import {
+  buildInviteMessage,
+  detectDemoBrand,
   demoCategories,
   demoStores,
   productsForBrand,
@@ -31,6 +36,7 @@ import {
   useDemoCommerceStore,
 } from '@/stores/demoCommerceStore';
 import { fontFamily } from '@/theme/fonts';
+import { BuildingSections } from '@/components/demo/BuildingSections';
 
 export default function DemoUserScreen() {
   const router = useRouter();
@@ -39,6 +45,7 @@ export default function DemoUserScreen() {
   const orders = useDemoCommerceStore((state) => state.orders);
   const activeParticipantId = useDemoCommerceStore((state) => state.activeParticipantId);
   const lastNotice = useDemoCommerceStore((state) => state.lastNotice);
+  const lastPulse = useDemoCommerceStore((state) => state.lastPulse);
   const selectBrand = useDemoCommerceStore((state) => state.selectBrand);
   const ensureOrder = useDemoCommerceStore((state) => state.ensureOrder);
   const joinParticipant = useDemoCommerceStore((state) => state.joinParticipant);
@@ -47,11 +54,19 @@ export default function DemoUserScreen() {
 
   const [category, setCategory] = useState<(typeof demoCategories)[number]>('Best Sellers');
   const [copied, setCopied] = useState(false);
+  const [linkInput, setLinkInput] = useState('');
+  const [joinCodeInput, setJoinCodeInput] = useState('');
+  const [nowMs, setNowMs] = useState(Date.now());
 
   useEffect(() => {
     initDemoCommerceSync();
     setDemoRole('user');
   }, [setDemoRole]);
+
+  useEffect(() => {
+    const interval = globalThis.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => globalThis.clearInterval(interval);
+  }, []);
 
   const joinedOrder = useMemo(
     () => orders.find((order) => order.inviteCode === params.join),
@@ -75,6 +90,7 @@ export default function DemoUserScreen() {
   const categoryProducts = products.filter((product) => product.category === category);
   const activeParticipant =
     demoParticipants.find((participant) => participant.id === activeParticipantId) ?? primaryDemoParticipant;
+  const remainingMs = order ? Math.max(0, order.closesAt - nowMs) : 0;
 
   const createOrder = (nextBrand: DemoBrandId) => {
     selectBrand(nextBrand);
@@ -82,7 +98,7 @@ export default function DemoUserScreen() {
   };
 
   const shareMessage = order
-    ? `${activeParticipant.name} is ordering from ${demoStores[order.brand].name}! 15 mins left to join and save on delivery. Join here: ${order.inviteLink} Code: ${order.inviteCode}`
+    ? buildInviteMessage(activeParticipant.name, order.brand, order.inviteLink, order.inviteCode)
     : '';
 
   const copyInvite = async () => {
@@ -90,6 +106,17 @@ export default function DemoUserScreen() {
     await Clipboard.setStringAsync(shareMessage);
     setCopied(true);
     globalThis.setTimeout(() => setCopied(false), 1600);
+  };
+
+  const quickJoin = () => {
+    const detected = detectDemoBrand(`${linkInput} ${joinCodeInput}`);
+    if (detected) {
+      createOrder(detected);
+      setCategory('Best Sellers');
+    }
+    if (joinCodeInput.trim().length === 4) {
+      router.replace(`/user?join=${joinCodeInput.trim()}`);
+    }
   };
 
   if (!brand || !store) {
@@ -100,9 +127,47 @@ export default function DemoUserScreen() {
             <Text style={styles.logo}>shakana</Text>
             <DemoButton label="Store login" onPress={() => router.push('/store')} tone="light" style={styles.smallBtn} />
           </View>
+          <BuildingSections
+            orders={orders}
+            onOpenStore={() => router.push('/store')}
+            onOpenLogin={() => router.push('/login')}
+            onChooseBrand={(brand) => {
+              selectBrand(brand);
+              setCategory('Best Sellers');
+            }}
+          />
           <SectionTitle title="Choose your store" kicker="User flow" />
+          <Card style={styles.quickJoinCard}>
+            <View style={styles.quickJoinGrid}>
+              <View style={{ flex: 1, gap: 6 }}>
+                <Text style={styles.quickJoinTitle}>One-link quick join</Text>
+                <Text style={styles.muted}>
+                  Paste a store or product link, or enter the 4-digit join code from a friend.
+                </Text>
+              </View>
+              <View style={styles.quickJoinInputs}>
+                <TextInput
+                  value={linkInput}
+                  onChangeText={setLinkInput}
+                  placeholder="Paste product or store link"
+                  placeholderTextColor="#8B6F56"
+                  style={styles.input}
+                />
+                <TextInput
+                  value={joinCodeInput}
+                  onChangeText={setJoinCodeInput}
+                  placeholder="4-digit join code"
+                  placeholderTextColor="#8B6F56"
+                  keyboardType="number-pad"
+                  maxLength={4}
+                  style={styles.input}
+                />
+              </View>
+              <DemoButton label="Quick join" onPress={quickJoin} tone="accent" style={styles.quickJoinBtn} />
+            </View>
+          </Card>
           <View style={styles.storeGrid}>
-            {(['hm', 'zara'] as DemoBrandId[]).map((brandId) => {
+            {(['hm', 'zara', 'amazon'] as DemoBrandId[]).map((brandId) => {
               const option = demoStores[brandId];
               return (
                 <Pressable
@@ -145,7 +210,10 @@ export default function DemoUserScreen() {
 
         <ImageBackground source={{ uri: store.heroImage }} resizeMode="cover" style={styles.hero}>
           <View style={styles.heroOverlay}>
-            <BrandPill brand={brand} />
+            <View style={styles.heroHeaderRow}>
+              <BrandPill brand={brand} />
+              {order ? <TimerRing remainingMs={remainingMs} totalMs={15 * 60 * 1000} /> : null}
+            </View>
             <Text style={styles.heroTitle}>{store.name}</Text>
             <Text style={styles.heroSubtitle}>{store.tagline}</Text>
             <Text style={styles.heroMeta}>{store.deliveryEta}</Text>
@@ -161,6 +229,7 @@ export default function DemoUserScreen() {
           </View>
         </ImageBackground>
 
+        <CelebrationBanner pulse={lastPulse} />
         {lastNotice ? (
           <Card style={styles.notice}>
             <Text style={styles.noticeText}>{lastNotice}</Text>
@@ -217,10 +286,21 @@ export default function DemoUserScreen() {
                     <Text style={styles.total}>₪{getOrderTotal(order)}</Text>
                   </View>
                   <StatusRail status={order.status} />
+                  <View style={styles.shareProofRow}>
+                    <View style={styles.trustPill}>
+                      <Text style={styles.trustValue}>{activeParticipant.name}</Text>
+                      <Text style={styles.trustLabel}>Verified neighbor</Text>
+                    </View>
+                    <View style={styles.trustPillSoft}>
+                      <Text style={styles.trustValue}>{order.participants.length}</Text>
+                      <Text style={styles.trustLabel}>Joined now</Text>
+                    </View>
+                  </View>
                   <View style={styles.participants}>
                     {demoParticipants.map((participant) => {
                       const joined = order.participants.some((current) => current.id === participant.id);
                       const active = activeParticipantId === participant.id;
+                      const verified = joined && order.items.some((item) => item.participantId === participant.id);
                       return (
                         <Pressable
                           key={participant.id}
@@ -231,15 +311,19 @@ export default function DemoUserScreen() {
                           }}
                           style={[styles.participantPill, joined && styles.joinedPill, active && styles.activePill]}
                         >
-                          <Text style={[styles.participantText, active && styles.activePillText]}>
-                            {participant.name}{joined ? '' : ' +'}
-                          </Text>
+                          <View style={styles.participantRow}>
+                            <Text style={[styles.participantText, active && styles.activePillText]}>
+                              {participant.name}{joined ? '' : ' +'}
+                            </Text>
+                            {verified ? <Text style={styles.participantBadge}>verified</Text> : null}
+                          </View>
                         </Pressable>
                       );
                     })}
                   </View>
                   <View style={styles.inviteBox}>
                     <Text style={styles.kicker}>WhatsApp-style invite</Text>
+                    <Text style={styles.inviteCardPreview}>{shareMessage}</Text>
                     <Text style={styles.inviteText}>{shareMessage}</Text>
                     <DemoButton
                       label={copied ? 'Invite copied' : 'Share with friends'}
@@ -254,6 +338,7 @@ export default function DemoUserScreen() {
                 </Card>
 
                 <SavingsPanel order={order} />
+                <SavingsTracker orders={orders} activeParticipantId={activeParticipantId} />
 
                 <Card style={styles.cartCard}>
                   <View style={styles.rowBetween}>
@@ -409,6 +494,27 @@ const styles = StyleSheet.create({
   },
   smallBtn: { width: 170, minHeight: 40 },
   storeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
+  quickJoinCard: { gap: 12, marginTop: 4 },
+  quickJoinGrid: { gap: 10 },
+  quickJoinTitle: {
+    color: '#171412',
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 16,
+  },
+  quickJoinInputs: { gap: 8, flexDirection: 'row', flexWrap: 'wrap' },
+  input: {
+    flexGrow: 1,
+    minWidth: 210,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#DED2C5',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    color: '#171412',
+    fontFamily: fontFamily.bodySemi,
+    backgroundColor: '#FFFFFF',
+  },
+  quickJoinBtn: { alignSelf: 'flex-start', minWidth: 160 },
   storeChoice: {
     flexGrow: 1,
     flexBasis: 340,
@@ -465,6 +571,7 @@ const styles = StyleSheet.create({
   },
   heroActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 8 },
   heroBtn: { width: 210 },
+  heroHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
   notice: { backgroundColor: '#FFF7E8', borderColor: '#E9C98D' },
   noticeText: { color: '#7D5424', fontFamily: fontFamily.bodyBold, fontSize: 14 },
   mainGrid: { flexDirection: 'row', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 },
@@ -527,9 +634,57 @@ const styles = StyleSheet.create({
   },
   joinedPill: { backgroundColor: '#EAF4E7' },
   activePill: { backgroundColor: '#171412' },
+  participantRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   participantText: { color: '#5F554C', fontFamily: fontFamily.bodyBold, fontSize: 12 },
   activePillText: { color: '#FFFFFF' },
+  participantBadge: {
+    color: '#24683A',
+    backgroundColor: '#EDF7E8',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 10,
+    textTransform: 'uppercase',
+  },
+  shareProofRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  trustPill: {
+    flexGrow: 1,
+    minWidth: 140,
+    borderRadius: 8,
+    backgroundColor: '#EAF4E7',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 2,
+  },
+  trustPillSoft: {
+    flexGrow: 1,
+    minWidth: 120,
+    borderRadius: 8,
+    backgroundColor: '#F6EFE8',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 2,
+  },
+  trustValue: {
+    color: '#171412',
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 15,
+  },
+  trustLabel: {
+    color: '#6D6258',
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 11,
+    textTransform: 'uppercase',
+  },
   inviteBox: { gap: 9, padding: 12, borderRadius: 8, backgroundColor: '#F7F0E8' },
+  inviteCardPreview: {
+    color: '#7D5424',
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 12,
+    lineHeight: 18,
+    opacity: 0.9,
+  },
   inviteText: { color: '#171412', fontFamily: fontFamily.bodySemi, fontSize: 13, lineHeight: 20 },
   simRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   simBtn: { flexGrow: 1, flexBasis: 140 },

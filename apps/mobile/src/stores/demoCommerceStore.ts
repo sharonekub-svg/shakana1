@@ -43,12 +43,19 @@ export type DemoOrder = {
   lastEvent: string;
 };
 
+export type DemoPulse = {
+  id: number;
+  kind: 'join' | 'item' | 'status' | 'goal';
+  message: string;
+};
+
 type DemoState = {
   demoRole: DemoRole;
   selectedBrand: DemoBrandId | null;
   activeParticipantId: string;
   orders: DemoOrder[];
   lastNotice: string | null;
+  lastPulse: DemoPulse | null;
   setDemoRole: (role: DemoRole) => void;
   selectBrand: (brand: DemoBrandId | null) => void;
   setActiveParticipant: (participantId: string) => void;
@@ -62,6 +69,7 @@ type DemoState = {
 type PersistedDemoState = Pick<
   DemoState,
   'demoRole' | 'selectedBrand' | 'activeParticipantId' | 'orders' | 'lastNotice'
+  | 'lastPulse'
 >;
 
 type AddItemInput = {
@@ -125,6 +133,7 @@ function defaultState(): PersistedDemoState {
     activeParticipantId: 'user-a',
     orders: [],
     lastNotice: null,
+    lastPulse: null,
   };
 }
 
@@ -139,6 +148,13 @@ function sanitizeState(value: unknown): PersistedDemoState {
       typeof incoming.activeParticipantId === 'string' ? incoming.activeParticipantId : 'user-a',
     orders: Array.isArray(incoming.orders) ? incoming.orders : [],
     lastNotice: typeof incoming.lastNotice === 'string' ? incoming.lastNotice : null,
+    lastPulse:
+      incoming.lastPulse &&
+      typeof incoming.lastPulse === 'object' &&
+      typeof (incoming.lastPulse as DemoPulse).id === 'number' &&
+      typeof (incoming.lastPulse as DemoPulse).message === 'string'
+        ? (incoming.lastPulse as DemoPulse)
+        : null,
   };
 }
 
@@ -159,6 +175,7 @@ function persistedFromState(state: DemoState): PersistedDemoState {
     activeParticipantId: state.activeParticipantId,
     orders: state.orders,
     lastNotice: state.lastNotice,
+    lastPulse: state.lastPulse,
   };
 }
 
@@ -200,11 +217,13 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
     if (existing) return existing.id;
     const order = createOrder(brand);
     set((state) => {
+      const pulse: DemoPulse = { id: now(), kind: 'join', message: order.lastEvent };
       const next = {
         ...state,
         selectedBrand: brand,
         orders: [order, ...state.orders],
         lastNotice: order.lastEvent,
+        lastPulse: pulse,
       };
       persistAndBroadcast(next);
       return next;
@@ -226,11 +245,17 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
         };
       });
       const joinedOrder = orders.find((order) => order.id === orderId);
+      const pulse: DemoPulse = {
+        id: now(),
+        kind: 'join',
+        message: joinedOrder?.lastEvent ?? 'Friend joined',
+      };
       const next = {
         ...state,
         orders,
         activeParticipantId: participantId,
         lastNotice: joinedOrder?.lastEvent ?? 'Friend joined',
+        lastPulse: pulse,
       };
       persistAndBroadcast(next);
       return next;
@@ -271,11 +296,17 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
         };
       });
       const changedOrder = orders.find((order) => order.id === orderId);
+      const pulse: DemoPulse = {
+        id: now(),
+        kind: 'item',
+        message: changedOrder?.lastEvent ?? 'Item added',
+      };
       const next = {
         ...state,
         orders,
         activeParticipantId: input.participantId,
         lastNotice: changedOrder?.lastEvent ?? 'Item added',
+        lastPulse: pulse,
       };
       persistAndBroadcast(next);
       return next;
@@ -291,6 +322,11 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
         ...state,
         orders,
         lastNotice: `Order status updated to ${status}`,
+        lastPulse: {
+          id: now(),
+          kind: status === 'Shipped' ? 'goal' : 'status',
+          message: `Order status updated to ${status}`,
+        } as DemoPulse,
       };
       persistAndBroadcast(next);
       return next;
@@ -385,6 +421,26 @@ export function getMasterPickingList(order: DemoOrder) {
 
 export function getOrdersForStore() {
   return useDemoCommerceStore.getState().orders;
+}
+
+export function getDemoOrderStats(orders: DemoOrder[]) {
+  const shippedOrders = orders.filter((order) => order.status === 'Shipped');
+  const totalSavings = shippedOrders.reduce((total, order) => total + getGroupSavings(order), 0);
+  const totalParticipants = new Set(
+    shippedOrders.flatMap((order) => order.participants.map((participant) => participant.id)),
+  ).size;
+  return {
+    shippedOrders: shippedOrders.length,
+    totalSavings,
+    totalParticipants,
+  };
+}
+
+export function getParticipantSuccessCount(orders: DemoOrder[], participantId: string) {
+  return orders.reduce((count, order) => {
+    const participantSeen = order.participants.some((participant) => participant.id === participantId);
+    return participantSeen && order.status === 'Shipped' ? count + 1 : count;
+  }, 0);
 }
 
 export function getDefaultProductForBrand(brand: DemoBrandId) {

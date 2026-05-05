@@ -1,13 +1,16 @@
-import { useEffect } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Card, DemoButton, DemoPage, SectionTitle } from '@/components/demo/DemoPrimitives';
+import { detectDemoBrand } from '@/demo/catalog';
 import { initDemoCommerceSync, useDemoCommerceStore } from '@/stores/demoCommerceStore';
 import { fontFamily } from '@/theme/fonts';
 
 export default function DemoLoginScreen() {
   const router = useRouter();
   const setDemoRole = useDemoCommerceStore((state) => state.setDemoRole);
+  const [linkInput, setLinkInput] = useState('');
+  const [codeInput, setCodeInput] = useState('');
 
   useEffect(() => {
     initDemoCommerceSync();
@@ -23,6 +26,18 @@ export default function DemoLoginScreen() {
     router.replace('/store');
   };
 
+  const quickJoin = () => {
+    const detected = detectDemoBrand(`${linkInput} ${codeInput}`);
+    if (codeInput.trim().length === 4) {
+      router.replace(`/user?join=${codeInput.trim()}`);
+      return;
+    }
+    if (detected) {
+      setDemoRole('user');
+      router.replace('/user');
+    }
+  };
+
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
       <DemoPage>
@@ -35,6 +50,32 @@ export default function DemoLoginScreen() {
         </View>
 
         <View style={styles.grid}>
+          <Card style={styles.quickJoinCard}>
+            <SectionTitle title="Quick join" kicker="Zero-friction entry" />
+            <Text style={styles.helper}>
+              Paste a brand link or enter the 4-digit invite code. The demo will jump straight to the shared order.
+            </Text>
+            <View style={styles.joinInputs}>
+              <TextInput
+                value={linkInput}
+                onChangeText={setLinkInput}
+                placeholder="Paste store or product link"
+                placeholderTextColor="#8B6F56"
+                style={styles.input}
+              />
+              <TextInput
+                value={codeInput}
+                onChangeText={setCodeInput}
+                placeholder="4-digit code"
+                placeholderTextColor="#8B6F56"
+                keyboardType="number-pad"
+                maxLength={4}
+                style={styles.input}
+              />
+            </View>
+            <DemoButton label="Quick join" onPress={quickJoin} tone="accent" />
+          </Card>
+
           <Card style={styles.loginCard}>
             <SectionTitle title="User side" kicker="Demo login" />
             <View style={styles.credentials}>
@@ -99,6 +140,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 16,
+  },
+  quickJoinCard: {
+    flexGrow: 1,
+    flexBasis: 320,
+    gap: 14,
+  },
+  helper: {
+    color: '#6D6258',
+    fontFamily: fontFamily.body,
+    fontSize: 15,
+    lineHeight: 23,
+  },
+  joinInputs: {
+    gap: 8,
+  },
+  input: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#DED2C5',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    color: '#171412',
+    fontFamily: fontFamily.bodySemi,
+    backgroundColor: '#FFFFFF',
   },
   loginCard: {
     flexGrow: 1,

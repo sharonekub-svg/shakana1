@@ -1,4 +1,4 @@
-export type DemoBrandId = 'hm' | 'zara';
+export type DemoBrandId = 'hm' | 'zara' | 'amazon';
 
 export type DemoProduct = {
   id: string;
@@ -48,6 +48,16 @@ export const demoStores: Record<DemoBrandId, DemoStore> = {
     logoText: 'ZARA',
     heroImage:
       'https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=1400&q=80',
+  },
+  amazon: {
+    id: 'amazon',
+    name: 'Amazon',
+    tagline: 'One-link quick join for essentials and wardrobe basics',
+    deliveryEta: 'Prime-style rapid fulfillment',
+    accent: '#111111',
+    logoText: 'A',
+    heroImage:
+      'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=1400&q=80',
   },
 };
 
@@ -222,6 +232,62 @@ export const demoProducts: DemoProduct[] = [
     colors: ['Black', 'Brown'],
     stockStatus: 'In stock',
   },
+  {
+    id: 'amazon-essential-tee',
+    brand: 'amazon',
+    name: 'Amazon Everyday Tee',
+    price: 69,
+    compareAtPrice: 79,
+    sku: 'AM-TS-1001',
+    description: 'Soft everyday tee with simple fit and fast replenishment.',
+    image: img('photo-1521572267360-ee0c2909d518'),
+    category: 'Best Sellers',
+    sizes: ['S', 'M', 'L', 'XL'],
+    colors: ['Black', 'White', 'Grey'],
+    stockStatus: 'In stock',
+  },
+  {
+    id: 'amazon-soft-hoodie',
+    brand: 'amazon',
+    name: 'Amazon Soft Fleece Hoodie',
+    price: 129,
+    compareAtPrice: 149,
+    sku: 'AM-HD-2208',
+    description: 'Brushed fleece hoodie with roomy hood and clean seams.',
+    image: img('photo-1483985988355-763728e1935b'),
+    category: 'New Arrivals',
+    sizes: ['S', 'M', 'L', 'XL'],
+    colors: ['Black', 'Oatmeal', 'Navy'],
+    stockStatus: 'Low stock',
+  },
+  {
+    id: 'amazon-straight-denim',
+    brand: 'amazon',
+    name: 'Amazon Straight Denim',
+    price: 119,
+    compareAtPrice: 139,
+    sku: 'AM-DN-3390',
+    description: 'Straight denim with comfort stretch and clean wash.',
+    image: img('photo-1541099649105-f69ad21f3246'),
+    category: 'Pants',
+    sizes: ['30', '32', '34', '36', '38'],
+    colors: ['Blue', 'Black'],
+    stockStatus: 'In stock',
+  },
+  {
+    id: 'amazon-mini-pack',
+    brand: 'amazon',
+    name: 'Amazon 3-Pack Socks',
+    price: 39,
+    compareAtPrice: 49,
+    sku: 'AM-AC-0051',
+    description: 'Utility 3-pack with stretch fit and quick delivery.',
+    image: img('photo-1586350977771-b3b0abd50c82'),
+    category: 'Accessories',
+    sizes: ['One size'],
+    colors: ['White', 'Black'],
+    stockStatus: 'In stock',
+  },
 ];
 
 export const demoCategories = [
@@ -239,4 +305,17 @@ export function productsForBrand(brand: DemoBrandId) {
 
 export function findProduct(productId: string) {
   return demoProducts.find((product) => product.id === productId);
+}
+
+export function detectDemoBrand(input: string) {
+  const lowered = input.toLowerCase();
+  if (lowered.includes('amazon')) return 'amazon' as const;
+  if (lowered.includes('zara')) return 'zara' as const;
+  if (lowered.includes('hm') || lowered.includes('h&m')) return 'hm' as const;
+  return null;
+}
+
+export function buildInviteMessage(name: string, brand: DemoBrandId, link: string, code: string) {
+  const store = demoStores[brand];
+  return `🚀 ${name} is ordering from ${store.name}! 15 mins left to join and save on delivery. Join here: ${link} Code: ${code}`;
 }
