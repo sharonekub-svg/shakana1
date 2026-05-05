@@ -30,7 +30,10 @@ export default function GroupOrderScreen() {
   if (!order || !totals) {
     return (
       <View style={s.empty}>
-        <Text style={s.emptyTitle}>Order not found</Text>
+        <Text style={s.emptyTitle}>This invite isn't loaded yet</Text>
+        <Text style={{ color: '#707070', textAlign: 'center', maxWidth: 360, lineHeight: 20 }}>
+          For the investor demo, open the invite link in the <Text style={{ fontWeight: '800' }}>same browser</Text> as the host (a second tab works), or use the “Simulate friend join” button on the host's screen.
+        </Text>
         <Pressable onPress={() => router.replace('/user')} style={s.btnDark}><Text style={s.btnDarkTxt}>Back to stores</Text></Pressable>
       </View>
     );
@@ -140,6 +143,13 @@ export default function GroupOrderScreen() {
           </Pressable>
         )}
       </View>
+
+      {/* Add more items CTA — visible whenever order is still open */}
+      {order.status === 'open' && isParticipant && (
+        <Pressable onPress={() => router.push(`/user/store/${order.brand}`)} style={[s.btnDark, { backgroundColor: meta.accent }]}>
+          <Text style={s.btnDarkTxt}>+ Add items as {DEMO_USER_META[activeUser].name}</Text>
+        </Pressable>
+      )}
 
       {/* Items */}
       <View style={s.card}>
