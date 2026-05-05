@@ -1,13 +1,19 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
+
 import { Card, DemoButton, DemoPage, SectionTitle } from '@/components/demo/DemoPrimitives';
+import { LanguageSwitcher } from '@/components/primitives/LanguageSwitcher';
 import { detectDemoBrand } from '@/demo/catalog';
+import { useLocale } from '@/i18n/locale';
 import { initDemoCommerceSync, useDemoCommerceStore } from '@/stores/demoCommerceStore';
+import { colors } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 
 export default function DemoLoginScreen() {
   const router = useRouter();
+  const { language } = useLocale();
+  const isHebrew = language === 'he';
   const setDemoRole = useDemoCommerceStore((state) => state.setDemoRole);
   const [linkInput, setLinkInput] = useState('');
   const [codeInput, setCodeInput] = useState('');
@@ -26,6 +32,10 @@ export default function DemoLoginScreen() {
     router.replace('/store');
   };
 
+  const openProfile = () => {
+    router.push('/profile');
+  };
+
   const quickJoin = () => {
     const detected = detectDemoBrand(`${linkInput} ${codeInput}`);
     if (codeInput.trim().length === 4) {
@@ -42,60 +52,81 @@ export default function DemoLoginScreen() {
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
       <DemoPage>
         <View style={styles.hero}>
-          <Text style={styles.logo}>shakana</Text>
-          <Text style={styles.title}>Investor demo control room</Text>
+          <View style={styles.heroTop}>
+            <Text style={styles.logo}>shakana</Text>
+            <LanguageSwitcher />
+          </View>
+          <Text style={styles.title}>{isHebrew ? 'כניסה נקייה ומהירה' : 'A cleaner way to sign in'}</Text>
           <Text style={styles.subtitle}>
-            A two-sided group shopping flow for fashion retailers, built as a live demo.
+            {isHebrew
+              ? 'צבעים חמים, מסך נקי, וכניסה מהירה לאפליקציה בעברית או באנגלית.'
+              : 'Warm colors, a clean layout, and fast entry into the app in Hebrew or English.'}
           </Text>
         </View>
 
         <View style={styles.grid}>
           <Card style={styles.quickJoinCard}>
-            <SectionTitle title="Quick join" kicker="Zero-friction entry" />
+            <SectionTitle title={isHebrew ? 'הצטרפות מהירה' : 'Quick join'} kicker={isHebrew ? 'כניסה מיידית' : 'Zero-friction entry'} />
             <Text style={styles.helper}>
-              Paste a brand link or enter the 4-digit invite code. The demo will jump straight to the shared order.
+              {isHebrew
+                ? 'הדבק קישור של חנות או הזן קוד בן 4 ספרות כדי להיכנס ישר להזמנה המשותפת.'
+                : 'Paste a store link or enter the 4-digit invite code to jump straight into the shared order.'}
             </Text>
             <View style={styles.joinInputs}>
               <TextInput
                 value={linkInput}
                 onChangeText={setLinkInput}
-                placeholder="Paste store or product link"
-                placeholderTextColor="#8B6F56"
+                placeholder={isHebrew ? 'הדבק קישור של מוצר או חנות' : 'Paste store or product link'}
+                placeholderTextColor={colors.mu2}
+                textAlign={isHebrew ? 'right' : 'left'}
                 style={styles.input}
               />
               <TextInput
                 value={codeInput}
                 onChangeText={setCodeInput}
-                placeholder="4-digit code"
-                placeholderTextColor="#8B6F56"
+                placeholder={isHebrew ? 'קוד בן 4 ספרות' : '4-digit code'}
+                placeholderTextColor={colors.mu2}
+                textAlign={isHebrew ? 'right' : 'left'}
                 keyboardType="number-pad"
                 maxLength={4}
                 style={styles.input}
               />
             </View>
-            <DemoButton label="Quick join" onPress={quickJoin} tone="accent" />
+            <DemoButton label={isHebrew ? 'הצטרפות מהירה' : 'Quick join'} onPress={quickJoin} tone="accent" />
           </Card>
 
           <Card style={styles.loginCard}>
-            <SectionTitle title="User side" kicker="Demo login" />
+            <SectionTitle title={isHebrew ? 'משתמש' : 'User side'} kicker={isHebrew ? 'התחברות דמו' : 'Demo login'} />
             <View style={styles.credentials}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>{isHebrew ? 'אימייל' : 'Email'}</Text>
               <Text style={styles.value}>user@shakana.demo</Text>
-              <Text style={styles.label}>Password</Text>
+              <Text style={styles.label}>{isHebrew ? 'סיסמה' : 'Password'}</Text>
               <Text style={styles.value}>demo123</Text>
             </View>
-            <DemoButton label="Continue as User" onPress={continueAsUser} tone="accent" />
+            <DemoButton label={isHebrew ? 'המשך כמשתמש' : 'Continue as User'} onPress={continueAsUser} tone="accent" />
           </Card>
 
           <Card style={styles.loginCard}>
-            <SectionTitle title="Store / Agent M" kicker="Merchant login" />
+            <SectionTitle title={isHebrew ? 'חנות / Agent M' : 'Store / Agent M'} kicker={isHebrew ? 'התחברות סוחר' : 'Merchant login'} />
             <View style={styles.credentials}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>{isHebrew ? 'אימייל' : 'Email'}</Text>
               <Text style={styles.value}>store@shakana.demo</Text>
-              <Text style={styles.label}>Password</Text>
+              <Text style={styles.label}>{isHebrew ? 'סיסמה' : 'Password'}</Text>
               <Text style={styles.value}>demo123</Text>
             </View>
-            <DemoButton label="Continue as Store / Agent M" onPress={continueAsStore} />
+            <DemoButton label={isHebrew ? 'המשך כחנות' : 'Continue as Store / Agent M'} onPress={continueAsStore} />
+          </Card>
+
+          <Card style={styles.loginCard}>
+            <SectionTitle title={isHebrew ? 'פרופיל' : 'Profile'} kicker={isHebrew ? 'דף חשבון' : 'Open the profile page'} />
+            <Text style={styles.helper}>
+              {isHebrew
+                ? 'אפשר לפתוח כאן את דף הפרופיל, להחליף שפה, ולוודא שהכל עובד.'
+                : 'Open the profile page here to change language and verify the account screen.'}
+            </Text>
+            <Pressable onPress={openProfile} style={({ pressed }) => [styles.profileLink, pressed && { opacity: 0.85 }]}>
+              <Text style={styles.profileLinkText}>{isHebrew ? 'פתח פרופיל' : 'Open profile'}</Text>
+            </Pressable>
           </Card>
         </View>
       </DemoPage>
@@ -112,25 +143,31 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   hero: {
-    minHeight: 260,
+    minHeight: 280,
     justifyContent: 'center',
     gap: 10,
   },
+  heroTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 14,
+  },
   logo: {
-    color: '#A65F3C',
+    color: colors.gold,
     fontFamily: fontFamily.bodyBold,
     fontSize: 16,
     letterSpacing: 0,
     textTransform: 'uppercase',
   },
   title: {
-    color: '#171412',
+    color: colors.tx,
     fontFamily: fontFamily.display,
-    fontSize: 44,
+    fontSize: 42,
     maxWidth: 760,
   },
   subtitle: {
-    color: '#6D6258',
+    color: colors.mu,
     fontFamily: fontFamily.body,
     fontSize: 18,
     lineHeight: 28,
@@ -147,7 +184,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   helper: {
-    color: '#6D6258',
+    color: colors.mu,
     fontFamily: fontFamily.body,
     fontSize: 15,
     lineHeight: 23,
@@ -158,12 +195,12 @@ const styles = StyleSheet.create({
   input: {
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#DED2C5',
+    borderColor: colors.br,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    color: '#171412',
+    color: colors.tx,
     fontFamily: fontFamily.bodySemi,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   loginCard: {
     flexGrow: 1,
@@ -180,9 +217,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   value: {
-    color: '#171412',
+    color: colors.tx,
     fontFamily: fontFamily.bodySemi,
     fontSize: 16,
     marginBottom: 6,
+  },
+  profileLink: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: colors.goldLight,
+  },
+  profileLinkText: {
+    color: colors.tx,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
   },
 });

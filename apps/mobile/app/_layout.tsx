@@ -188,7 +188,9 @@ function RootLayoutInner() {
     const inJoin = segments[0] === 'join';
     const inTabsBuilding = segments[0] === '(tabs)' && segments[1] === 'building';
     const inDemo =
+      segments[0] === 'welcome' ||
       segments[0] === 'login' ||
+      segments[0] === 'profile' ||
       segments[0] === 'user' ||
       segments[0] === 'store' ||
       inTabsBuilding;
