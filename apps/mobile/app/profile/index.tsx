@@ -2,35 +2,30 @@ import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
+import { ScreenBase } from '@/components/primitives/ScreenBase';
+import { LanguageSwitcher } from '@/components/primitives/LanguageSwitcher';
+import { PrimaryBtn } from '@/components/primitives/Button';
 import { useLocale } from '@/i18n/locale';
 import { useAuthStore } from '@/stores/authStore';
 import { useUserOrders } from '@/api/orders';
 import { useSignOut } from '@/api/auth';
 import { resetAnalytics } from '@/lib/posthog';
-import { LanguageSwitcher } from '@/components/primitives/LanguageSwitcher';
-import { PrimaryBtn, SecondaryBtn } from '@/components/primitives/Button';
-import { ScreenBase } from '@/components/primitives/ScreenBase';
 import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 
-type QuickLink = {
-  href: string;
-  en: string;
-  he: string;
-  danger?: boolean;
-};
+type ProfileLink = { href: string; label: string; danger?: boolean };
 
-const QUICK_LINKS: QuickLink[] = [
-  { href: '/profile/payment', en: 'Payments', he: 'תשלומים' },
-  { href: '/profile/alerts', en: 'Alerts', he: 'התראות' },
-  { href: '/profile/privacy', en: 'Privacy', he: 'פרטיות' },
-  { href: '/profile/terms', en: 'Terms', he: 'תנאים' },
-  { href: '/profile/delete', en: 'Delete account', he: 'מחיקת חשבון', danger: true },
+const PROFILE_LINKS: ProfileLink[] = [
+  { href: '/profile/payment', label: 'Payments' },
+  { href: '/profile/alerts', label: 'Alerts' },
+  { href: '/profile/privacy', label: 'Privacy' },
+  { href: '/profile/terms', label: 'Terms' },
+  { href: '/profile/delete', label: 'Delete account', danger: true },
 ] as const;
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { language, setLanguage } = useLocale();
+  const { language } = useLocale();
   const isHebrew = language === 'he';
   const signOut = useSignOut();
   const session = useAuthStore((s) => s.session);
@@ -38,45 +33,13 @@ export default function ProfileScreen() {
   const resetAuth = useAuthStore((s) => s.reset);
   const { data: orders = [] } = useUserOrders(session?.user.id);
 
-  const fullName = useMemo(
+  const name = useMemo(
     () => [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim(),
     [profile?.first_name, profile?.last_name],
   );
 
-  const email = session?.user.email ?? (isHebrew ? '׳׳™׳ ׳׳×׳•׳‘׳× ׳“׳•׳׳¨׳׳' : 'No email yet');
   const openOrders = orders.filter((order) => !['completed', 'cancelled', 'Shipped'].includes(order.status)).length;
-
-  const copy = isHebrew
-    ? {
-        title: '׳₪׳¨׳•׳₪׳™׳',
-        subtitle: '׳›׳׳ ׳׳©׳˜׳™׳ ׳©׳₪׳”, ׳”׳×׳¨׳׳•׳×, ׳•׳”׳”׳–׳׳ ׳•׳× ׳©׳׳ ׳‘׳’׳¨׳¡׳” ׳׳—׳× ׳ ׳§׳™׳™׳”.',
-        ready: '׳₪׳¨׳•׳₪׳™׳ ׳׳•׳›׳',
-        guest: '׳׳×׳” ׳׳ ׳׳•׳’׳“׳¨ ׳›׳‘׳¨ ׳‘׳׳©׳×׳׳©. ׳׳₪׳©׳¨ ׳׳”׳×׳—׳‘׳¨ ׳׳•׳׳™ ׳׳“׳£ ׳”׳׳¨׳™׳›׳”.',
-        guestCta: '׳”׳×׳—׳‘׳¨׳•׳× ׳׳׳×׳׳©׳׳',
-        account: '׳—׳©׳‘׳•׳',
-        nameLabel: '׳©׳',
-        emailLabel: '׳“׳•׳׳¨׳׳',
-        openOrdersLabel: '׳”׳–׳׳ ׳•׳× ׳₪׳×׳•׳—׳•׳×',
-        languageTitle: '׳©׳₪׳”',
-        languageBody: '׳׳₪׳©׳¨ ׳׳¢׳‘׳¨ ׳‘׳™׳ ׳¢׳‘׳¨׳™׳× ׳׳׳ ׳’׳׳™׳× ׳‘׳׳¡׳ ׳׳—׳“.',
-        settingsTitle: '׳’׳“׳¨׳•׳× ׳׳—׳©׳‘׳',
-        signOut: '׳×׳¤׳§׳™׳“ ׳Ÿ׳—׳¬׳™׳¨׳”',
-      }
-    : {
-        title: 'Profile',
-        subtitle: 'Keep language, notifications, and account details in one calm place.',
-        ready: 'Profile ready',
-        guest: 'You are not signed in yet. Continue from the login screen to save your details.',
-        guestCta: 'Go to login',
-        account: 'Account',
-        nameLabel: 'Name',
-        emailLabel: 'Email',
-        openOrdersLabel: 'Open orders',
-        languageTitle: 'Language',
-        languageBody: 'Switch between Hebrew and English whenever you need it.',
-        settingsTitle: 'Account settings',
-        signOut: 'Sign out',
-      };
+  const email = session?.user.email ?? (isHebrew ? 'לא מחובר' : 'Not signed in');
 
   const onSignOut = async () => {
     try {
@@ -93,96 +56,89 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
         <View style={styles.shell}>
           <View style={styles.topBar}>
-            <View>
+            <View style={styles.titleBlock}>
               <Text style={styles.brand}>SHAKANA</Text>
-              <Text style={styles.title}>{copy.title}</Text>
+              <Text style={styles.title}>{isHebrew ? 'פרופיל' : 'Profile'}</Text>
+              <Text style={styles.subtitle}>
+                {isHebrew
+                  ? 'כאן מנהלים שפה, פרטי חשבון, והעדפות בסיסיות במקום אחד.'
+                  : 'Manage language, account details, and basic preferences in one calm place.'}
+              </Text>
             </View>
-            <View style={styles.topRight}>
-              <View style={styles.statusPill}>
-                <Text style={styles.statusText}>{copy.ready}</Text>
-              </View>
-              <LanguageSwitcher />
-            </View>
+            <LanguageSwitcher />
           </View>
 
           <View style={styles.heroCard}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{(fullName || email).charAt(0).toUpperCase()}</Text>
+              <Text style={styles.avatarText}>{(name || email).charAt(0).toUpperCase()}</Text>
             </View>
             <View style={styles.heroCopy}>
-              <Text style={styles.heroKicker}>{copy.account}</Text>
+              <Text style={styles.heroKicker}>{isHebrew ? 'חשבון' : 'Account'}</Text>
               <Text style={styles.heroName} numberOfLines={1}>
-                {fullName || (isHebrew ? '׳׳•׳¨׳— ׳׳—׳™׳“' : 'Guest user')}
+                {name || (isHebrew ? 'משתמש אורח' : 'Guest user')}
               </Text>
-              <Text style={styles.heroBody}>{copy.subtitle}</Text>
+              <Text style={styles.heroBody}>
+                {isHebrew
+                  ? 'הפרופיל נוצר אחרי ההתחברות, כך שאין צורך במסכים נוספים.'
+                  : 'The profile is created after sign in, so you do not need an extra setup step.'}
+              </Text>
             </View>
           </View>
 
           {!session ? (
-            <View style={styles.guestCard}>
-              <Text style={styles.sectionTitle}>{copy.guest}</Text>
-              <SecondaryBtn label={copy.guestCta} onPress={() => router.push('/login')} />
+            <View style={styles.noticeCard}>
+              <Text style={styles.noticeTitle}>{isHebrew ? 'עוד לא נכנסת' : 'Not signed in yet'}</Text>
+              <Text style={styles.noticeBody}>
+                {isHebrew
+                  ? 'אפשר לחזור למסך ההתחברות ולהמשיך משם.'
+                  : 'Go back to the login screen and continue from there.'}
+              </Text>
+              <PrimaryBtn label={isHebrew ? 'חזרה להתחברות' : 'Back to login'} onPress={() => router.push('/login')} />
             </View>
           ) : null}
 
-          <View style={styles.summaryGrid}>
+          <View style={styles.summaryRow}>
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>{copy.nameLabel}</Text>
-              <Text style={styles.summaryValue} numberOfLines={1}>
-                {fullName || (isHebrew ? '׳׳ ׳¢׳•׳“׳׳' : 'Not set')}
-              </Text>
-            </View>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>{copy.emailLabel}</Text>
+              <Text style={styles.summaryLabel}>{isHebrew ? 'אימייל' : 'Email'}</Text>
               <Text style={styles.summaryValue} numberOfLines={1}>
                 {email}
               </Text>
             </View>
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>{copy.openOrdersLabel}</Text>
+              <Text style={styles.summaryLabel}>{isHebrew ? 'פתוחות' : 'Open orders'}</Text>
               <Text style={styles.summaryValue}>{String(openOrders)}</Text>
             </View>
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>{copy.languageTitle}</Text>
+              <Text style={styles.summaryLabel}>{isHebrew ? 'שפה' : 'Language'}</Text>
               <Text style={styles.summaryValue}>{language.toUpperCase()}</Text>
             </View>
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>{copy.languageTitle}</Text>
-            <Text style={styles.sectionBody}>{copy.languageBody}</Text>
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>{isHebrew ? 'שפה' : 'Language'}</Text>
+            <Text style={styles.sectionBody}>
+              {isHebrew ? 'בחרו עברית או אנגלית לכל האפליקציה.' : 'Choose Hebrew or English for the whole app.'}
+            </Text>
             <LanguageSwitcher />
-            <View style={styles.languageRow}>
-              <Pressable onPress={() => void setLanguage('he')} style={[styles.languageGhost, isHebrew && styles.languageGhostActive]}>
-                <Text style={[styles.languageGhostText, isHebrew && styles.languageGhostTextActive]}>{isHebrew ? 'עברית' : 'Hebrew'}</Text>
-              </Pressable>
-              <Pressable onPress={() => void setLanguage('en')} style={[styles.languageGhost, !isHebrew && styles.languageGhostActive]}>
-                <Text style={[styles.languageGhostText, !isHebrew && styles.languageGhostTextActive]}>English</Text>
-              </Pressable>
-            </View>
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>{copy.settingsTitle}</Text>
-            <View style={styles.linkGrid}>
-              {QUICK_LINKS.map((item) => (
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>{isHebrew ? 'הגדרות חשבון' : 'Account settings'}</Text>
+            <View style={styles.linkList}>
+              {PROFILE_LINKS.map((item) => (
                 <Pressable
                   key={item.href}
                   onPress={() => router.push(item.href)}
-                  style={({ pressed }) => [styles.linkCard, pressed && { transform: [{ scale: 0.99 }] }]}
+                  style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.85 }]}
                 >
-                  <Text style={[styles.linkLabel, item.danger && styles.linkLabelDanger]}>
-                    {isHebrew ? item.he : item.en}
-                  </Text>
+                  <Text style={[styles.linkText, item.danger && styles.linkTextDanger]}>{item.label}</Text>
                   <Text style={styles.linkArrow}>›</Text>
                 </Pressable>
               ))}
             </View>
           </View>
 
-          {session ? (
-            <PrimaryBtn label={copy.signOut} onPress={onSignOut} />
-          ) : null}
+          {session ? <PrimaryBtn label={isHebrew ? 'התנתקות' : 'Sign out'} onPress={onSignOut} /> : null}
         </View>
       </ScrollView>
     </ScreenBase>
@@ -201,38 +157,32 @@ const styles = StyleSheet.create({
   },
   topBar: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
     gap: 12,
   },
-  topRight: {
-    alignItems: 'flex-end',
-    gap: 10,
+  titleBlock: {
+    flex: 1,
+    gap: 4,
   },
   brand: {
     color: colors.gold,
     fontFamily: fontFamily.bodyBold,
     fontSize: 12,
-    letterSpacing: 1.8,
+    letterSpacing: 1.6,
   },
   title: {
-    marginTop: 4,
     color: colors.tx,
     fontFamily: fontFamily.display,
     fontSize: 34,
     lineHeight: 38,
   },
-  statusPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: radii.pill,
-    backgroundColor: colors.goldLight,
-  },
-  statusText: {
-    color: colors.tx,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 11,
-    letterSpacing: 1,
+  subtitle: {
+    color: colors.mu,
+    fontFamily: fontFamily.body,
+    fontSize: 14,
+    lineHeight: 22,
+    maxWidth: 580,
   },
   heroCard: {
     flexDirection: 'row',
@@ -249,12 +199,12 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 999,
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    color: colors.acc,
+    color: colors.tx,
     fontFamily: fontFamily.display,
     fontSize: 24,
   },
@@ -266,7 +216,7 @@ const styles = StyleSheet.create({
     color: colors.mu,
     fontFamily: fontFamily.bodyBold,
     fontSize: 11,
-    letterSpacing: 1.4,
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
   heroName: {
@@ -280,28 +230,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
   },
-  guestCard: {
-    gap: 12,
+  noticeCard: {
+    gap: 10,
     padding: 16,
     borderRadius: radii.xl,
     backgroundColor: colors.goldLight,
     borderWidth: 1,
     borderColor: colors.br,
   },
-  sectionTitle: {
+  noticeTitle: {
     color: colors.tx,
     fontFamily: fontFamily.bodyBold,
-    fontSize: 18,
+    fontSize: 16,
   },
-  sectionBody: {
-    marginTop: 6,
-    marginBottom: 12,
+  noticeBody: {
     color: colors.mu,
     fontFamily: fontFamily.body,
     fontSize: 14,
     lineHeight: 22,
   },
-  summaryGrid: {
+  summaryRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
@@ -329,7 +277,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodyBold,
     fontSize: 16,
   },
-  card: {
+  sectionCard: {
     gap: 12,
     padding: 16,
     borderRadius: radii.xl,
@@ -338,35 +286,21 @@ const styles = StyleSheet.create({
     borderColor: colors.br,
     ...shadow.card,
   },
-  languageRow: {
-    flexDirection: 'row',
-    gap: 10,
-    flexWrap: 'wrap',
-  },
-  languageGhost: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.br,
-    backgroundColor: colors.bg,
-  },
-  languageGhostActive: {
-    backgroundColor: colors.tx,
-    borderColor: colors.tx,
-  },
-  languageGhostText: {
+  sectionTitle: {
     color: colors.tx,
     fontFamily: fontFamily.bodyBold,
-    fontSize: 12,
+    fontSize: 18,
   },
-  languageGhostTextActive: {
-    color: colors.white,
+  sectionBody: {
+    color: colors.mu,
+    fontFamily: fontFamily.body,
+    fontSize: 14,
+    lineHeight: 22,
   },
-  linkGrid: {
+  linkList: {
     gap: 10,
   },
-  linkCard: {
+  linkRow: {
     minHeight: 52,
     paddingHorizontal: 14,
     borderRadius: radii.lg,
@@ -377,12 +311,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  linkLabel: {
+  linkText: {
     color: colors.tx,
     fontFamily: fontFamily.bodyBold,
     fontSize: 14,
   },
-  linkLabelDanger: {
+  linkTextDanger: {
     color: colors.err,
   },
   linkArrow: {

@@ -87,9 +87,32 @@ export default function AuthCallback() {
       }
 
       const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
-      useAuthStore.getState().setProfile(profile ?? null);
+      if (!profile) {
+        const defaultProfile = {
+          id: userId,
+          first_name: sessionData.session?.user.user_metadata?.first_name?.trim?.() ?? '',
+          last_name: sessionData.session?.user.user_metadata?.last_name?.trim?.() ?? '',
+          phone: sessionData.session?.user.phone ?? '',
+          city: '',
+          street: '',
+          building: '',
+          apt: '',
+          floor: null,
+        };
+        const { data: created, error: createError } = await supabase
+          .from('profiles')
+          .upsert(defaultProfile as never, { onConflict: 'id' })
+          .select('*')
+          .single();
+        if (createError) {
+          throw createError;
+        }
+        useAuthStore.getState().setProfile(created ?? defaultProfile);
+      } else {
+        useAuthStore.getState().setProfile(profile);
+      }
 
-      if (!isProfileComplete(profile)) {
+      if (!isProfileComplete(profile ?? null)) {
         router.replace('/(auth)/name');
         return;
       }

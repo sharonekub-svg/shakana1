@@ -52,7 +52,7 @@ export const demoStores: Record<DemoBrandId, DemoStore> = {
   amazon: {
     id: 'amazon',
     name: 'Amazon',
-    tagline: 'One-link quick join for essentials and wardrobe basics',
+    tagline: 'One-link invite for essentials and wardrobe basics',
     deliveryEta: 'Prime-style rapid fulfillment',
     accent: '#111111',
     logoText: 'A',

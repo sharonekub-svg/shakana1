@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -17,15 +17,7 @@ import {
   StatusRail,
   demoStyles,
 } from '@/components/demo/DemoPrimitives';
-import {
-  buildInviteMessage,
-  detectDemoBrand,
-  demoCategories,
-  demoStores,
-  productsForBrand,
-  type DemoBrandId,
-  type DemoProduct,
-} from '@/demo/catalog';
+import { buildInviteMessage, demoCategories, demoStores, productsForBrand, type DemoBrandId, type DemoProduct } from '@/demo/catalog';
 import {
   demoParticipants,
   getOrderItemCount,
@@ -36,10 +28,13 @@ import {
   useDemoCommerceStore,
 } from '@/stores/demoCommerceStore';
 import { fontFamily } from '@/theme/fonts';
+import { colors } from '@/theme/tokens';
 import { BuildingSections } from '@/components/demo/BuildingSections';
+import { useLocale } from '@/i18n/locale';
 
 export default function DemoUserScreen() {
   const router = useRouter();
+  const { language } = useLocale();
   const params = useLocalSearchParams<{ join?: string }>();
   const selectedBrand = useDemoCommerceStore((state) => state.selectedBrand);
   const orders = useDemoCommerceStore((state) => state.orders);
@@ -54,8 +49,6 @@ export default function DemoUserScreen() {
 
   const [category, setCategory] = useState<(typeof demoCategories)[number]>('Best Sellers');
   const [copied, setCopied] = useState(false);
-  const [linkInput, setLinkInput] = useState('');
-  const [joinCodeInput, setJoinCodeInput] = useState('');
   const [nowMs, setNowMs] = useState(Date.now());
 
   useEffect(() => {
@@ -108,17 +101,6 @@ export default function DemoUserScreen() {
     globalThis.setTimeout(() => setCopied(false), 1600);
   };
 
-  const quickJoin = () => {
-    const detected = detectDemoBrand(`${linkInput} ${joinCodeInput}`);
-    if (detected) {
-      createOrder(detected);
-      setCategory('Best Sellers');
-    }
-    if (joinCodeInput.trim().length === 4) {
-      router.replace(`/user?join=${joinCodeInput.trim()}`);
-    }
-  };
-
   if (!brand || !store) {
     return (
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
@@ -136,36 +118,15 @@ export default function DemoUserScreen() {
               setCategory('Best Sellers');
             }}
           />
-          <SectionTitle title="Choose your store" kicker="User flow" />
-          <Card style={styles.quickJoinCard}>
-            <View style={styles.quickJoinGrid}>
-              <View style={{ flex: 1, gap: 6 }}>
-                <Text style={styles.quickJoinTitle}>One-link quick join</Text>
-                <Text style={styles.muted}>
-                  Paste a store or product link, or enter the 4-digit join code from a friend.
-                </Text>
-              </View>
-              <View style={styles.quickJoinInputs}>
-                <TextInput
-                  value={linkInput}
-                  onChangeText={setLinkInput}
-                  placeholder="Paste product or store link"
-                  placeholderTextColor="#8B6F56"
-                  style={styles.input}
-                />
-                <TextInput
-                  value={joinCodeInput}
-                  onChangeText={setJoinCodeInput}
-                  placeholder="4-digit join code"
-                  placeholderTextColor="#8B6F56"
-                  keyboardType="number-pad"
-                  maxLength={4}
-                  style={styles.input}
-                />
-              </View>
-              <DemoButton label="Quick join" onPress={quickJoin} tone="accent" style={styles.quickJoinBtn} />
-            </View>
+          <Card style={styles.whatsappCard}>
+            <Text style={styles.whatsappTitle}>{language === 'he' ? 'הצטרפות מ-WhatsApp' : 'Join from WhatsApp'}</Text>
+            <Text style={styles.muted}>
+              {language === 'he'
+                ? 'פותחים את קישור ההזמנה מ-WhatsApp והעגלה המשותפת נטענת ישר, בלי קוד ובלי הדבקה.'
+                : 'Open the invite link from WhatsApp and the shared cart loads directly, with no code and no paste field.'}
+            </Text>
           </Card>
+          <SectionTitle title="Choose your store" kicker="User flow" />
           <View style={styles.storeGrid}>
             {(['hm', 'zara', 'amazon'] as DemoBrandId[]).map((brandId) => {
               const option = demoStores[brandId];
@@ -494,27 +455,20 @@ const styles = StyleSheet.create({
   },
   smallBtn: { width: 170, minHeight: 40 },
   storeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
-  quickJoinCard: { gap: 12, marginTop: 4 },
-  quickJoinGrid: { gap: 10 },
-  quickJoinTitle: {
-    color: '#171412',
+  whatsappCard: {
+    gap: 8,
+    marginTop: 4,
+    padding: 16,
+    borderRadius: 22,
+    backgroundColor: colors.goldLight,
+    borderWidth: 1,
+    borderColor: colors.br,
+  },
+  whatsappTitle: {
+    color: colors.tx,
     fontFamily: fontFamily.bodyBold,
     fontSize: 16,
   },
-  quickJoinInputs: { gap: 8, flexDirection: 'row', flexWrap: 'wrap' },
-  input: {
-    flexGrow: 1,
-    minWidth: 210,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#DED2C5',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    color: '#171412',
-    fontFamily: fontFamily.bodySemi,
-    backgroundColor: '#FFFFFF',
-  },
-  quickJoinBtn: { alignSelf: 'flex-start', minWidth: 160 },
   storeChoice: {
     flexGrow: 1,
     flexBasis: 340,
@@ -623,7 +577,7 @@ const styles = StyleSheet.create({
   cartCard: { gap: 14 },
   cartTitle: { color: '#171412', fontFamily: fontFamily.bodyBold, fontSize: 20 },
   total: { color: '#171412', fontFamily: fontFamily.display, fontSize: 28 },
-  muted: { color: '#6D6258', fontFamily: fontFamily.body, fontSize: 14, lineHeight: 21 },
+   muted: { color: colors.mu, fontFamily: fontFamily.body, fontSize: 14, lineHeight: 21 },
   kicker: { color: '#8B6F56', fontFamily: fontFamily.bodyBold, fontSize: 12, textTransform: 'uppercase' },
   participants: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   participantPill: {

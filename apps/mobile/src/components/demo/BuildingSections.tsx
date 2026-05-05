@@ -145,7 +145,7 @@ export function BuildingSections({
           </View>
         </View>
         <Pressable style={styles.topAction} onPress={onOpenLogin}>
-          <Text style={styles.topActionText}>Profile</Text>
+          <Text style={styles.topActionText}>Login</Text>
         </Pressable>
       </View>
 
@@ -262,11 +262,11 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: radii.pill,
-    backgroundColor: colors.acc,
+    backgroundColor: colors.gold,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: colors.acc,
+    borderColor: colors.gold,
     ...shadow.card,
   },
   markLetter: {
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodyBold,
     fontSize: 10,
     letterSpacing: 2.4,
-    color: colors.acc,
+    color: colors.gold,
   },
   brandTitle: {
     fontFamily: fontFamily.display,
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
   heroCard: {
     borderRadius: radii.xxl,
     overflow: 'hidden',
-    backgroundColor: colors.lime,
+    backgroundColor: colors.goldLight,
     ...shadow.card,
   },
   heroImage: {
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
     height: 46,
     paddingHorizontal: 18,
     borderRadius: radii.pill,
-    backgroundColor: colors.navy,
+    backgroundColor: colors.tx,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -376,8 +376,8 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   statCardFeatured: {
-    backgroundColor: colors.lime,
-    borderColor: colors.lime,
+    backgroundColor: colors.goldLight,
+    borderColor: colors.goldLight,
   },
   statValue: {
     fontFamily: fontFamily.display,
@@ -394,10 +394,10 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   statValueFeatured: {
-    color: colors.navy,
+    color: colors.tx,
   },
   statLabelFeatured: {
-    color: colors.acc,
+    color: colors.tx,
   },
   categoryRow: {
     gap: 8,
@@ -413,8 +413,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   categoryChipActive: {
-    backgroundColor: colors.lime,
-    borderColor: colors.lime,
+    backgroundColor: colors.goldLight,
+    borderColor: colors.goldLight,
   },
   categoryChipText: {
     fontFamily: fontFamily.bodyBold,
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
     color: colors.tx,
   },
   categoryChipTextActive: {
-    color: colors.navy,
+    color: colors.tx,
   },
   categoryChipDetail: {
     marginTop: 4,
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
   sectionLink: {
     fontFamily: fontFamily.bodyBold,
     fontSize: 13,
-    color: colors.acc,
+    color: colors.tx,
   },
   featureGrid: {
     flexDirection: 'row',
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
   featureNote: {
     fontFamily: fontFamily.body,
     fontSize: 13,
-    color: colors.grn,
+    color: colors.mu,
   },
   ordersList: {
     gap: 12,
@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.acc,
+    backgroundColor: colors.gold,
   },
   orderBadgeText: {
     color: colors.white,
@@ -542,12 +542,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 30,
     borderRadius: radii.pill,
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
   orderStatusText: {
-    color: colors.acc,
+    color: colors.tx,
     fontFamily: fontFamily.bodyBold,
     fontSize: 11,
     letterSpacing: 1,
@@ -571,13 +571,13 @@ const styles = StyleSheet.create({
   orderMeta: {
     fontFamily: fontFamily.body,
     fontSize: 13,
-    color: colors.grn,
+    color: colors.mu,
   },
   orderAction: {
     fontFamily: fontFamily.bodyBold,
     fontSize: 11,
     letterSpacing: 1.4,
-    color: colors.acc,
+    color: colors.tx,
   },
   emptyBlock: {
     padding: 18,
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
     height: 44,
     paddingHorizontal: 16,
     borderRadius: radii.pill,
-    backgroundColor: colors.navy,
+    backgroundColor: colors.tx,
     alignItems: 'center',
     justifyContent: 'center',
   },

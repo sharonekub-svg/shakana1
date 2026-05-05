@@ -255,7 +255,7 @@ export function SavingsTracker({
         </View>
       </View>
       <Text style={styles.muted}>
-        Quick join, exact variants, and privacy mode keep the flow fast without exposing items you want to keep private.
+        WhatsApp invites, exact variants, and privacy mode keep the flow fast without exposing items you want to keep private.
       </Text>
     </Card>
   );
