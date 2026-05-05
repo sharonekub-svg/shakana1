@@ -186,9 +186,11 @@ function RootLayoutInner() {
     const inCallback = segments[0] === 'auth-callback';
     const inShare = segments[0] === 'share';
     const inJoin = segments[0] === 'join';
+    const inDemo = segments[0] === 'login' || segments[0] === 'user' || segments[0] === 'store';
     if (inCallback) return;
     if (inShare) return;
     if (inJoin && Platform.OS === 'web') return;
+    if (inDemo) return;
     if (session && !profileQuery.isFetched && !profileQuery.isError) return;
     const profileComplete =
       !!profile &&
@@ -268,9 +270,12 @@ function RootLayoutInner() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="auth-callback" />
         <Stack.Screen name="join/[token]" />
+        <Stack.Screen name="login" />
         <Stack.Screen name="order" />
         <Stack.Screen name="profile" />
         <Stack.Screen name="share" />
+        <Stack.Screen name="store" />
+        <Stack.Screen name="user" />
       </Stack>
       {showSplash ? <View pointerEvents="none" style={styles.splashOverlay} /> : null}
       <ToastLayer />

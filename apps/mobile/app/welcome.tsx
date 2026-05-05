@@ -1,2 +1,2 @@
-export { default } from './(auth)/welcome';
+export { default } from './login';
 

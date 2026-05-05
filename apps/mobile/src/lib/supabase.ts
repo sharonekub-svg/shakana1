@@ -1,22 +1,47 @@
 import 'react-native-url-polyfill/auto';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { AppState, Platform } from 'react-native';
 import { env } from './env';
 import { secureAuthStorage } from './secureStorage';
 import type { Database } from '@/types/database';
 
-export const supabase = createClient<Database>(env.supabaseUrl, env.supabaseAnonKey, {
-  auth: {
-    storage: secureAuthStorage,
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: Platform.OS === 'web',
-    flowType: 'pkce',
-  },
-  global: {
-    headers: { 'x-shk-client': 'mobile' },
-  },
-});
+type SupabaseLike = SupabaseClient<Database> & {
+  auth: SupabaseClient<Database>['auth'] & {
+    startAutoRefresh: () => void;
+    stopAutoRefresh: () => void;
+  };
+};
+
+const createStubSupabase = (): SupabaseLike =>
+  ({
+    auth: {
+      getSession: async () => ({ data: { session: null }, error: null }),
+      onAuthStateChange: () => ({
+        data: { subscription: { unsubscribe: () => {} } },
+      }),
+      startAutoRefresh: () => {},
+      stopAutoRefresh: () => {},
+    },
+    functions: {
+      invoke: async () => ({ data: null, error: new Error('Supabase is not configured for this demo build.') }),
+    },
+  } as unknown as SupabaseLike);
+
+export const supabase: SupabaseLike =
+  env.supabaseUrl && env.supabaseAnonKey
+    ? createClient<Database>(env.supabaseUrl, env.supabaseAnonKey, {
+        auth: {
+          storage: secureAuthStorage,
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: Platform.OS === 'web',
+          flowType: 'pkce',
+        },
+        global: {
+          headers: { 'x-shk-client': 'mobile' },
+        },
+      })
+    : createStubSupabase();
 
 // Pause / resume auto-refresh based on app foreground state. Prevents
 // background tokens from being refreshed on every wake.
@@ -29,6 +54,9 @@ export async function invokeFn<T = unknown>(
   name: string,
   body: Record<string, unknown>,
 ): Promise<T> {
+  if (!env.supabaseUrl || !env.supabaseAnonKey) {
+    throw new Error(`Supabase is not configured. Cannot invoke ${name}.`);
+  }
   if (Platform.OS === 'web') {
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;

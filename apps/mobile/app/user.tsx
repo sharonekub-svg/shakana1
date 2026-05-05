@@ -1,0 +1,547 @@
+import { useEffect, useMemo, useState } from 'react';
+import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import {
+  BrandPill,
+  Card,
+  DemoButton,
+  DemoPage,
+  EmptyNotice,
+  ProductImage,
+  SavingsPanel,
+  SectionTitle,
+  StatusRail,
+  demoStyles,
+} from '@/components/demo/DemoPrimitives';
+import {
+  demoCategories,
+  demoStores,
+  productsForBrand,
+  type DemoBrandId,
+  type DemoProduct,
+} from '@/demo/catalog';
+import {
+  demoParticipants,
+  getOrderItemCount,
+  getOrderTotal,
+  getProductLine,
+  initDemoCommerceSync,
+  primaryDemoParticipant,
+  useDemoCommerceStore,
+} from '@/stores/demoCommerceStore';
+import { fontFamily } from '@/theme/fonts';
+
+export default function DemoUserScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams<{ join?: string }>();
+  const selectedBrand = useDemoCommerceStore((state) => state.selectedBrand);
+  const orders = useDemoCommerceStore((state) => state.orders);
+  const activeParticipantId = useDemoCommerceStore((state) => state.activeParticipantId);
+  const lastNotice = useDemoCommerceStore((state) => state.lastNotice);
+  const selectBrand = useDemoCommerceStore((state) => state.selectBrand);
+  const ensureOrder = useDemoCommerceStore((state) => state.ensureOrder);
+  const joinParticipant = useDemoCommerceStore((state) => state.joinParticipant);
+  const setActiveParticipant = useDemoCommerceStore((state) => state.setActiveParticipant);
+  const setDemoRole = useDemoCommerceStore((state) => state.setDemoRole);
+
+  const [category, setCategory] = useState<(typeof demoCategories)[number]>('Best Sellers');
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    initDemoCommerceSync();
+    setDemoRole('user');
+  }, [setDemoRole]);
+
+  const joinedOrder = useMemo(
+    () => orders.find((order) => order.inviteCode === params.join),
+    [orders, params.join],
+  );
+
+  useEffect(() => {
+    if (joinedOrder && !joinedOrder.participants.some((participant) => participant.id === activeParticipantId)) {
+      joinParticipant(joinedOrder.id, activeParticipantId);
+      selectBrand(joinedOrder.brand);
+    }
+  }, [activeParticipantId, joinedOrder, joinParticipant, selectBrand]);
+
+  const brand = selectedBrand ?? joinedOrder?.brand ?? null;
+  const order = brand
+    ? orders.find((candidate) => candidate.brand === brand && candidate.status !== 'Shipped') ??
+      orders.find((candidate) => candidate.brand === brand)
+    : null;
+  const store = brand ? demoStores[brand] : null;
+  const products = brand ? productsForBrand(brand) : [];
+  const categoryProducts = products.filter((product) => product.category === category);
+  const activeParticipant =
+    demoParticipants.find((participant) => participant.id === activeParticipantId) ?? primaryDemoParticipant;
+
+  const createOrder = (nextBrand: DemoBrandId) => {
+    selectBrand(nextBrand);
+    ensureOrder(nextBrand);
+  };
+
+  const shareMessage = order
+    ? `${activeParticipant.name} is ordering from ${demoStores[order.brand].name}! 15 mins left to join and save on delivery. Join here: ${order.inviteLink} Code: ${order.inviteCode}`
+    : '';
+
+  const copyInvite = async () => {
+    if (!shareMessage) return;
+    await Clipboard.setStringAsync(shareMessage);
+    setCopied(true);
+    globalThis.setTimeout(() => setCopied(false), 1600);
+  };
+
+  if (!brand || !store) {
+    return (
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+        <DemoPage>
+          <View style={styles.topBar}>
+            <Text style={styles.logo}>shakana</Text>
+            <DemoButton label="Store login" onPress={() => router.push('/store')} tone="light" style={styles.smallBtn} />
+          </View>
+          <SectionTitle title="Choose your store" kicker="User flow" />
+          <View style={styles.storeGrid}>
+            {(['hm', 'zara'] as DemoBrandId[]).map((brandId) => {
+              const option = demoStores[brandId];
+              return (
+                <Pressable
+                  key={brandId}
+                  accessibilityRole="button"
+                  onPress={() => {
+                    selectBrand(brandId);
+                    setCategory('Best Sellers');
+                  }}
+                  style={({ pressed }) => [styles.storeChoice, pressed && demoStyles.pressed]}
+                >
+                  <ImageBackground source={{ uri: option.heroImage }} resizeMode="cover" style={styles.storeChoiceImage}>
+                    <View style={styles.storeOverlay}>
+                      <BrandPill brand={brandId} />
+                      <Text style={styles.storeName}>{option.name}</Text>
+                      <Text style={styles.storeTagline}>{option.tagline}</Text>
+                    </View>
+                  </ImageBackground>
+                </Pressable>
+              );
+            })}
+          </View>
+        </DemoPage>
+      </ScrollView>
+    );
+  }
+
+  return (
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <DemoPage wide>
+        <View style={styles.topBar}>
+          <Pressable onPress={() => selectBrand(null)} accessibilityRole="button">
+            <Text style={styles.logo}>shakana demo</Text>
+          </Pressable>
+          <View style={styles.topActions}>
+            <DemoButton label="Switch store" onPress={() => selectBrand(null)} tone="light" style={styles.smallBtn} />
+            <DemoButton label="Merchant view" onPress={() => router.push('/store')} tone="light" style={styles.smallBtn} />
+          </View>
+        </View>
+
+        <ImageBackground source={{ uri: store.heroImage }} resizeMode="cover" style={styles.hero}>
+          <View style={styles.heroOverlay}>
+            <BrandPill brand={brand} />
+            <Text style={styles.heroTitle}>{store.name}</Text>
+            <Text style={styles.heroSubtitle}>{store.tagline}</Text>
+            <Text style={styles.heroMeta}>{store.deliveryEta}</Text>
+            <View style={styles.heroActions}>
+              <DemoButton
+                label={order ? `Group order ${order.id}` : 'Create group order'}
+                onPress={() => createOrder(brand)}
+                tone="accent"
+                style={styles.heroBtn}
+              />
+              <DemoButton label="Open login" onPress={() => router.push('/login')} tone="light" style={styles.heroBtn} />
+            </View>
+          </View>
+        </ImageBackground>
+
+        {lastNotice ? (
+          <Card style={styles.notice}>
+            <Text style={styles.noticeText}>{lastNotice}</Text>
+          </Card>
+        ) : null}
+
+        <View style={styles.mainGrid}>
+          <View style={styles.catalogColumn}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
+              {demoCategories.map((name) => (
+                <Pressable
+                  key={name}
+                  accessibilityRole="button"
+                  onPress={() => setCategory(name)}
+                  style={[styles.categoryPill, category === name && { backgroundColor: store.accent }]}
+                >
+                  <Text style={[styles.categoryText, category === name && styles.categoryTextActive]}>{name}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+
+            <SectionTitle title={category} kicker={`${store.name} scraped-style catalog`} />
+            {categoryProducts.length === 0 ? (
+              <EmptyNotice title="No products here yet" body="Choose another category to keep browsing the demo inventory." />
+            ) : (
+              <View style={styles.productGrid}>
+                {categoryProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    orderId={order?.id ?? null}
+                    activeParticipantId={activeParticipantId}
+                    onCreateOrder={() => createOrder(brand)}
+                  />
+                ))}
+              </View>
+            )}
+          </View>
+
+          <View style={styles.cartColumn}>
+            {!order ? (
+              <EmptyNotice
+                title="Create your first group order"
+                body="Pick a store, create the shared session, then add exact variants to the group cart."
+              />
+            ) : (
+              <>
+                <Card style={styles.cartCard}>
+                  <View style={styles.rowBetween}>
+                    <View>
+                      <Text style={styles.cartTitle}>Group cart</Text>
+                      <Text style={styles.muted}>{order.id} | Code {order.inviteCode}</Text>
+                    </View>
+                    <Text style={styles.total}>₪{getOrderTotal(order)}</Text>
+                  </View>
+                  <StatusRail status={order.status} />
+                  <View style={styles.participants}>
+                    {demoParticipants.map((participant) => {
+                      const joined = order.participants.some((current) => current.id === participant.id);
+                      const active = activeParticipantId === participant.id;
+                      return (
+                        <Pressable
+                          key={participant.id}
+                          accessibilityRole="button"
+                          onPress={() => {
+                            if (!joined) joinParticipant(order.id, participant.id);
+                            setActiveParticipant(participant.id);
+                          }}
+                          style={[styles.participantPill, joined && styles.joinedPill, active && styles.activePill]}
+                        >
+                          <Text style={[styles.participantText, active && styles.activePillText]}>
+                            {participant.name}{joined ? '' : ' +'}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  <View style={styles.inviteBox}>
+                    <Text style={styles.kicker}>WhatsApp-style invite</Text>
+                    <Text style={styles.inviteText}>{shareMessage}</Text>
+                    <DemoButton
+                      label={copied ? 'Invite copied' : 'Share with friends'}
+                      onPress={copyInvite}
+                      tone="light"
+                    />
+                  </View>
+                  <View style={styles.simRow}>
+                    <DemoButton label="Simulate User B joining" onPress={() => joinParticipant(order.id, 'user-b')} tone="light" style={styles.simBtn} />
+                    <DemoButton label="Simulate User C joining" onPress={() => joinParticipant(order.id, 'user-c')} tone="light" style={styles.simBtn} />
+                  </View>
+                </Card>
+
+                <SavingsPanel order={order} />
+
+                <Card style={styles.cartCard}>
+                  <View style={styles.rowBetween}>
+                    <Text style={styles.cartTitle}>Items</Text>
+                    <Text style={styles.muted}>{getOrderItemCount(order)} units</Text>
+                  </View>
+                  {order.items.length === 0 ? (
+                    <Text style={styles.muted}>No items yet. Select size and color, then add the first piece.</Text>
+                  ) : (
+                    <View style={styles.itemList}>
+                      {order.items.map((item) => {
+                        const line = getProductLine(item);
+                        const owner = demoParticipants.find((participant) => participant.id === item.participantId);
+                        const privateForViewer = item.private && item.participantId !== activeParticipantId;
+                        return (
+                          <View key={item.id} style={styles.cartItem}>
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.itemName}>
+                                {privateForViewer ? 'Private item' : line.displayName}
+                              </Text>
+                              <Text style={styles.muted}>
+                                {owner?.name ?? 'Guest'} | {privateForViewer ? 'Contribution hidden' : `${item.size}, ${item.color}`} | Qty {item.quantity}
+                              </Text>
+                            </View>
+                            <Text style={styles.itemPrice}>₪{line.lineTotal}</Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
+                </Card>
+              </>
+            )}
+          </View>
+        </View>
+      </DemoPage>
+    </ScrollView>
+  );
+}
+
+function ProductCard({
+  product,
+  orderId,
+  activeParticipantId,
+  onCreateOrder,
+}: {
+  product: DemoProduct;
+  orderId: string | null;
+  activeParticipantId: string;
+  onCreateOrder: () => void;
+}) {
+  const addItem = useDemoCommerceStore((state) => state.addItem);
+  const [size, setSize] = useState('');
+  const [color, setColor] = useState('');
+  const [quantity, setQuantity] = useState(1);
+  const [privateItem, setPrivateItem] = useState(false);
+  const ready = !!orderId && !!size && !!color && quantity > 0;
+  const productSaving = Math.max(0, product.compareAtPrice - product.price);
+
+  return (
+    <Card style={styles.productCard}>
+      <ProductImage product={product} />
+      <View style={styles.productInfo}>
+        <View style={styles.rowBetween}>
+          <Text style={styles.productName}>{product.name}</Text>
+          <Text style={styles.price}>₪{product.price}</Text>
+        </View>
+        <Text style={styles.muted}>{product.description}</Text>
+        <Text style={styles.sku}>{product.sku} | {product.stockStatus} | Save ₪{productSaving}</Text>
+        <Text style={styles.selectorLabel}>Size</Text>
+        <View style={styles.optionRow}>
+          {product.sizes.map((option) => (
+            <Pressable
+              key={option}
+              testID={`size-${product.id}-${option}`}
+              accessibilityRole="button"
+              onPress={() => setSize(option)}
+              style={[styles.option, size === option && styles.optionActive]}
+            >
+              <Text style={[styles.optionText, size === option && styles.optionTextActive]}>{option}</Text>
+            </Pressable>
+          ))}
+        </View>
+        <Text style={styles.selectorLabel}>Color</Text>
+        <View style={styles.optionRow}>
+          {product.colors.map((option) => (
+            <Pressable
+              key={option}
+              testID={`color-${product.id}-${option}`}
+              accessibilityRole="button"
+              onPress={() => setColor(option)}
+              style={[styles.option, color === option && styles.optionActive]}
+            >
+              <Text style={[styles.optionText, color === option && styles.optionTextActive]}>{option}</Text>
+            </Pressable>
+          ))}
+        </View>
+        <View style={styles.qtyRow}>
+          <DemoButton label="-" onPress={() => setQuantity(Math.max(1, quantity - 1))} tone="light" style={styles.qtyBtn} />
+          <Text style={styles.qtyText}>Qty {quantity}</Text>
+          <DemoButton label="+" onPress={() => setQuantity(quantity + 1)} tone="light" style={styles.qtyBtn} />
+          <Pressable
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: privateItem }}
+            onPress={() => setPrivateItem((value) => !value)}
+            style={[styles.privateToggle, privateItem && styles.privateToggleActive]}
+          >
+            <Text style={[styles.privateText, privateItem && styles.privateTextActive]}>Private</Text>
+          </Pressable>
+        </View>
+        {!orderId ? (
+          <DemoButton label="Create group order first" onPress={onCreateOrder} tone="accent" />
+        ) : (
+          <DemoButton
+            testID={`add-${product.id}`}
+            label={ready ? 'Add to group cart' : 'Select size and color'}
+            disabled={!ready}
+            onPress={() => {
+              if (!orderId) return;
+              addItem(orderId, {
+                productId: product.id,
+                participantId: activeParticipantId,
+                size,
+                color,
+                quantity,
+                private: privateItem,
+              });
+            }}
+            tone="accent"
+          />
+        )}
+      </View>
+    </Card>
+  );
+}
+
+const styles = StyleSheet.create({
+  scroll: { flex: 1, backgroundColor: '#F8F4EE' },
+  content: { flexGrow: 1 },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  topActions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  logo: {
+    color: '#A65F3C',
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 15,
+    textTransform: 'uppercase',
+  },
+  smallBtn: { width: 170, minHeight: 40 },
+  storeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
+  storeChoice: {
+    flexGrow: 1,
+    flexBasis: 340,
+    height: 430,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#DDD3C7',
+  },
+  storeChoiceImage: { flex: 1 },
+  storeOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    gap: 10,
+    padding: 22,
+    backgroundColor: 'rgba(0,0,0,0.22)',
+  },
+  storeName: {
+    color: '#FFFFFF',
+    fontFamily: fontFamily.display,
+    fontSize: 44,
+  },
+  storeTagline: {
+    color: '#FFFFFF',
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 16,
+  },
+  hero: {
+    minHeight: 340,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#DDD3C7',
+  },
+  heroOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    gap: 10,
+    padding: 22,
+    backgroundColor: 'rgba(0,0,0,0.28)',
+  },
+  heroTitle: {
+    color: '#FFFFFF',
+    fontFamily: fontFamily.display,
+    fontSize: 52,
+  },
+  heroSubtitle: {
+    color: '#FFFFFF',
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 17,
+  },
+  heroMeta: {
+    color: '#F8F4EE',
+    fontFamily: fontFamily.body,
+    fontSize: 14,
+  },
+  heroActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 8 },
+  heroBtn: { width: 210 },
+  notice: { backgroundColor: '#FFF7E8', borderColor: '#E9C98D' },
+  noticeText: { color: '#7D5424', fontFamily: fontFamily.bodyBold, fontSize: 14 },
+  mainGrid: { flexDirection: 'row', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 },
+  catalogColumn: { flexGrow: 1, flexBasis: 640, gap: 14 },
+  cartColumn: { flexGrow: 1, flexBasis: 330, gap: 14 },
+  categoryRow: { gap: 8, paddingVertical: 4 },
+  categoryPill: {
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: '#EFE7DE',
+  },
+  categoryText: { color: '#5F554C', fontFamily: fontFamily.bodyBold, fontSize: 13 },
+  categoryTextActive: { color: '#FFFFFF' },
+  productGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
+  productCard: { flexGrow: 1, flexBasis: 280, maxWidth: 390, overflow: 'hidden', padding: 0 },
+  productInfo: { padding: 14, gap: 10 },
+  productName: { color: '#171412', fontFamily: fontFamily.bodyBold, fontSize: 17, flex: 1 },
+  price: { color: '#171412', fontFamily: fontFamily.bodyBold, fontSize: 18 },
+  sku: { color: '#8B6F56', fontFamily: fontFamily.bodyBold, fontSize: 12 },
+  selectorLabel: { color: '#171412', fontFamily: fontFamily.bodyBold, fontSize: 13 },
+  optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  option: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#DED2C5',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: '#FFFFFF',
+  },
+  optionActive: { backgroundColor: '#171412', borderColor: '#171412' },
+  optionText: { color: '#171412', fontFamily: fontFamily.bodySemi, fontSize: 12 },
+  optionTextActive: { color: '#FFFFFF' },
+  qtyRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  qtyBtn: { width: 44, minHeight: 38, paddingHorizontal: 0 },
+  qtyText: { color: '#171412', fontFamily: fontFamily.bodyBold, minWidth: 54, textAlign: 'center' },
+  privateToggle: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#DED2C5',
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    backgroundColor: '#FFFFFF',
+  },
+  privateToggleActive: { backgroundColor: '#F0E2D5', borderColor: '#A65F3C' },
+  privateText: { color: '#5F554C', fontFamily: fontFamily.bodyBold, fontSize: 12 },
+  privateTextActive: { color: '#7A4329' },
+  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  cartCard: { gap: 14 },
+  cartTitle: { color: '#171412', fontFamily: fontFamily.bodyBold, fontSize: 20 },
+  total: { color: '#171412', fontFamily: fontFamily.display, fontSize: 28 },
+  muted: { color: '#6D6258', fontFamily: fontFamily.body, fontSize: 14, lineHeight: 21 },
+  kicker: { color: '#8B6F56', fontFamily: fontFamily.bodyBold, fontSize: 12, textTransform: 'uppercase' },
+  participants: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  participantPill: {
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#EFE7DE',
+  },
+  joinedPill: { backgroundColor: '#EAF4E7' },
+  activePill: { backgroundColor: '#171412' },
+  participantText: { color: '#5F554C', fontFamily: fontFamily.bodyBold, fontSize: 12 },
+  activePillText: { color: '#FFFFFF' },
+  inviteBox: { gap: 9, padding: 12, borderRadius: 8, backgroundColor: '#F7F0E8' },
+  inviteText: { color: '#171412', fontFamily: fontFamily.bodySemi, fontSize: 13, lineHeight: 20 },
+  simRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  simBtn: { flexGrow: 1, flexBasis: 140 },
+  itemList: { gap: 8 },
+  cartItem: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#EFE7DE',
+    paddingTop: 10,
+  },
+  itemName: { color: '#171412', fontFamily: fontFamily.bodyBold, fontSize: 14 },
+  itemPrice: { color: '#171412', fontFamily: fontFamily.bodyBold, fontSize: 15 },
+});

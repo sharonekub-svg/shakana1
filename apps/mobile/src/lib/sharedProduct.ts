@@ -852,7 +852,7 @@ function chooseVariantOptions(html: string): { availableSizes: string[]; availab
     .map((m) => m[1] + '"');
   const dataSizeValues = [...decoded.matchAll(/data-(?:size|option-value)=["']([^"']{1,20})["']/gi)]
     .map((m) => m[1])
-    .filter((v) => looksLikeRealSize(v));
+    .filter((v): v is string => Boolean(v && looksLikeRealSize(v)));
   const sizeCandidates = [...explicitSizeValues, ...dimensionValues, ...namedSizeValues, ...screenSizeValues, ...dataSizeValues];
 
   const colorCandidates = [
