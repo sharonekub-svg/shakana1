@@ -1,27 +1,38 @@
-import { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { type Href, useRouter } from 'expo-router';
 
 import { ScreenBase } from '@/components/primitives/ScreenBase';
-import { LanguageSwitcher } from '@/components/primitives/LanguageSwitcher';
-import { PrimaryBtn } from '@/components/primitives/Button';
-import { useLocale } from '@/i18n/locale';
 import { useAuthStore } from '@/stores/authStore';
-import { useUserOrders } from '@/api/orders';
 import { useSignOut } from '@/api/auth';
 import { resetAnalytics } from '@/lib/posthog';
+import { stashPendingInvite } from '@/lib/deeplinks';
 import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
+import { useLocale } from '@/i18n/locale';
+import { usePaymentSettingsStore, type PaymentMethodKey } from '@/stores/paymentSettingsStore';
+import { useNotificationSettingsStore } from '@/stores/notificationSettingsStore';
+import {
+  getDemoOrderStats,
+  getParticipantSuccessCount,
+  useDemoCommerceStore,
+} from '@/stores/demoCommerceStore';
 
-type ProfileLink = { href: string; label: string; danger?: boolean };
+const PAYMENT_METHODS: Array<{ key: PaymentMethodKey; label: string; placeholder: string }> = [
+  { key: 'bit', label: 'Bit', placeholder: '050... or Bit link' },
+  { key: 'paybox', label: 'PayBox', placeholder: 'PayBox link' },
+  { key: 'paypal', label: 'PayPal', placeholder: 'paypal.me/name or email' },
+  { key: 'cash', label: 'Cash / other', placeholder: 'Cash on pickup, bank transfer...' },
+];
 
-const PROFILE_LINKS: ProfileLink[] = [
-  { href: '/profile/payment', label: 'Payments' },
-  { href: '/profile/alerts', label: 'Alerts' },
-  { href: '/profile/privacy', label: 'Privacy' },
-  { href: '/profile/terms', label: 'Terms' },
-  { href: '/profile/delete', label: 'Delete account', danger: true },
-] as const;
+const LEGAL_LINKS: Array<{ href: Href; label: string; note: string }> = [
+  { href: '/profile/privacy', label: 'Privacy Policy', note: 'Data, orders, and account use' },
+  { href: '/profile/terms', label: 'Terms & Conditions', note: 'Rules for using Shakana' },
+  { href: '/profile/cookies', label: 'Cookie Consent', note: 'EU GDPR consent controls' },
+  { href: '/profile/security', label: 'Auth & security', note: 'Login, reset, OAuth, rate limits' },
+  { href: '/profile/support', label: 'Contact support', note: 'Support email' },
+  { href: '/profile/bug-report', label: 'Bug report', note: 'Send a reproducible issue' },
+];
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -31,15 +42,55 @@ export default function ProfileScreen() {
   const session = useAuthStore((s) => s.session);
   const profile = useAuthStore((s) => s.profile);
   const resetAuth = useAuthStore((s) => s.reset);
-  const { data: orders = [] } = useUserOrders(session?.user.id);
+  const demoOrders = useDemoCommerceStore((s) => s.orders);
+  const activeParticipantId = useDemoCommerceStore((s) => s.activeParticipantId);
+  const paymentSettings = usePaymentSettingsStore((s) => s.settings);
+  const paymentHydrated = usePaymentSettingsStore((s) => s.hydrated);
+  const loadPayments = usePaymentSettingsStore((s) => s.load);
+  const setPaymentMethod = usePaymentSettingsStore((s) => s.setMethod);
+  const notificationSettings = useNotificationSettingsStore((s) => s.settings);
+  const notificationHydrated = useNotificationSettingsStore((s) => s.hydrated);
+  const loadNotifications = useNotificationSettingsStore((s) => s.load);
+  const setNotification = useNotificationSettingsStore((s) => s.setSetting);
+  const [joinCode, setJoinCode] = useState('');
+  const [savedPulse, setSavedPulse] = useState('');
 
-  const name = useMemo(
-    () => [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim(),
-    [profile?.first_name, profile?.last_name],
-  );
+  useEffect(() => {
+    if (!paymentHydrated) void loadPayments();
+    if (!notificationHydrated) void loadNotifications();
+  }, [loadNotifications, loadPayments, notificationHydrated, paymentHydrated]);
 
-  const openOrders = orders.filter((order) => !['completed', 'cancelled', 'Shipped'].includes(order.status)).length;
-  const email = session?.user.email ?? (isHebrew ? 'לא מחובר' : 'Not signed in');
+  const displayName = useMemo(() => {
+    const profileName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim();
+    const metadata = session?.user.user_metadata as Record<string, unknown> | undefined;
+    const authName =
+      (typeof metadata?.full_name === 'string' && metadata.full_name.trim()) ||
+      (typeof metadata?.name === 'string' && metadata.name.trim());
+    return profileName || authName || (session ? 'Shakana member' : 'Guest');
+  }, [profile, session]);
+
+  const stats = getDemoOrderStats(demoOrders);
+  const personalSaves = getParticipantSuccessCount(demoOrders, activeParticipantId);
+  const readyPayments = Object.values(paymentSettings).filter(
+    (method) => method.enabled && method.link.trim().length > 0,
+  ).length;
+  const openOrders = demoOrders.filter((order) => order.status !== 'shipped').length;
+  const initial = displayName.charAt(0).toUpperCase() || 'S';
+  const email = session?.user.email ?? 'Sign in to attach orders to your account';
+
+  const joinByCode = async () => {
+    const code = joinCode.replace(/\D/g, '').slice(0, 4);
+    if (code.length !== 4) {
+      setSavedPulse('Enter a 4-digit invite code first.');
+      return;
+    }
+    if (!session) {
+      await stashPendingInvite(code);
+      router.push('/login');
+      return;
+    }
+    router.push(`/user?join=${code}` as Href);
+  };
 
   const onSignOut = async () => {
     try {
@@ -51,144 +102,252 @@ export default function ProfileScreen() {
     }
   };
 
+  const savePulse = (message: string) => {
+    setSavedPulse(message);
+    globalThis.setTimeout(() => setSavedPulse(''), 1800);
+  };
+
   return (
     <ScreenBase padded={false}>
       <ScrollView contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
-        <View style={styles.shell}>
-          <View style={styles.topBar}>
-            <View style={styles.titleBlock}>
-              <Text style={styles.brand}>SHAKANA</Text>
-              <Text style={styles.title}>{isHebrew ? 'פרופיל' : 'Profile'}</Text>
-              <Text style={styles.subtitle}>
-                {isHebrew
-                  ? 'כאן מנהלים שפה, פרטי חשבון, והעדפות בסיסיות במקום אחד.'
-                  : 'Manage language, account details, and basic preferences in one calm place.'}
-              </Text>
-            </View>
-            <LanguageSwitcher />
-          </View>
-
-          <View style={styles.heroCard}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{(name || email).charAt(0).toUpperCase()}</Text>
-            </View>
-            <View style={styles.heroCopy}>
-              <Text style={styles.heroKicker}>{isHebrew ? 'חשבון' : 'Account'}</Text>
-              <Text style={styles.heroName} numberOfLines={1}>
-                {name || (isHebrew ? 'משתמש אורח' : 'Guest user')}
-              </Text>
-              <Text style={styles.heroBody}>
-                {isHebrew
-                  ? 'הפרופיל נוצר אחרי ההתחברות, כך שאין צורך במסכים נוספים.'
-                  : 'The profile is created after sign in, so you do not need an extra setup step.'}
-              </Text>
-            </View>
-          </View>
-
-          {!session ? (
-            <View style={styles.noticeCard}>
-              <Text style={styles.noticeTitle}>{isHebrew ? 'עוד לא נכנסת' : 'Not signed in yet'}</Text>
-              <Text style={styles.noticeBody}>
-                {isHebrew
-                  ? 'אפשר לחזור למסך ההתחברות ולהמשיך משם.'
-                  : 'Go back to the login screen and continue from there.'}
-              </Text>
-              <PrimaryBtn label={isHebrew ? 'חזרה להתחברות' : 'Back to login'} onPress={() => router.push('/login')} />
-            </View>
-          ) : null}
-
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>{isHebrew ? 'אימייל' : 'Email'}</Text>
-              <Text style={styles.summaryValue} numberOfLines={1}>
-                {email}
-              </Text>
-            </View>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>{isHebrew ? 'פתוחות' : 'Open orders'}</Text>
-              <Text style={styles.summaryValue}>{String(openOrders)}</Text>
-            </View>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>{isHebrew ? 'שפה' : 'Language'}</Text>
-              <Text style={styles.summaryValue}>{language.toUpperCase()}</Text>
-            </View>
-          </View>
-
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>{isHebrew ? 'שפה' : 'Language'}</Text>
-            <Text style={styles.sectionBody}>
-              {isHebrew ? 'בחרו עברית או אנגלית לכל האפליקציה.' : 'Choose Hebrew or English for the whole app.'}
+        <View style={styles.header}>
+          <View style={styles.headerCopy}>
+            <Text style={styles.brand}>SHAKANA</Text>
+            <Text style={styles.title}>{isHebrew ? 'Profile' : 'Profile'}</Text>
+            <Text style={styles.subtitle}>
+              Account, wallet settings, joins, legal, and support in one clean place.
             </Text>
-            <LanguageSwitcher />
           </View>
-
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>{isHebrew ? 'הגדרות חשבון' : 'Account settings'}</Text>
-            <View style={styles.linkList}>
-              {PROFILE_LINKS.map((item) => (
-                <Pressable
-                  key={item.href}
-                  onPress={() => router.push(item.href)}
-                  style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.85 }]}
-                >
-                  <Text style={[styles.linkText, item.danger && styles.linkTextDanger]}>{item.label}</Text>
-                  <Text style={styles.linkArrow}>›</Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-
-          {session ? <PrimaryBtn label={isHebrew ? 'התנתקות' : 'Sign out'} onPress={onSignOut} /> : null}
         </View>
+
+        <View style={styles.identityCard}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initial}</Text>
+          </View>
+          <View style={styles.identityCopy}>
+            <Text style={styles.name} numberOfLines={1}>{displayName}</Text>
+            <Text style={styles.email} numberOfLines={1}>{email}</Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            onPress={session ? onSignOut : () => router.push('/login')}
+            style={styles.authPill}
+          >
+            <Text style={styles.authPillText}>{session ? 'Sign out' : 'Sign in'}</Text>
+          </Pressable>
+        </View>
+
+        {savedPulse ? (
+          <View style={styles.toast}>
+            <Text style={styles.toastText}>{savedPulse}</Text>
+          </View>
+        ) : null}
+
+        <View style={styles.quickGrid}>
+          <QuickAction title="New Order" body="Choose Amazon, H&M, or Zara and open a new cart." badge="+" primary onPress={() => router.push('/user?new=1' as Href)} />
+          <QuickAction title="Open orders" body="Live carts you are tracking now." badge={String(openOrders)} onPress={() => router.push('/user')} />
+          <QuickAction title="Store mode" body="Merchant dashboard for active orders." badge="M" onPress={() => router.push('/store')} />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Join an order</Text>
+          <Text style={styles.sectionBody}>Paste the 4-digit code from WhatsApp. Invite links still open directly.</Text>
+          <View style={styles.joinRow}>
+            <TextInput
+              value={joinCode}
+              onChangeText={(value) => setJoinCode(value.replace(/\D/g, '').slice(0, 4))}
+              keyboardType="number-pad"
+              placeholder="4821"
+              placeholderTextColor={colors.mu2}
+              style={styles.joinInput}
+              accessibilityLabel="Join code"
+            />
+            <Pressable
+              accessibilityRole="button"
+              onPress={joinByCode}
+              style={({ pressed }) => [styles.joinButton, pressed && styles.pressed]}
+            >
+              <Text style={styles.joinButtonText}>Join</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        <View style={styles.statsGrid}>
+          <Stat label="Open" value={String(openOrders)} />
+          <Stat label="Completed" value={String(stats.shippedOrders)} />
+          <Stat label="My saves" value={String(personalSaves)} />
+          <Stat label="Wallets" value={String(readyPayments)} />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Wallets & payment</Text>
+          <Text style={styles.sectionBody}>Turn on the methods people can use to pay you before joining a shared order.</Text>
+          <View style={styles.paymentList}>
+            {PAYMENT_METHODS.map((method) => {
+              const setting = paymentSettings[method.key];
+              return (
+                <View key={method.key} style={styles.paymentCard}>
+                  <Pressable
+                    accessibilityRole="switch"
+                    accessibilityState={{ checked: setting.enabled }}
+                    onPress={() => {
+                      void setPaymentMethod(method.key, { enabled: !setting.enabled });
+                      savePulse(`${method.label} ${setting.enabled ? 'turned off' : 'turned on'}`);
+                    }}
+                    style={styles.paymentTop}
+                  >
+                    <Text style={styles.paymentTitle}>{method.label}</Text>
+                    <View style={[styles.switch, setting.enabled && styles.switchOn]}>
+                      <Text style={[styles.switchText, setting.enabled && styles.switchTextOn]}>{setting.enabled ? 'ON' : 'OFF'}</Text>
+                    </View>
+                  </Pressable>
+                  {setting.enabled ? (
+                    <TextInput
+                      value={setting.link}
+                      onChangeText={(value) => void setPaymentMethod(method.key, { link: value })}
+                      onBlur={() => savePulse(`${method.label} saved`)}
+                      placeholder={method.placeholder}
+                      placeholderTextColor={colors.mu2}
+                      autoCapitalize="none"
+                      style={styles.walletInput}
+                    />
+                  ) : null}
+                </View>
+              );
+            })}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Alerts</Text>
+          <ToggleRow
+            label="Order updates"
+            desc="Status changes, packing, ready, and shipped."
+            value={notificationSettings.orderUpdates}
+            onPress={() => void setNotification('orderUpdates', !notificationSettings.orderUpdates)}
+          />
+          <ToggleRow
+            label="Payment reminders"
+            desc="Remind participants before the timer closes."
+            value={notificationSettings.paymentReminders}
+            onPress={() => void setNotification('paymentReminders', !notificationSettings.paymentReminders)}
+          />
+          <ToggleRow
+            label="Building orders"
+            desc="Optional alerts when someone in your building opens an order."
+            value={notificationSettings.buildingOrderAlerts}
+            onPress={() => void setNotification('buildingOrderAlerts', !notificationSettings.buildingOrderAlerts)}
+          />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Legal, security & support</Text>
+          <View style={styles.linkList}>
+            {LEGAL_LINKS.map((item) => (
+              <Pressable
+                key={String(item.href)}
+                accessibilityRole="button"
+                onPress={() => router.push(item.href)}
+                style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.linkText}>{item.label}</Text>
+                  <Text style={styles.linkNote}>{item.note}</Text>
+                </View>
+                <Text style={styles.linkArrow}>{'>'}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        {session ? (
+          <Pressable accessibilityRole="button" onPress={() => router.push('/profile/delete')} style={styles.deleteButton}>
+            <Text style={styles.deleteText}>Delete account</Text>
+          </Pressable>
+        ) : null}
       </ScrollView>
     </ScreenBase>
   );
 }
 
+function QuickAction({
+  title,
+  body,
+  badge,
+  primary,
+  onPress,
+}: {
+  title: string;
+  body: string;
+  badge: string;
+  primary?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.quickCard,
+        primary && styles.quickCardPrimary,
+        pressed && styles.pressed,
+      ]}
+    >
+      <View style={[styles.quickBadge, primary && styles.quickBadgePrimary]}>
+        <Text style={styles.quickBadgeText}>{badge}</Text>
+      </View>
+      <Text style={styles.quickTitle}>{title}</Text>
+      <Text style={styles.quickBody}>{body}</Text>
+    </Pressable>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.statCard}>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function ToggleRow({
+  label,
+  desc,
+  value,
+  onPress,
+}: {
+  label: string;
+  desc: string;
+  value: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable accessibilityRole="switch" accessibilityState={{ checked: value }} onPress={onPress} style={styles.toggleRow}>
+      <View style={{ flex: 1, gap: 4 }}>
+        <Text style={styles.toggleTitle}>{label}</Text>
+        <Text style={styles.toggleDesc}>{desc}</Text>
+      </View>
+      <View style={[styles.switch, value && styles.switchOn]}>
+        <Text style={[styles.switchText, value && styles.switchTextOn]}>{value ? 'ON' : 'OFF'}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  screen: {
-    flexGrow: 1,
-    paddingHorizontal: 18,
-    paddingTop: 18,
-    paddingBottom: 28,
-  },
-  shell: {
-    gap: 16,
-  },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  titleBlock: {
-    flex: 1,
-    gap: 4,
-  },
-  brand: {
-    color: colors.gold,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 12,
-    letterSpacing: 1.6,
-  },
-  title: {
-    color: colors.tx,
-    fontFamily: fontFamily.display,
-    fontSize: 34,
-    lineHeight: 38,
-  },
-  subtitle: {
-    color: colors.mu,
-    fontFamily: fontFamily.body,
-    fontSize: 14,
-    lineHeight: 22,
-    maxWidth: 580,
-  },
-  heroCard: {
+  screen: { flexGrow: 1, width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: 14, paddingTop: 14, paddingBottom: 104, gap: 14 },
+  header: { gap: 8 },
+  headerCopy: { flex: 1, gap: 4 },
+  brand: { color: colors.gold, fontFamily: fontFamily.bodyBold, fontSize: 11, letterSpacing: 2 },
+  title: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 34, lineHeight: 38 },
+  subtitle: { color: colors.mu, fontFamily: fontFamily.body, fontSize: 14, lineHeight: 21 },
+  identityCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    padding: 16,
+    flexWrap: 'wrap',
+    gap: 12,
+    padding: 14,
     borderRadius: radii.xl,
     backgroundColor: colors.s1,
     borderWidth: 1,
@@ -196,113 +355,174 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 999,
-    backgroundColor: colors.goldLight,
+    width: 58,
+    height: 58,
+    borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  avatarText: {
-    color: colors.tx,
-    fontFamily: fontFamily.display,
-    fontSize: 24,
-  },
-  heroCopy: {
-    flex: 1,
-    gap: 4,
-  },
-  heroKicker: {
-    color: colors.mu,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 11,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-  },
-  heroName: {
-    color: colors.tx,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 20,
-  },
-  heroBody: {
-    color: colors.mu,
-    fontFamily: fontFamily.body,
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  noticeCard: {
-    gap: 10,
-    padding: 16,
-    borderRadius: radii.xl,
     backgroundColor: colors.goldLight,
     borderWidth: 1,
     borderColor: colors.br,
   },
-  noticeTitle: {
-    color: colors.tx,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 16,
+  avatarText: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 23 },
+  identityCopy: { flex: 1, minWidth: 0 },
+  name: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 18 },
+  email: { marginTop: 3, color: colors.mu, fontFamily: fontFamily.body, fontSize: 13 },
+  authPill: {
+    minHeight: 40,
+    borderRadius: radii.pill,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.gold,
+    flexShrink: 0,
   },
-  noticeBody: {
-    color: colors.mu,
-    fontFamily: fontFamily.body,
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  summaryCard: {
-    flexGrow: 1,
-    flexBasis: '48%',
-    padding: 14,
+  authPillText: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 12 },
+  toast: {
+    padding: 12,
     borderRadius: radii.lg,
+    backgroundColor: colors.goldLight,
+    borderWidth: 1,
+    borderColor: colors.br,
+  },
+  toastText: { color: colors.acc, fontFamily: fontFamily.bodyBold, fontSize: 13 },
+  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  quickCard: {
+    flexGrow: 1,
+    flexBasis: 148,
+    minHeight: 144,
+    borderRadius: radii.xl,
+    padding: 15,
     backgroundColor: colors.s1,
     borderWidth: 1,
     borderColor: colors.br,
-    gap: 6,
+    justifyContent: 'space-between',
     ...shadow.card,
   },
-  summaryLabel: {
-    color: colors.mu,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 11,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
+  quickCardPrimary: { backgroundColor: colors.gold, borderColor: colors.acc },
+  quickBadge: {
+    width: 42,
+    height: 42,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.br,
   },
-  summaryValue: {
-    color: colors.tx,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 16,
-  },
-  sectionCard: {
+  quickBadgePrimary: { backgroundColor: 'rgba(255,255,255,0.34)', borderColor: 'rgba(255,255,255,0.38)' },
+  quickBadgeText: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 19 },
+  quickTitle: { marginTop: 10, color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 17 },
+  quickBody: { marginTop: 5, color: colors.mu, fontFamily: fontFamily.body, fontSize: 13, lineHeight: 19 },
+  section: {
     gap: 12,
-    padding: 16,
+    padding: 15,
     borderRadius: radii.xl,
     backgroundColor: colors.s1,
     borderWidth: 1,
     borderColor: colors.br,
     ...shadow.card,
   },
-  sectionTitle: {
+  sectionTitle: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 17 },
+  sectionBody: { color: colors.mu, fontFamily: fontFamily.body, fontSize: 13, lineHeight: 20 },
+  joinRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, alignItems: 'center' },
+  joinInput: {
+    flex: 1,
+    minHeight: 50,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.br,
+    backgroundColor: colors.bg,
     color: colors.tx,
     fontFamily: fontFamily.bodyBold,
     fontSize: 18,
+    paddingHorizontal: 14,
+    textAlign: 'center',
   },
-  sectionBody: {
+  joinButton: {
+    minHeight: 50,
+    minWidth: 92,
+    borderRadius: radii.lg,
+    backgroundColor: colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  joinButtonText: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 14 },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
+  statCard: {
+    flexGrow: 1,
+    flexBasis: 118,
+    minHeight: 78,
+    borderRadius: radii.lg,
+    padding: 12,
+    backgroundColor: colors.s1,
+    borderWidth: 1,
+    borderColor: colors.br,
+    justifyContent: 'center',
+    ...shadow.card,
+  },
+  statValue: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 22, lineHeight: 25 },
+  statLabel: {
+    marginTop: 5,
     color: colors.mu,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 10,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  paymentList: { gap: 10 },
+  paymentCard: {
+    gap: 10,
+    padding: 12,
+    borderRadius: radii.lg,
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.br,
+  },
+  paymentTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  paymentTitle: { flex: 1, color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 14 },
+  walletInput: {
+    minHeight: 46,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.br,
+    backgroundColor: colors.white,
+    color: colors.tx,
     fontFamily: fontFamily.body,
     fontSize: 14,
-    lineHeight: 22,
+    paddingHorizontal: 12,
   },
-  linkList: {
-    gap: 10,
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderRadius: radii.lg,
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.br,
   },
+  toggleTitle: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 14 },
+  toggleDesc: { color: colors.mu, fontFamily: fontFamily.body, fontSize: 12, lineHeight: 18 },
+  switch: {
+    width: 58,
+    height: 34,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.br,
+    backgroundColor: colors.s2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  switchOn: { backgroundColor: colors.tx, borderColor: colors.tx },
+  switchText: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 11 },
+  switchTextOn: { color: colors.white },
+  linkList: { gap: 8 },
   linkRow: {
-    minHeight: 52,
+    minHeight: 58,
     paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: radii.lg,
     backgroundColor: colors.bg,
     borderWidth: 1,
@@ -310,18 +530,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 10,
   },
-  linkText: {
-    color: colors.tx,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 14,
+  linkText: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 14 },
+  linkNote: { marginTop: 2, color: colors.mu, fontFamily: fontFamily.body, fontSize: 12 },
+  linkArrow: { color: colors.mu, fontFamily: fontFamily.display, fontSize: 24, lineHeight: 26 },
+  deleteButton: {
+    minHeight: 50,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.err,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
   },
-  linkTextDanger: {
-    color: colors.err,
-  },
-  linkArrow: {
-    color: colors.mu,
-    fontFamily: fontFamily.display,
-    fontSize: 20,
-  },
+  deleteText: { color: colors.err, fontFamily: fontFamily.bodyBold, fontSize: 14 },
+  pressed: { transform: [{ scale: 0.98 }], opacity: 0.9 },
 });

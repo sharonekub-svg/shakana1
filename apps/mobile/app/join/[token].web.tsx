@@ -14,16 +14,16 @@ import { useAuthStore } from '@/stores/authStore';
 import { useClaimInvite } from '@/api/invites';
 
 const C = {
-  bg: '#F8F7F2',
-  tx: '#111111',
-  mu: '#68635D',
-  acc: '#0B6B3A',
-  accLight: '#EAF4E7',
-  lime: '#DDF8B7',
-  br: '#E6E0D7',
-  white: '#FFFFFF',
-  err: '#E45B5B',
-  skel: '#F1EEE8',
+  bg: '#F7F1E8',
+  tx: '#2B2118',
+  mu: '#6F6257',
+  acc: '#B35C37',
+  accLight: '#F6E4D6',
+  lime: '#E9D3BF',
+  br: '#E3D5C6',
+  white: '#FFFCF7',
+  err: '#C84D3A',
+  skel: '#F1E7DA',
 };
 
 type OrderPreview = {

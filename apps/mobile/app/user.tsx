@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Image, ImageBackground, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -19,23 +19,54 @@ import {
 } from '@/components/demo/DemoPrimitives';
 import { buildInviteMessage, demoCategories, demoStores, productsForBrand, type DemoBrandId, type DemoProduct } from '@/demo/catalog';
 import {
-  demoParticipants,
+  type DemoParticipant,
   getOrderItemCount,
   getOrderTotal,
   getProductLine,
   initDemoCommerceSync,
-  primaryDemoParticipant,
   useDemoCommerceStore,
 } from '@/stores/demoCommerceStore';
 import { fontFamily } from '@/theme/fonts';
 import { colors } from '@/theme/tokens';
 import { BuildingSections } from '@/components/demo/BuildingSections';
 import { useLocale } from '@/i18n/locale';
+import { useAuthStore } from '@/stores/authStore';
+import { stashPendingInvite } from '@/lib/deeplinks';
+
+const ADDRESS_SUGGESTIONS = [
+  'Rothschild Boulevard 12, Tel Aviv',
+  'Dizengoff Street 88, Tel Aviv',
+  'Ibn Gabirol Street 110, Tel Aviv',
+  'Allenby Street 65, Tel Aviv',
+  'Herzl Street 21, Ramat Gan',
+  'Jabotinsky Street 42, Petah Tikva',
+  'Weizmann Street 17, Givatayim',
+  'Ben Gurion Street 9, Herzliya',
+  'King George Street 30, Jerusalem',
+  'Bialik Street 7, Holon',
+  'HaNassi Boulevard 45, Haifa',
+  'Sokolov Street 18, Ramat Hasharon',
+];
+
+function getAddressSuggestions(value: string) {
+  const query = value.trim().toLowerCase();
+  if (query.length < 2) return [];
+  return ADDRESS_SUGGESTIONS.filter((address) => address.toLowerCase().includes(query)).slice(0, 5);
+}
+
+function normalizeTimerMinutes(value: string) {
+  if (!value.trim()) return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.max(1, Math.min(720, Math.round(parsed)));
+}
 
 export default function DemoUserScreen() {
   const router = useRouter();
   const { language } = useLocale();
-  const params = useLocalSearchParams<{ join?: string }>();
+  const params = useLocalSearchParams<{ join?: string; new?: string }>();
+  const session = useAuthStore((state) => state.session);
+  const demoMode = useDemoCommerceStore((state) => state.demoMode);
   const selectedBrand = useDemoCommerceStore((state) => state.selectedBrand);
   const orders = useDemoCommerceStore((state) => state.orders);
   const activeParticipantId = useDemoCommerceStore((state) => state.activeParticipantId);
@@ -43,22 +74,35 @@ export default function DemoUserScreen() {
   const lastPulse = useDemoCommerceStore((state) => state.lastPulse);
   const selectBrand = useDemoCommerceStore((state) => state.selectBrand);
   const ensureOrder = useDemoCommerceStore((state) => state.ensureOrder);
+  const createNewOrder = useDemoCommerceStore((state) => state.createNewOrder);
+  const claimOrderFounder = useDemoCommerceStore((state) => state.claimOrderFounder);
   const joinParticipant = useDemoCommerceStore((state) => state.joinParticipant);
   const setActiveParticipant = useDemoCommerceStore((state) => state.setActiveParticipant);
   const setDemoRole = useDemoCommerceStore((state) => state.setDemoRole);
+  const updateTimer = useDemoCommerceStore((state) => state.updateTimer);
+  const updateDeliveryAddress = useDemoCommerceStore((state) => state.updateDeliveryAddress);
 
   const [category, setCategory] = useState<(typeof demoCategories)[number]>('Best Sellers');
   const [copied, setCopied] = useState(false);
   const [nowMs, setNowMs] = useState(Date.now());
+  const [customTimer, setCustomTimer] = useState('45');
+  const [newOrderMode, setNewOrderMode] = useState(false);
+  const timerRef = useRef<ReturnType<typeof globalThis.setInterval> | null>(null);
 
   useEffect(() => {
     initDemoCommerceSync();
-    setDemoRole('user');
-  }, [setDemoRole]);
+    if (demoMode) setDemoRole('user');
+  }, [demoMode, setDemoRole]);
 
   useEffect(() => {
-    const interval = globalThis.setInterval(() => setNowMs(Date.now()), 1000);
-    return () => globalThis.clearInterval(interval);
+    if (timerRef.current) globalThis.clearInterval(timerRef.current);
+    timerRef.current = globalThis.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => {
+      if (timerRef.current) {
+        globalThis.clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
   }, []);
 
   const joinedOrder = useMemo(
@@ -66,28 +110,79 @@ export default function DemoUserScreen() {
     [orders, params.join],
   );
 
+  const accountParticipant: DemoParticipant = useMemo(() => {
+    const metadata = session?.user.user_metadata as Record<string, unknown> | undefined;
+    const fullName =
+      (typeof metadata?.full_name === 'string' && metadata.full_name.trim()) ||
+      (typeof metadata?.name === 'string' && metadata.name.trim()) ||
+      (session?.user ? 'Signed-in member' : 'Sharone');
+    return {
+      id: session?.user.id ?? 'user-a',
+      name: fullName,
+      joinedAt: Date.now(),
+    };
+  }, [session?.user.id, session?.user.user_metadata]);
+
   useEffect(() => {
     if (joinedOrder && !joinedOrder.participants.some((participant) => participant.id === activeParticipantId)) {
-      joinParticipant(joinedOrder.id, activeParticipantId);
+      joinParticipant(joinedOrder.id, accountParticipant);
       selectBrand(joinedOrder.brand);
     }
-  }, [activeParticipantId, joinedOrder, joinParticipant, selectBrand]);
+  }, [accountParticipant, activeParticipantId, joinedOrder, joinParticipant, selectBrand]);
+
+  useEffect(() => {
+    if (params.new !== '1') return;
+    setNewOrderMode(true);
+    selectBrand(null);
+    setCategory('Best Sellers');
+  }, [params.new, selectBrand]);
+
+  useEffect(() => {
+    if (!session?.user) return;
+    setActiveParticipant(accountParticipant.id);
+  }, [accountParticipant.id, session?.user.id, setActiveParticipant]);
 
   const brand = selectedBrand ?? joinedOrder?.brand ?? null;
   const order = brand
-    ? orders.find((candidate) => candidate.brand === brand && candidate.status !== 'Shipped') ??
-      orders.find((candidate) => candidate.brand === brand)
+    ? newOrderMode
+      ? null
+      : orders.find((candidate) => candidate.brand === brand && candidate.status !== 'shipped') ??
+        orders.find((candidate) => candidate.brand === brand)
     : null;
   const store = brand ? demoStores[brand] : null;
   const products = brand ? productsForBrand(brand) : [];
   const categoryProducts = products.filter((product) => product.category === category);
   const activeParticipant =
-    demoParticipants.find((participant) => participant.id === activeParticipantId) ?? primaryDemoParticipant;
+    order?.participants.find((participant) => participant.id === activeParticipantId) ?? accountParticipant;
   const remainingMs = order ? Math.max(0, order.closesAt - nowMs) : 0;
+  const totalTimerMs = order ? Math.max(60 * 1000, order.closesAt - order.createdAt) : 30 * 60 * 1000;
+  const isFounder = order?.createdBy === activeParticipantId;
+  const isAuthenticated = !!session?.user;
+  const customTimerMinutes = normalizeTimerMinutes(customTimer);
+  const addressSuggestions = useMemo(
+    () => (order ? getAddressSuggestions(order.deliveryAddress) : []),
+    [order?.deliveryAddress],
+  );
+
+  useEffect(() => {
+    if (!session?.user.id || !order || order.createdBy !== 'user-a') return;
+    claimOrderFounder(order.id, accountParticipant);
+  }, [accountParticipant, claimOrderFounder, order?.createdBy, order?.id, session?.user.id]);
+
+  useEffect(() => {
+    if (!params.join || isAuthenticated) return;
+    void stashPendingInvite(params.join);
+  }, [isAuthenticated, params.join]);
 
   const createOrder = (nextBrand: DemoBrandId) => {
     selectBrand(nextBrand);
-    ensureOrder(nextBrand);
+    if (newOrderMode) {
+      createNewOrder(nextBrand, accountParticipant);
+      setNewOrderMode(false);
+      router.replace('/user');
+    } else {
+      ensureOrder(nextBrand, accountParticipant);
+    }
   };
 
   const shareMessage = order
@@ -98,7 +193,13 @@ export default function DemoUserScreen() {
     if (!shareMessage) return;
     await Clipboard.setStringAsync(shareMessage);
     setCopied(true);
-    globalThis.setTimeout(() => setCopied(false), 1600);
+    globalThis.setTimeout(() => setCopied(false), 2000);
+  };
+
+  const setOrderTimer = (minutes: number) => {
+    if (!order) return;
+    updateTimer(order.id, minutes);
+    setNowMs(Date.now());
   };
 
   if (!brand || !store) {
@@ -107,7 +208,10 @@ export default function DemoUserScreen() {
         <DemoPage>
           <View style={styles.topBar}>
             <Text style={styles.logo}>shakana</Text>
-            <DemoButton label="Store login" onPress={() => router.push('/store')} tone="light" style={styles.smallBtn} />
+            <View style={styles.topActions}>
+              <DemoButton label="Profile" onPress={() => router.push('/profile')} tone="light" style={styles.smallBtn} />
+              <DemoButton label="Store login" onPress={() => router.push('/store')} tone="light" style={styles.smallBtn} />
+            </View>
           </View>
           <BuildingSections
             orders={orders}
@@ -127,6 +231,11 @@ export default function DemoUserScreen() {
             </Text>
           </Card>
           <SectionTitle title="Choose your store" kicker="User flow" />
+          {newOrderMode ? (
+            <Card style={styles.notice}>
+              <Text style={styles.noticeText}>Choose a store to open a brand new shared cart.</Text>
+            </Card>
+          ) : null}
           <View style={styles.storeGrid}>
             {(['hm', 'zara', 'amazon'] as DemoBrandId[]).map((brandId) => {
               const option = demoStores[brandId];
@@ -165,6 +274,7 @@ export default function DemoUserScreen() {
           </Pressable>
           <View style={styles.topActions}>
             <DemoButton label="Switch store" onPress={() => selectBrand(null)} tone="light" style={styles.smallBtn} />
+            <DemoButton label="Profile" onPress={() => router.push('/profile')} tone="light" style={styles.smallBtn} />
             <DemoButton label="Merchant view" onPress={() => router.push('/store')} tone="light" style={styles.smallBtn} />
           </View>
         </View>
@@ -173,7 +283,7 @@ export default function DemoUserScreen() {
           <View style={styles.heroOverlay}>
             <View style={styles.heroHeaderRow}>
               <BrandPill brand={brand} />
-              {order ? <TimerRing remainingMs={remainingMs} totalMs={15 * 60 * 1000} /> : null}
+              {order ? <TimerRing remainingMs={remainingMs} totalMs={totalTimerMs} /> : null}
             </View>
             <Text style={styles.heroTitle}>{store.name}</Text>
             <Text style={styles.heroSubtitle}>{store.tagline}</Text>
@@ -223,6 +333,12 @@ export default function DemoUserScreen() {
                     product={product}
                     orderId={order?.id ?? null}
                     activeParticipantId={activeParticipantId}
+                    activeParticipant={activeParticipant}
+                    isAuthenticated={isAuthenticated}
+                    onRequireLogin={async () => {
+                      if (order) await stashPendingInvite(order.inviteCode);
+                      router.push('/login');
+                    }}
                     onCreateOrder={() => createOrder(brand)}
                   />
                 ))}
@@ -238,6 +354,23 @@ export default function DemoUserScreen() {
               />
             ) : (
               <>
+                {!isAuthenticated ? (
+                  <Card style={styles.authGate}>
+                    <Text style={styles.authTitle}>Log in to add your items</Text>
+                    <Text style={styles.muted}>
+                      You can browse this shared catalog now. Before adding products to the main cart,
+                      sign in so your items, privacy choices, and delivery details are saved.
+                    </Text>
+                    <DemoButton
+                      label="Log in and return to this cart"
+                      onPress={async () => {
+                        await stashPendingInvite(order.inviteCode);
+                        router.push('/login');
+                      }}
+                      tone="accent"
+                    />
+                  </Card>
+                ) : null}
                 <Card style={styles.cartCard}>
                   <View style={styles.rowBetween}>
                     <View>
@@ -247,6 +380,88 @@ export default function DemoUserScreen() {
                     <Text style={styles.total}>₪{getOrderTotal(order)}</Text>
                   </View>
                   <StatusRail status={order.status} />
+                  <View style={styles.timerPanel}>
+                    <View style={styles.rowBetween}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.timerTitle}>Founder timer</Text>
+                        <Text style={styles.muted}>
+                          {isFounder
+                            ? 'Choose how long friends have to join this cart.'
+                            : 'Only the cart founder can change this timer.'}
+                        </Text>
+                      </View>
+                      <TimerRing remainingMs={remainingMs} totalMs={totalTimerMs} label="left" />
+                    </View>
+                    <View style={styles.timerActions}>
+                      <DemoButton
+                        label="30 min"
+                        onPress={() => setOrderTimer(30)}
+                        disabled={!isFounder}
+                        tone="accent"
+                        style={styles.timerBtn}
+                      />
+                      <DemoButton
+                        label="60 min"
+                        onPress={() => setOrderTimer(60)}
+                        disabled={!isFounder}
+                        tone="light"
+                        style={styles.timerBtn}
+                      />
+                      <View style={styles.customTimerBox}>
+                        <TextInput
+                          value={customTimer}
+                          onChangeText={(value) => setCustomTimer(value.replace(/[^\d]/g, '').slice(0, 3))}
+                          keyboardType="number-pad"
+                          placeholder="45"
+                          editable={isFounder}
+                          style={styles.customTimerInput}
+                          accessibilityLabel="Custom timer minutes"
+                        />
+                        <DemoButton
+                          label="Set custom"
+                          onPress={() => {
+                            if (!customTimerMinutes) return;
+                            setCustomTimer(String(customTimerMinutes));
+                            setOrderTimer(customTimerMinutes);
+                          }}
+                          disabled={!isFounder || !customTimerMinutes}
+                          tone="accent"
+                          style={styles.customTimerButton}
+                        />
+                      </View>
+                    </View>
+                    {customTimer.trim() && !customTimerMinutes ? (
+                      <Text style={styles.validationText}>Enter a timer from 1 to 720 minutes.</Text>
+                    ) : null}
+                  </View>
+                  <View style={styles.addressPanel}>
+                    <Text style={styles.timerTitle}>Delivery address</Text>
+                    <TextInput
+                      value={order.deliveryAddress}
+                      onChangeText={(value) => updateDeliveryAddress(order.id, value)}
+                      placeholder="Street, building, apartment, city"
+                      style={styles.addressInput}
+                      accessibilityLabel="Shared order delivery address"
+                    />
+                    {addressSuggestions.length > 0 ? (
+                      <View style={styles.addressSuggestionList}>
+                        {addressSuggestions.map((suggestion) => (
+                          <Pressable
+                            key={suggestion}
+                            accessibilityRole="button"
+                            onPress={() => updateDeliveryAddress(order.id, suggestion)}
+                            style={({ pressed }) => [
+                              styles.addressSuggestion,
+                              pressed && demoStyles.pressed,
+                            ]}
+                          >
+                            <Text style={styles.addressSuggestionText}>{suggestion}</Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    ) : null}
+                    <Text style={styles.muted}>This is the address the merchant sees for the final shipment.</Text>
+                  </View>
                   <View style={styles.shareProofRow}>
                     <View style={styles.trustPill}>
                       <Text style={styles.trustValue}>{activeParticipant.name}</Text>
@@ -258,23 +473,19 @@ export default function DemoUserScreen() {
                     </View>
                   </View>
                   <View style={styles.participants}>
-                    {demoParticipants.map((participant) => {
-                      const joined = order.participants.some((current) => current.id === participant.id);
+                    {order.participants.map((participant) => {
                       const active = activeParticipantId === participant.id;
-                      const verified = joined && order.items.some((item) => item.participantId === participant.id);
+                      const verified = order.items.some((item) => item.participantId === participant.id);
                       return (
                         <Pressable
                           key={participant.id}
                           accessibilityRole="button"
-                          onPress={() => {
-                            if (!joined) joinParticipant(order.id, participant.id);
-                            setActiveParticipant(participant.id);
-                          }}
-                          style={[styles.participantPill, joined && styles.joinedPill, active && styles.activePill]}
+                          onPress={() => setActiveParticipant(participant.id)}
+                          style={[styles.participantPill, styles.joinedPill, active && styles.activePill]}
                         >
                           <View style={styles.participantRow}>
                             <Text style={[styles.participantText, active && styles.activePillText]}>
-                              {participant.name}{joined ? '' : ' +'}
+                              {participant.name}
                             </Text>
                             {verified ? <Text style={styles.participantBadge}>verified</Text> : null}
                           </View>
@@ -292,10 +503,6 @@ export default function DemoUserScreen() {
                       tone="light"
                     />
                   </View>
-                  <View style={styles.simRow}>
-                    <DemoButton label="Simulate User B joining" onPress={() => joinParticipant(order.id, 'user-b')} tone="light" style={styles.simBtn} />
-                    <DemoButton label="Simulate User C joining" onPress={() => joinParticipant(order.id, 'user-c')} tone="light" style={styles.simBtn} />
-                  </View>
                 </Card>
 
                 <SavingsPanel order={order} />
@@ -312,10 +519,21 @@ export default function DemoUserScreen() {
                     <View style={styles.itemList}>
                       {order.items.map((item) => {
                         const line = getProductLine(item);
-                        const owner = demoParticipants.find((participant) => participant.id === item.participantId);
+                        const owner = order.participants.find((participant) => participant.id === item.participantId);
                         const privateForViewer = item.private && item.participantId !== activeParticipantId;
                         return (
                           <View key={item.id} style={styles.cartItem}>
+                            {privateForViewer ? (
+                              <View style={styles.cartItemImagePlaceholder}>
+                                <Text style={styles.cartItemImageText}>Private</Text>
+                              </View>
+                            ) : line.product?.image ? (
+                              <Image source={{ uri: line.product.image }} style={styles.cartItemImage} resizeMode="cover" />
+                            ) : (
+                              <View style={styles.cartItemImagePlaceholder}>
+                                <Text style={styles.cartItemImageText}>Item</Text>
+                              </View>
+                            )}
                             <View style={{ flex: 1 }}>
                               <Text style={styles.itemName}>
                                 {privateForViewer ? 'Private item' : line.displayName}
@@ -344,11 +562,17 @@ function ProductCard({
   product,
   orderId,
   activeParticipantId,
+  activeParticipant,
+  isAuthenticated,
+  onRequireLogin,
   onCreateOrder,
 }: {
   product: DemoProduct;
   orderId: string | null;
   activeParticipantId: string;
+  activeParticipant: DemoParticipant;
+  isAuthenticated: boolean;
+  onRequireLogin: () => void;
   onCreateOrder: () => void;
 }) {
   const addItem = useDemoCommerceStore((state) => state.addItem);
@@ -356,7 +580,7 @@ function ProductCard({
   const [color, setColor] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [privateItem, setPrivateItem] = useState(false);
-  const ready = !!orderId && !!size && !!color && quantity > 0;
+  const ready = !!orderId && isAuthenticated && !!size && !!color && quantity > 0;
   const productSaving = Math.max(0, product.compareAtPrice - product.price);
 
   return (
@@ -412,6 +636,8 @@ function ProductCard({
         </View>
         {!orderId ? (
           <DemoButton label="Create group order first" onPress={onCreateOrder} tone="accent" />
+        ) : !isAuthenticated ? (
+          <DemoButton label="Log in to add item" onPress={onRequireLogin} tone="accent" />
         ) : (
           <DemoButton
             testID={`add-${product.id}`}
@@ -422,6 +648,7 @@ function ProductCard({
               addItem(orderId, {
                 productId: product.id,
                 participantId: activeParticipantId,
+                participant: activeParticipant,
                 size,
                 color,
                 quantity,
@@ -437,7 +664,7 @@ function ProductCard({
 }
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: '#F8F4EE' },
+  scroll: { flex: 1, backgroundColor: colors.bg },
   content: { flexGrow: 1 },
   topBar: {
     flexDirection: 'row',
@@ -448,12 +675,12 @@ const styles = StyleSheet.create({
   },
   topActions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   logo: {
-    color: '#A65F3C',
+    color: colors.acc,
     fontFamily: fontFamily.bodyBold,
     fontSize: 15,
     textTransform: 'uppercase',
   },
-  smallBtn: { width: 170, minHeight: 40 },
+  smallBtn: { flexGrow: 1, flexBasis: 136, minHeight: 40 },
   storeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
   whatsappCard: {
     gap: 8,
@@ -471,24 +698,24 @@ const styles = StyleSheet.create({
   },
   storeChoice: {
     flexGrow: 1,
-    flexBasis: 340,
-    height: 430,
+    flexBasis: 280,
+    height: 320,
     borderRadius: 8,
     overflow: 'hidden',
-    backgroundColor: '#DDD3C7',
+    backgroundColor: colors.s3,
   },
   storeChoiceImage: { flex: 1 },
   storeOverlay: {
     flex: 1,
     justifyContent: 'flex-end',
     gap: 10,
-    padding: 22,
+    padding: 18,
     backgroundColor: 'rgba(0,0,0,0.22)',
   },
   storeName: {
     color: '#FFFFFF',
     fontFamily: fontFamily.display,
-    fontSize: 44,
+    fontSize: 36,
   },
   storeTagline: {
     color: '#FFFFFF',
@@ -496,22 +723,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   hero: {
-    minHeight: 340,
+    minHeight: 280,
     borderRadius: 8,
     overflow: 'hidden',
-    backgroundColor: '#DDD3C7',
+    backgroundColor: colors.s3,
   },
   heroOverlay: {
     flex: 1,
     justifyContent: 'flex-end',
     gap: 10,
-    padding: 22,
+    padding: 18,
     backgroundColor: 'rgba(0,0,0,0.28)',
   },
   heroTitle: {
     color: '#FFFFFF',
     fontFamily: fontFamily.display,
-    fontSize: 52,
+    fontSize: 40,
+    lineHeight: 44,
   },
   heroSubtitle: {
     color: '#FFFFFF',
@@ -519,15 +747,15 @@ const styles = StyleSheet.create({
     fontSize: 17,
   },
   heroMeta: {
-    color: '#F8F4EE',
+    color: colors.bg,
     fontFamily: fontFamily.body,
     fontSize: 14,
   },
   heroActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 8 },
-  heroBtn: { width: 210 },
+  heroBtn: { flexGrow: 1, flexBasis: 160 },
   heroHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
-  notice: { backgroundColor: '#FFF7E8', borderColor: '#E9C98D' },
-  noticeText: { color: '#7D5424', fontFamily: fontFamily.bodyBold, fontSize: 14 },
+  notice: { backgroundColor: colors.goldLight, borderColor: colors.br },
+  noticeText: { color: colors.acc, fontFamily: fontFamily.bodyBold, fontSize: 14 },
   mainGrid: { flexDirection: 'row', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 },
   catalogColumn: { flexGrow: 1, flexBasis: 640, gap: 14 },
   cartColumn: { flexGrow: 1, flexBasis: 330, gap: 14 },
@@ -536,64 +764,162 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: '#EFE7DE',
+    backgroundColor: colors.s2,
   },
-  categoryText: { color: '#5F554C', fontFamily: fontFamily.bodyBold, fontSize: 13 },
+  categoryText: { color: colors.mu, fontFamily: fontFamily.bodyBold, fontSize: 13 },
   categoryTextActive: { color: '#FFFFFF' },
   productGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
-  productCard: { flexGrow: 1, flexBasis: 280, maxWidth: 390, overflow: 'hidden', padding: 0 },
+  productCard: { flexGrow: 1, flexBasis: 260, overflow: 'hidden', padding: 0 },
   productInfo: { padding: 14, gap: 10 },
-  productName: { color: '#171412', fontFamily: fontFamily.bodyBold, fontSize: 17, flex: 1 },
-  price: { color: '#171412', fontFamily: fontFamily.bodyBold, fontSize: 18 },
-  sku: { color: '#8B6F56', fontFamily: fontFamily.bodyBold, fontSize: 12 },
-  selectorLabel: { color: '#171412', fontFamily: fontFamily.bodyBold, fontSize: 13 },
+  productName: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 17, flex: 1 },
+  price: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 18 },
+  sku: { color: colors.acc, fontFamily: fontFamily.bodyBold, fontSize: 12 },
+  selectorLabel: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 13 },
   optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   option: {
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#DED2C5',
+    borderColor: colors.br,
     paddingHorizontal: 10,
     paddingVertical: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
-  optionActive: { backgroundColor: '#171412', borderColor: '#171412' },
-  optionText: { color: '#171412', fontFamily: fontFamily.bodySemi, fontSize: 12 },
+  optionActive: { backgroundColor: colors.tx, borderColor: colors.tx },
+  optionText: { color: colors.tx, fontFamily: fontFamily.bodySemi, fontSize: 12 },
   optionTextActive: { color: '#FFFFFF' },
   qtyRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   qtyBtn: { width: 44, minHeight: 38, paddingHorizontal: 0 },
-  qtyText: { color: '#171412', fontFamily: fontFamily.bodyBold, minWidth: 54, textAlign: 'center' },
+  qtyText: { color: colors.tx, fontFamily: fontFamily.bodyBold, minWidth: 54, textAlign: 'center' },
   privateToggle: {
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#DED2C5',
+    borderColor: colors.br,
     paddingHorizontal: 10,
     paddingVertical: 9,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
-  privateToggleActive: { backgroundColor: '#F0E2D5', borderColor: '#A65F3C' },
-  privateText: { color: '#5F554C', fontFamily: fontFamily.bodyBold, fontSize: 12 },
-  privateTextActive: { color: '#7A4329' },
+  privateToggleActive: { backgroundColor: colors.goldLight, borderColor: colors.acc },
+  privateText: { color: colors.mu, fontFamily: fontFamily.bodyBold, fontSize: 12 },
+  privateTextActive: { color: colors.acc },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   cartCard: { gap: 14 },
-  cartTitle: { color: '#171412', fontFamily: fontFamily.bodyBold, fontSize: 20 },
-  total: { color: '#171412', fontFamily: fontFamily.display, fontSize: 28 },
+  authGate: {
+    gap: 10,
+    borderColor: 'rgba(201,168,76,0.45)',
+    backgroundColor: colors.goldLight,
+  },
+  authTitle: {
+    color: colors.tx,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 18,
+  },
+  cartTitle: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 20 },
+  total: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 28 },
    muted: { color: colors.mu, fontFamily: fontFamily.body, fontSize: 14, lineHeight: 21 },
-  kicker: { color: '#8B6F56', fontFamily: fontFamily.bodyBold, fontSize: 12, textTransform: 'uppercase' },
+  kicker: { color: colors.acc, fontFamily: fontFamily.bodyBold, fontSize: 12, textTransform: 'uppercase' },
+  timerPanel: {
+    gap: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.br,
+    backgroundColor: colors.goldLight,
+    padding: 12,
+  },
+  timerTitle: {
+    color: colors.tx,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 16,
+  },
+  timerActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    alignItems: 'center',
+  },
+  timerBtn: {
+    flexGrow: 1,
+    flexBasis: 92,
+    minHeight: 40,
+  },
+  customTimerBox: {
+    flexGrow: 1,
+    flexBasis: 180,
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  customTimerInput: {
+    width: 76,
+    minHeight: 42,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.brBr,
+    backgroundColor: colors.white,
+    color: colors.tx,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 15,
+    paddingHorizontal: 12,
+    textAlign: 'center',
+  },
+  customTimerButton: {
+    flex: 1,
+    minHeight: 42,
+  },
+  validationText: {
+    color: colors.acc,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+  },
+  addressPanel: {
+    gap: 9,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.br,
+    backgroundColor: colors.white,
+    padding: 12,
+  },
+  addressInput: {
+    minHeight: 46,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.brBr,
+    backgroundColor: colors.white,
+    color: colors.tx,
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 14,
+    paddingHorizontal: 12,
+  },
+  addressSuggestionList: {
+    gap: 6,
+  },
+  addressSuggestion: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.br,
+    backgroundColor: colors.s2,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  addressSuggestionText: {
+    color: colors.tx,
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 13,
+  },
   participants: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   participantPill: {
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#EFE7DE',
+    backgroundColor: colors.s2,
   },
-  joinedPill: { backgroundColor: '#EAF4E7' },
-  activePill: { backgroundColor: '#171412' },
+  joinedPill: { backgroundColor: colors.goldLight },
+  activePill: { backgroundColor: colors.tx },
   participantRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  participantText: { color: '#5F554C', fontFamily: fontFamily.bodyBold, fontSize: 12 },
+  participantText: { color: colors.mu, fontFamily: fontFamily.bodyBold, fontSize: 12 },
   activePillText: { color: '#FFFFFF' },
   participantBadge: {
-    color: '#24683A',
-    backgroundColor: '#EDF7E8',
+    color: colors.acc,
+    backgroundColor: colors.goldLight,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 999,
@@ -606,7 +932,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     minWidth: 140,
     borderRadius: 8,
-    backgroundColor: '#EAF4E7',
+    backgroundColor: colors.goldLight,
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 2,
@@ -615,31 +941,31 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     minWidth: 120,
     borderRadius: 8,
-    backgroundColor: '#F6EFE8',
+    backgroundColor: colors.s2,
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 2,
   },
   trustValue: {
-    color: '#171412',
+    color: colors.tx,
     fontFamily: fontFamily.bodyBold,
     fontSize: 15,
   },
   trustLabel: {
-    color: '#6D6258',
+    color: colors.mu,
     fontFamily: fontFamily.bodySemi,
     fontSize: 11,
     textTransform: 'uppercase',
   },
-  inviteBox: { gap: 9, padding: 12, borderRadius: 8, backgroundColor: '#F7F0E8' },
+  inviteBox: { gap: 9, padding: 12, borderRadius: 8, backgroundColor: colors.s2 },
   inviteCardPreview: {
-    color: '#7D5424',
+    color: colors.acc,
     fontFamily: fontFamily.bodySemi,
     fontSize: 12,
     lineHeight: 18,
     opacity: 0.9,
   },
-  inviteText: { color: '#171412', fontFamily: fontFamily.bodySemi, fontSize: 13, lineHeight: 20 },
+  inviteText: { color: colors.tx, fontFamily: fontFamily.bodySemi, fontSize: 13, lineHeight: 20 },
   simRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   simBtn: { flexGrow: 1, flexBasis: 140 },
   itemList: { gap: 8 },
@@ -647,10 +973,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     alignItems: 'center',
+    flexWrap: 'wrap',
     borderTopWidth: 1,
-    borderTopColor: '#EFE7DE',
+    borderTopColor: colors.br,
     paddingTop: 10,
   },
-  itemName: { color: '#171412', fontFamily: fontFamily.bodyBold, fontSize: 14 },
-  itemPrice: { color: '#171412', fontFamily: fontFamily.bodyBold, fontSize: 15 },
+  cartItemImage: {
+    width: 58,
+    height: 70,
+    borderRadius: 8,
+    backgroundColor: colors.s2,
+  },
+  cartItemImagePlaceholder: {
+    width: 58,
+    height: 70,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.s2,
+    borderWidth: 1,
+    borderColor: colors.br,
+  },
+  cartItemImageText: {
+    color: colors.mu,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 10,
+    textAlign: 'center',
+  },
+  itemName: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 14 },
+  itemPrice: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 15 },
 });

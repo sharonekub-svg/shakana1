@@ -1,6 +1,8 @@
 import { corsHeaders } from './cors.ts';
 import { HttpError } from './supabaseAdmin.ts';
 
+const exposeDebugErrors = Deno.env.get('EXPOSE_DEBUG_ERRORS') === 'true';
+
 export function json<T>(body: T, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -13,7 +15,7 @@ export function errorJson(err: unknown): Response {
     return json({ error: err.code, message: err.message }, err.status);
   }
   console.error('unhandled', err);
-  if (err && typeof err === 'object') {
+  if (exposeDebugErrors && err && typeof err === 'object') {
     const obj = err as Record<string, unknown>;
     const message =
       typeof obj.message === 'string'
@@ -34,7 +36,7 @@ export function errorJson(err: unknown): Response {
     );
   }
   return json(
-    { error: 'internal', message: err instanceof Error ? err.message : 'unknown' },
+    { error: 'internal', message: 'Internal server error' },
     500,
   );
 }

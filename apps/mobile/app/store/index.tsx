@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   topActions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  smallBtn: { width: 140, minHeight: 40 },
+  smallBtn: { flexGrow: 1, flexBasis: 132, minHeight: 40 },
   logo: {
     color: colors.acc,
     fontFamily: fontFamily.bodyBold,
@@ -287,7 +287,8 @@ const styles = StyleSheet.create({
   title: {
     color: colors.tx,
     fontFamily: fontFamily.display,
-    fontSize: 40,
+    fontSize: 32,
+    lineHeight: 36,
   },
   metricsGrid: {
     flexDirection: 'row',
@@ -296,22 +297,22 @@ const styles = StyleSheet.create({
   },
   metric: {
     flexGrow: 1,
-    flexBasis: 170,
+    flexBasis: 145,
   },
   metricHighlighted: {
     flexGrow: 1,
-    flexBasis: 170,
+    flexBasis: 145,
     backgroundColor: colors.acc,
     borderColor: colors.acc,
   },
   metricValue: {
     color: colors.tx,
     fontFamily: fontFamily.display,
-    fontSize: 32,
+    fontSize: 28,
   },
   metricValueHighlighted: {
     color: '#FFFFFF',
-    fontSize: 40,
+    fontSize: 34,
   },
   metricLabelHighlighted: {
     color: 'rgba(255,255,255,0.72)',
@@ -325,7 +326,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flexGrow: 1,
-    flexBasis: 280,
+    flexBasis: 240,
     maxWidth: 520,
     minHeight: 46,
     borderRadius: 8,
@@ -375,7 +376,7 @@ const styles = StyleSheet.create({
   brandHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap', flex: 1 },
   orderIdentity: { flex: 1, minWidth: 210 },
   inlineRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  orderHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  orderHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
   orderId: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 18 },
   statusBadge: {
     borderWidth: 1,
@@ -405,6 +406,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 10,
+    flexWrap: 'wrap',
     borderRadius: 8,
     backgroundColor: colors.s2,
     paddingHorizontal: 12,
@@ -415,7 +417,7 @@ const styles = StyleSheet.create({
   orderStats: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   stat: {
     flexGrow: 1,
-    flexBasis: 120,
+    flexBasis: 100,
     borderRadius: 8,
     backgroundColor: colors.s2,
     padding: 12,

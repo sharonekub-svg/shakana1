@@ -11,6 +11,7 @@ import { useAppFonts } from '@/theme/fonts';
 import { ensureLanguageDirection } from '@/theme/rtl';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
+import { useDemoCommerceStore } from '@/stores/demoCommerceStore';
 import { initSentry, identifySentryUser, Sentry } from '@/lib/sentry';
 import { initPostHog, identify, resetAnalytics } from '@/lib/posthog';
 import { StripeProviderShim } from '@/components/StripeProviderShim';
@@ -21,6 +22,9 @@ import { useProfile } from '@/api/profile';
 import { loadStoredLanguage, useLocaleStore } from '@/i18n/locale';
 import { useProfileDraftStore } from '@/stores/profileDraftStore';
 import { ToastLayer } from '@/components/primitives/ToastLayer';
+import { FloatingNewOrderButton } from '@/components/demo/FloatingNewOrderButton';
+import { CookieConsentBanner } from '@/components/primitives/CookieConsentBanner';
+import { env } from '@/lib/env';
 
 import '../global.css';
 
@@ -34,6 +38,15 @@ export function ErrorBoundary({ error, retry }: { error: Error; retry: () => voi
     Sentry.captureException(error);
   }, [error]);
 
+  const errorMessage = __DEV__ ? error.message : '';
+  const reload = () => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.location.reload();
+      return;
+    }
+    retry();
+  };
+
   return (
     <SafeAreaProvider>
       <View style={styles.errorScreen}>
@@ -42,12 +55,13 @@ export function ErrorBoundary({ error, retry }: { error: Error; retry: () => voi
           <View style={styles.errorLogoPill}>
             <Text style={styles.errorLogo}>shakana</Text>
           </View>
-          <Text style={styles.errorTitle}>משהו נתקע בטעינת המסך</Text>
+          <Text style={styles.errorTitle}>Screen needs a refresh</Text>
           <Text style={styles.errorBody}>
-            תיקנו את המנגנון כדי שלא תישאר על מסך לבן. נסה לטעון שוב, ואם זה חוזר נמשיך מהשגיאה המדויקת.
+            We updated this screen. Tap reload once to load the newest version.
           </Text>
-          <Pressable accessibilityRole="button" onPress={retry} style={styles.errorButton}>
-            <Text style={styles.errorButtonText}>נסה שוב</Text>
+          {errorMessage ? <Text style={styles.errorDebug}>{errorMessage}</Text> : null}
+          <Pressable accessibilityRole="button" onPress={reload} style={styles.errorButton}>
+            <Text style={styles.errorButtonText}>Reload</Text>
           </Pressable>
         </View>
       </View>
@@ -81,6 +95,7 @@ function RootLayoutInner() {
   const setHydrated = useAuthStore((s) => s.setHydrated);
   const session = useAuthStore((s) => s.session);
   const hydrated = useAuthStore((s) => s.hydrated);
+  const demoMode = useDemoCommerceStore((s) => s.demoMode);
   const draft = useProfileDraftStore((s) => s.draft);
   const profileQuery = useProfile(session?.user.id);
   const profile = profileQuery.data;
@@ -186,18 +201,13 @@ function RootLayoutInner() {
     const inCallback = segments[0] === 'auth-callback';
     const inShare = segments[0] === 'share';
     const inJoin = segments[0] === 'join';
-    const inTabsBuilding = segments[0] === '(tabs)' && segments[1] === 'building';
-    const inDemo =
-      segments[0] === 'welcome' ||
-      segments[0] === 'login' ||
-      segments[0] === 'profile' ||
-      segments[0] === 'user' ||
-      segments[0] === 'store' ||
-      inTabsBuilding;
+    const isPublicRoute = segments[0] === 'welcome' || segments[0] === 'login';
+    const isDemoRoute = segments[0] === 'user' || segments[0] === 'store';
     if (inCallback) return;
     if (inShare) return;
     if (inJoin && Platform.OS === 'web') return;
-    if (inDemo) return;
+    if (isPublicRoute) return;
+    if (isDemoRoute && ((env.enableDemo && demoMode) || session)) return;
     if (session && !profileQuery.isFetched && !profileQuery.isError) return;
     const profileComplete =
       !!profile &&
@@ -209,10 +219,19 @@ function RootLayoutInner() {
       draft.last_name.trim().length > 0;
 
     if (!session && !inAuth && !(Platform.OS === 'web' && inJoin)) {
-      router.replace('/(auth)/welcome');
+      if (segments[0] === 'user' && Platform.OS === 'web' && typeof window !== 'undefined') {
+        const join = new URLSearchParams(window.location.search).get('join');
+        if (join) void stashPendingInvite(join);
+      }
+      router.replace('/login');
     } else if (session && profileComplete && inAuth) {
       void consumePendingInvite().then((pending) => {
-        router.replace((pending ? `/join/${pending}` : '/(tabs)/building') as Href);
+        const nextRoute = pending
+          ? /^\d{4}$/.test(pending)
+            ? `/user?join=${pending}`
+            : `/join/${pending}`
+          : '/user';
+        router.replace(nextRoute as Href);
       });
     } else if (session && !profileComplete) {
       const nextRoute = (draftHasName ? '/(auth)/address' : '/(auth)/name') as Href;
@@ -222,7 +241,7 @@ function RootLayoutInner() {
         router.replace(nextRoute);
       }
     }
-  }, [bootstrapped, hydrated, navReady, session, profile, profileQuery.isFetched, profileQuery.isError, draft, segments, router]);
+  }, [bootstrapped, demoMode, hydrated, navReady, session, profile, profileQuery.isFetched, profileQuery.isError, draft, segments, router]);
 
   useEffect(() => {
     setProfile(profile ?? null);
@@ -285,6 +304,8 @@ function RootLayoutInner() {
         <Stack.Screen name="user" />
       </Stack>
       {showSplash ? <View pointerEvents="none" style={styles.splashOverlay} /> : null}
+      <FloatingNewOrderButton />
+      <CookieConsentBanner />
       <ToastLayer />
     </View>
   );
@@ -368,6 +389,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 24,
     color: colors.mu,
+    textAlign: 'center',
+  },
+  errorDebug: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.err,
     textAlign: 'center',
   },
   errorButton: {

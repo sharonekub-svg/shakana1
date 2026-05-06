@@ -440,8 +440,8 @@ export const useLocaleStore = create<LocaleState>((set) => ({
   language: 'he',
   hydrated: false,
   setLanguage: async (language: Language) => {
-    await persistLanguage(language);
     set({ language });
+    await persistLanguage(language);
     await applyLanguageDirection(language);
   },
   setHydrated: (hydrated) => set({ hydrated }),

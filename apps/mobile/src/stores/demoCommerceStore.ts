@@ -10,7 +10,7 @@ import {
 } from '@/demo/catalog';
 
 export type DemoRole = 'user' | 'store' | null;
-export type OrderStatus = 'Collecting' | 'Accepted' | 'Packing' | 'Ready' | 'Shipped';
+export type OrderStatus = 'collecting' | 'accepted' | 'packing' | 'ready' | 'shipped';
 
 export type DemoParticipant = {
   id: string;
@@ -38,6 +38,7 @@ export type DemoOrder = {
   createdBy: string;
   createdAt: number;
   closesAt: number;
+  deliveryAddress: string;
   participants: DemoParticipant[];
   items: DemoOrderItem[];
   lastEvent: string;
@@ -51,30 +52,37 @@ export type DemoPulse = {
 
 type DemoState = {
   demoRole: DemoRole;
+  demoMode: boolean;
   selectedBrand: DemoBrandId | null;
   activeParticipantId: string;
   orders: DemoOrder[];
   lastNotice: string | null;
   lastPulse: DemoPulse | null;
   setDemoRole: (role: DemoRole) => void;
+  setDemoMode: (enabled: boolean) => void;
   selectBrand: (brand: DemoBrandId | null) => void;
   setActiveParticipant: (participantId: string) => void;
-  ensureOrder: (brand: DemoBrandId) => string;
-  joinParticipant: (orderId: string, participantId: string) => void;
+  ensureOrder: (brand: DemoBrandId, creator?: DemoParticipant) => string;
+  createNewOrder: (brand: DemoBrandId, creator?: DemoParticipant) => string;
+  claimOrderFounder: (orderId: string, participant: DemoParticipant) => void;
+  joinParticipant: (orderId: string, participant: DemoParticipant | string) => void;
   addItem: (orderId: string, input: AddItemInput) => void;
+  updateTimer: (orderId: string, minutes: number) => void;
+  updateDeliveryAddress: (orderId: string, deliveryAddress: string) => void;
   updateStatus: (orderId: string, status: OrderStatus) => void;
   resetDemo: () => void;
 };
 
 type PersistedDemoState = Pick<
   DemoState,
-  'demoRole' | 'selectedBrand' | 'activeParticipantId' | 'orders' | 'lastNotice'
+  'demoRole' | 'demoMode' | 'selectedBrand' | 'activeParticipantId' | 'orders' | 'lastNotice'
   | 'lastPulse'
 >;
 
 type AddItemInput = {
   productId: string;
   participantId: string;
+  participant?: DemoParticipant;
   size: string;
   color: string;
   quantity: number;
@@ -99,28 +107,36 @@ const DEMO_ORIGIN = 'https://shakana1.vercel.app';
 
 let channel: BroadcastChannel | null = null;
 let applyingRemote = false;
+let syncInitialized = false;
+let persistTimer: ReturnType<typeof globalThis.setTimeout> | null = null;
+let pendingPayload: PersistedDemoState | null = null;
 
 const canUseWindow = () => typeof window !== 'undefined';
 const now = () => Date.now();
 
-function getParticipantName(participantId: string) {
-  return demoParticipants.find((participant) => participant.id === participantId)?.name ?? 'Guest';
+function getParticipantName(participantId: string, order?: DemoOrder) {
+  return (
+    order?.participants.find((participant) => participant.id === participantId)?.name ??
+    demoParticipants.find((participant) => participant.id === participantId)?.name ??
+    'Guest'
+  );
 }
 
-function createOrder(brand: DemoBrandId): DemoOrder {
+function createOrder(brand: DemoBrandId, creator = primaryDemoParticipant): DemoOrder {
   const id = `SK-${Math.floor(1000 + Math.random() * 9000)}`;
   const inviteCode = String(Math.floor(1000 + Math.random() * 9000));
   const createdAt = now();
   return {
     id,
     brand,
-    status: 'Collecting',
+    status: 'collecting',
     inviteCode,
     inviteLink: `${DEMO_ORIGIN}/user?join=${inviteCode}`,
-    createdBy: 'user-a',
+    createdBy: creator.id,
     createdAt,
-    closesAt: createdAt + 15 * 60 * 1000,
-    participants: [{ ...primaryDemoParticipant, joinedAt: createdAt }],
+    closesAt: createdAt + 30 * 60 * 1000,
+    deliveryAddress: '',
+    participants: [{ ...creator, joinedAt: createdAt }],
     items: [],
     lastEvent: `${demoStores[brand].name} group order created`,
   };
@@ -129,6 +145,7 @@ function createOrder(brand: DemoBrandId): DemoOrder {
 function defaultState(): PersistedDemoState {
   return {
     demoRole: null,
+    demoMode: false,
     selectedBrand: null,
     activeParticipantId: 'user-a',
     orders: [],
@@ -141,12 +158,121 @@ function sanitizeState(value: unknown): PersistedDemoState {
   const fallback = defaultState();
   if (!value || typeof value !== 'object') return fallback;
   const incoming = value as Partial<PersistedDemoState>;
+  const orders = Array.isArray(incoming.orders)
+    ? incoming.orders.flatMap((order) => {
+        if (!order || typeof order !== 'object') return [];
+        const incomingOrder = order as Partial<DemoOrder>;
+        const brand =
+          incomingOrder.brand === 'hm' ||
+          incomingOrder.brand === 'zara' ||
+          incomingOrder.brand === 'amazon'
+            ? incomingOrder.brand
+            : null;
+        if (!brand || typeof incomingOrder.id !== 'string') return [];
+
+        const normalizedStatus = String(incomingOrder.status ?? 'collecting').toLowerCase();
+        const status = ['collecting', 'accepted', 'packing', 'ready', 'shipped'].includes(normalizedStatus)
+          ? (normalizedStatus as OrderStatus)
+          : 'collecting';
+        const createdAt =
+          typeof incomingOrder.createdAt === 'number' && Number.isFinite(incomingOrder.createdAt)
+            ? incomingOrder.createdAt
+            : now();
+        const closesAt =
+          typeof incomingOrder.closesAt === 'number' && Number.isFinite(incomingOrder.closesAt)
+            ? incomingOrder.closesAt
+            : createdAt + 30 * 60 * 1000;
+        const participants = Array.isArray(incomingOrder.participants)
+          ? incomingOrder.participants.flatMap((participant) => {
+              if (!participant || typeof participant !== 'object') return [];
+              const candidate = participant as Partial<DemoParticipant>;
+              if (typeof candidate.id !== 'string') return [];
+              return [{
+                id: candidate.id,
+                name: typeof candidate.name === 'string' && candidate.name.trim() ? candidate.name : 'Member',
+                joinedAt:
+                  typeof candidate.joinedAt === 'number' && Number.isFinite(candidate.joinedAt)
+                    ? candidate.joinedAt
+                    : createdAt,
+              }];
+            })
+          : [];
+        const safeParticipants = participants.length > 0 ? participants : [{ ...primaryDemoParticipant, joinedAt: createdAt }];
+        const participantIds = new Set(safeParticipants.map((participant) => participant.id));
+        const items = Array.isArray(incomingOrder.items)
+          ? incomingOrder.items.flatMap((item) => {
+              if (!item || typeof item !== 'object') return [];
+              const candidate = item as Partial<DemoOrderItem>;
+              if (
+                typeof candidate.id !== 'string' ||
+                typeof candidate.productId !== 'string' ||
+                typeof candidate.participantId !== 'string' ||
+                !findProduct(candidate.productId)
+              ) {
+                return [];
+              }
+              return [{
+                id: candidate.id,
+                productId: candidate.productId,
+                participantId: participantIds.has(candidate.participantId)
+                  ? candidate.participantId
+                  : safeParticipants[0]?.id ?? primaryDemoParticipant.id,
+                size: typeof candidate.size === 'string' ? candidate.size : '',
+                color: typeof candidate.color === 'string' ? candidate.color : '',
+                quantity:
+                  typeof candidate.quantity === 'number' && Number.isFinite(candidate.quantity)
+                    ? Math.max(1, Math.round(candidate.quantity))
+                    : 1,
+                private: candidate.private === true,
+                addedAt:
+                  typeof candidate.addedAt === 'number' && Number.isFinite(candidate.addedAt)
+                    ? candidate.addedAt
+                    : createdAt,
+              }];
+            })
+          : [];
+
+        return [{
+          id: incomingOrder.id,
+          brand,
+          status,
+          inviteCode:
+            typeof incomingOrder.inviteCode === 'string' && /^\d{4}$/.test(incomingOrder.inviteCode)
+              ? incomingOrder.inviteCode
+              : String(Math.floor(1000 + Math.random() * 9000)),
+          inviteLink:
+            typeof incomingOrder.inviteLink === 'string' && incomingOrder.inviteLink
+              ? incomingOrder.inviteLink
+              : `${DEMO_ORIGIN}/user?join=${incomingOrder.inviteCode ?? ''}`,
+          createdBy:
+            typeof incomingOrder.createdBy === 'string' && incomingOrder.createdBy
+              ? incomingOrder.createdBy
+              : safeParticipants[0]?.id ?? primaryDemoParticipant.id,
+          createdAt,
+          closesAt,
+          deliveryAddress:
+            typeof incomingOrder.deliveryAddress === 'string' ? incomingOrder.deliveryAddress : '',
+          participants: safeParticipants,
+          items,
+          lastEvent:
+            typeof incomingOrder.lastEvent === 'string' && incomingOrder.lastEvent
+              ? incomingOrder.lastEvent
+              : `${demoStores[brand].name} group order`,
+        }];
+      })
+    : [];
   return {
     demoRole: incoming.demoRole === 'user' || incoming.demoRole === 'store' ? incoming.demoRole : null,
-    selectedBrand: incoming.selectedBrand === 'hm' || incoming.selectedBrand === 'zara' ? incoming.selectedBrand : null,
+    demoMode: incoming.demoMode === true,
+    selectedBrand:
+      incoming.selectedBrand === 'hm' ||
+      incoming.selectedBrand === 'zara' ||
+      incoming.selectedBrand === 'amazon'
+        ? incoming.selectedBrand
+        : null,
     activeParticipantId:
       typeof incoming.activeParticipantId === 'string' ? incoming.activeParticipantId : 'user-a',
-    orders: Array.isArray(incoming.orders) ? incoming.orders : [],
+    orders,
     lastNotice: typeof incoming.lastNotice === 'string' ? incoming.lastNotice : null,
     lastPulse:
       incoming.lastPulse &&
@@ -171,6 +297,7 @@ function readPersistedState(): PersistedDemoState {
 function persistedFromState(state: DemoState): PersistedDemoState {
   return {
     demoRole: state.demoRole,
+    demoMode: state.demoMode,
     selectedBrand: state.selectedBrand,
     activeParticipantId: state.activeParticipantId,
     orders: state.orders,
@@ -181,6 +308,30 @@ function persistedFromState(state: DemoState): PersistedDemoState {
 
 function persistAndBroadcast(state: DemoState) {
   if (!canUseWindow() || applyingRemote) return;
+  const payload = persistedFromState(state);
+  pendingPayload = payload;
+  if (persistTimer) globalThis.clearTimeout(persistTimer);
+  persistTimer = globalThis.setTimeout(() => {
+    const nextPayload = pendingPayload;
+    pendingPayload = null;
+    persistTimer = null;
+    if (!nextPayload) return;
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextPayload));
+      channel?.postMessage(nextPayload);
+    } catch {
+      // The demo continues in memory when browser storage is unavailable.
+    }
+  }, 100);
+}
+
+function persistNow(state: DemoState) {
+  if (!canUseWindow() || applyingRemote) return;
+  if (persistTimer) {
+    globalThis.clearTimeout(persistTimer);
+    persistTimer = null;
+  }
+  pendingPayload = null;
   const payload = persistedFromState(state);
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -200,6 +351,12 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
       persistAndBroadcast(next);
       return next;
     }),
+  setDemoMode: (demoMode) =>
+    set((state) => {
+      const next = { ...state, demoMode };
+      persistAndBroadcast(next);
+      return next;
+    }),
   selectBrand: (selectedBrand) =>
     set((state) => {
       const next = { ...state, selectedBrand };
@@ -212,10 +369,10 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
       persistAndBroadcast(next);
       return next;
     }),
-  ensureOrder: (brand) => {
-    const existing = get().orders.find((order) => order.brand === brand && order.status !== 'Shipped');
+  ensureOrder: (brand, creator = primaryDemoParticipant) => {
+    const existing = get().orders.find((order) => order.brand === brand && order.status !== 'shipped');
     if (existing) return existing.id;
-    const order = createOrder(brand);
+    const order = createOrder(brand, creator);
     set((state) => {
       const pulse: DemoPulse = { id: now(), kind: 'join', message: order.lastEvent };
       const next = {
@@ -230,10 +387,54 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
     });
     return order.id;
   },
-  joinParticipant: (orderId, participantId) =>
+  createNewOrder: (brand, creator = primaryDemoParticipant) => {
+    const order = createOrder(brand, creator);
     set((state) => {
-      const participantTemplate = demoParticipants.find((participant) => participant.id === participantId);
+      const pulse: DemoPulse = { id: now(), kind: 'join', message: order.lastEvent };
+      const next = {
+        ...state,
+        selectedBrand: brand,
+        orders: [order, ...state.orders],
+        lastNotice: order.lastEvent,
+        lastPulse: pulse,
+      };
+      persistAndBroadcast(next);
+      return next;
+    });
+    return order.id;
+  },
+  claimOrderFounder: (orderId, participant) =>
+    set((state) => {
+      const orders = state.orders.map((order) => {
+        if (order.id !== orderId || order.createdBy !== primaryDemoParticipant.id) return order;
+        const withoutPlaceholder = order.participants.filter(
+          (existing) => existing.id !== primaryDemoParticipant.id && existing.id !== participant.id,
+        );
+        return {
+          ...order,
+          createdBy: participant.id,
+          participants: [{ ...participant, joinedAt: order.createdAt }, ...withoutPlaceholder],
+          lastEvent: `${participant.name} is leading this group order`,
+        };
+      });
+      const changedOrder = orders.find((order) => order.id === orderId);
+      const next = {
+        ...state,
+        orders,
+        activeParticipantId: participant.id,
+        lastNotice: changedOrder?.lastEvent ?? state.lastNotice,
+      };
+      persistAndBroadcast(next);
+      return next;
+    }),
+  joinParticipant: (orderId, participantInput) =>
+    set((state) => {
+      const participantTemplate =
+        typeof participantInput === 'string'
+          ? demoParticipants.find((participant) => participant.id === participantInput)
+          : participantInput;
       if (!participantTemplate) return state;
+      const participantId = participantTemplate.id;
       const orders = state.orders.map((order) => {
         if (order.id !== orderId) return order;
         if (order.participants.some((participant) => participant.id === participantId)) return order;
@@ -281,18 +482,25 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
         const participantExists = order.participants.some(
           (participant) => participant.id === input.participantId,
         );
-        const participantTemplate = demoParticipants.find(
-          (participant) => participant.id === input.participantId,
-        );
+        const participantFromInput = input.participant
+          ? { ...input.participant, joinedAt: now() }
+          : null;
         const participants =
-          participantExists || !participantTemplate
+          participantExists
             ? order.participants
-            : [...order.participants, { ...participantTemplate, joinedAt: now() }];
+            : [
+                ...order.participants,
+                participantFromInput ?? {
+                  id: input.participantId,
+                  name: getParticipantName(input.participantId, order),
+                  joinedAt: now(),
+                },
+              ];
         return {
           ...order,
           participants,
           items: [item, ...order.items],
-          lastEvent: `${getParticipantName(input.participantId)} added ${input.quantity}x ${product.name}`,
+          lastEvent: `${getParticipantName(input.participantId, { ...order, participants })} added ${input.quantity}x ${product.name}`,
         };
       });
       const changedOrder = orders.find((order) => order.id === orderId);
@@ -311,6 +519,57 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
       persistAndBroadcast(next);
       return next;
     }),
+  updateTimer: (orderId, minutes) =>
+    set((state) => {
+      const safeMinutes = Math.max(1, Math.min(720, Math.round(minutes)));
+      const updatedAt = now();
+      const closesAt = updatedAt + safeMinutes * 60 * 1000;
+      const orders = state.orders.map((order) =>
+        order.id === orderId
+          ? {
+              ...order,
+              createdAt: updatedAt,
+              closesAt,
+              lastEvent: `Founder set the cart timer to ${safeMinutes} minutes`,
+            }
+          : order,
+      );
+      const changedOrder = orders.find((order) => order.id === orderId);
+      const next = {
+        ...state,
+        orders,
+        lastNotice: changedOrder?.lastEvent ?? 'Timer updated',
+        lastPulse: {
+          id: now(),
+          kind: 'status',
+          message: changedOrder?.lastEvent ?? 'Timer updated',
+        } as DemoPulse,
+      };
+      persistAndBroadcast(next);
+      return next;
+    }),
+  updateDeliveryAddress: (orderId, deliveryAddress) =>
+    set((state) => {
+      const safeAddress = deliveryAddress.slice(0, 180);
+      const orders = state.orders.map((order) =>
+        order.id === orderId
+          ? {
+              ...order,
+              deliveryAddress: safeAddress,
+              lastEvent: safeAddress
+                ? 'Delivery address added to the shared order'
+                : 'Delivery address cleared',
+            }
+          : order,
+      );
+      const next = {
+        ...state,
+        orders,
+        lastNotice: safeAddress ? 'Delivery address added to the shared order' : 'Delivery address cleared',
+      };
+      persistAndBroadcast(next);
+      return next;
+    }),
   updateStatus: (orderId, status) =>
     set((state) => {
       const orders = state.orders.map((order) =>
@@ -324,7 +583,7 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
         lastNotice: `Order status updated to ${status}`,
         lastPulse: {
           id: now(),
-          kind: status === 'Shipped' ? 'goal' : 'status',
+          kind: status === 'shipped' ? 'goal' : 'status',
           message: `Order status updated to ${status}`,
         } as DemoPulse,
       };
@@ -334,13 +593,15 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
   resetDemo: () =>
     set((state) => {
       const next = { ...state, ...defaultState() };
-      persistAndBroadcast(next);
+      persistNow(next);
       return next;
     }),
 }));
 
 export function initDemoCommerceSync() {
   if (!canUseWindow()) return;
+  if (syncInitialized) return;
+  syncInitialized = true;
   if ('BroadcastChannel' in window && !channel) {
     channel = new BroadcastChannel(CHANNEL_NAME);
     channel.onmessage = (event: MessageEvent<PersistedDemoState>) => {
@@ -424,7 +685,7 @@ export function getOrdersForStore() {
 }
 
 export function getDemoOrderStats(orders: DemoOrder[]) {
-  const shippedOrders = orders.filter((order) => order.status === 'Shipped');
+  const shippedOrders = orders.filter((order) => order.status === 'shipped');
   const totalSavings = shippedOrders.reduce((total, order) => total + getGroupSavings(order), 0);
   const totalParticipants = new Set(
     shippedOrders.flatMap((order) => order.participants.map((participant) => participant.id)),
@@ -439,10 +700,31 @@ export function getDemoOrderStats(orders: DemoOrder[]) {
 export function getParticipantSuccessCount(orders: DemoOrder[], participantId: string) {
   return orders.reduce((count, order) => {
     const participantSeen = order.participants.some((participant) => participant.id === participantId);
-    return participantSeen && order.status === 'Shipped' ? count + 1 : count;
+    return participantSeen && order.status === 'shipped' ? count + 1 : count;
   }, 0);
 }
 
 export function getDefaultProductForBrand(brand: DemoBrandId) {
   return productsForBrand(brand)[0] ?? null;
+}
+
+export function getOrderTimerTotal(order: DemoOrder) {
+  return Math.max(60 * 1000, order.closesAt - order.createdAt);
+}
+
+export function isOrderTimerEnded(order: DemoOrder, atMs = now()) {
+  return order.closesAt <= atMs;
+}
+
+export function getMerchantOrderState(order: DemoOrder, atMs = now()) {
+  const statusLabels: Record<OrderStatus, string> = {
+    collecting: 'Collecting',
+    accepted: 'Accepted',
+    packing: 'Packing',
+    ready: 'Ready',
+    shipped: 'Shipped',
+  };
+  if (order.status === 'shipped') return 'Shipped';
+  if (isOrderTimerEnded(order, atMs)) return 'Order done';
+  return statusLabels[order.status];
 }

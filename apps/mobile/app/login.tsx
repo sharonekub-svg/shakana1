@@ -9,12 +9,15 @@ import { initDemoCommerceSync, useDemoCommerceStore } from '@/stores/demoCommerc
 import { colors } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { useLocale } from '@/i18n/locale';
+import { env } from '@/lib/env';
 
 export default function LoginScreen() {
   const router = useRouter();
   const { language } = useLocale();
   const isHebrew = language === 'he';
   const setDemoRole = useDemoCommerceStore((state) => state.setDemoRole);
+  const setDemoMode = useDemoCommerceStore((state) => state.setDemoMode);
+  const resetDemo = useDemoCommerceStore((state) => state.resetDemo);
   const googleSignIn = useGoogleSignIn();
 
   useEffect(() => {
@@ -22,11 +25,15 @@ export default function LoginScreen() {
   }, []);
 
   const continueAsUser = () => {
+    if (!env.enableDemo) return;
+    setDemoMode(true);
     setDemoRole('user');
     router.replace('/user');
   };
 
   const continueAsStore = () => {
+    if (!env.enableDemo) return;
+    setDemoMode(true);
     setDemoRole('store');
     router.replace('/store');
   };
@@ -68,6 +75,7 @@ export default function LoginScreen() {
             </View>
           </Card>
 
+          {env.enableDemo ? (
           <Card style={styles.card}>
             <SectionTitle title={isHebrew ? 'הדגמה' : 'Demo entry'} kicker={isHebrew ? 'לצוות ולמצגת' : 'For demo mode'} />
             <Text style={styles.helper}>
@@ -78,8 +86,19 @@ export default function LoginScreen() {
             <View style={styles.buttonStack}>
               <DemoButton label={isHebrew ? 'המשך כמשתמש' : 'Continue as User'} onPress={continueAsUser} tone="accent" />
               <DemoButton label={isHebrew ? 'המשך כחנות' : 'Continue as Store / Agent M'} onPress={continueAsStore} />
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  resetDemo();
+                  router.replace('/login');
+                }}
+                style={({ pressed }) => [styles.resetLink, pressed && { opacity: 0.75 }]}
+              >
+                <Text style={styles.resetText}>{isHebrew ? 'איפוס דמו' : 'Reset demo'}</Text>
+              </Pressable>
             </View>
           </Card>
+          ) : null}
         </View>
 
         <Card style={styles.noteCard}>
@@ -98,13 +117,13 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   scroll: {
     flex: 1,
-    backgroundColor: '#F8F4EE',
+    backgroundColor: colors.bg,
   },
   content: {
     flexGrow: 1,
   },
   hero: {
-    minHeight: 240,
+    minHeight: 210,
     justifyContent: 'center',
     gap: 10,
   },
@@ -113,6 +132,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: 12,
+    flexWrap: 'wrap',
   },
   brandBlock: {
     flex: 1,
@@ -135,15 +155,15 @@ const styles = StyleSheet.create({
   title: {
     color: colors.tx,
     fontFamily: fontFamily.display,
-    fontSize: 42,
-    lineHeight: 46,
+    fontSize: 36,
+    lineHeight: 40,
     maxWidth: 740,
   },
   subtitle: {
     color: colors.mu,
     fontFamily: fontFamily.body,
-    fontSize: 18,
-    lineHeight: 28,
+    fontSize: 16,
+    lineHeight: 24,
     maxWidth: 640,
   },
   grid: {
@@ -153,7 +173,7 @@ const styles = StyleSheet.create({
   },
   card: {
     flexGrow: 1,
-    flexBasis: 320,
+    flexBasis: 280,
     gap: 14,
   },
   helper: {
@@ -164,6 +184,15 @@ const styles = StyleSheet.create({
   },
   buttonStack: {
     gap: 10,
+  },
+  resetLink: {
+    alignSelf: 'flex-start',
+    paddingVertical: 8,
+  },
+  resetText: {
+    color: colors.gold,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
   },
   noteCard: {
     gap: 8,

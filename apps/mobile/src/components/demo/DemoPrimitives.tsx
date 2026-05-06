@@ -345,9 +345,9 @@ const styles = StyleSheet.create({
   shell: {
     width: '100%',
     maxWidth: 1180,
-    paddingHorizontal: 16,
-    paddingVertical: 18,
-    gap: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    gap: 14,
   },
   wideShell: {
     maxWidth: 1320,
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   cardPad: {
-    padding: 16,
+    padding: 14,
   },
   button: {
     minHeight: 46,
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
   h2: {
     color: colors.tx,
     fontFamily: fontFamily.display,
-    fontSize: 28,
+    fontSize: 24,
   },
   h3: {
     color: colors.tx,

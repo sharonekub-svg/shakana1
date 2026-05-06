@@ -7,6 +7,18 @@ type Body = {
 };
 
 const MAX_HTML_CHARS = 900_000;
+const ALLOWED_HOST_SUFFIXES = [
+  'amazon.com',
+  'amazon.co.uk',
+  'amazon.de',
+  'zara.com',
+  'hm.com',
+  'www2.hm.com',
+];
+
+function isAllowedStoreHost(host: string): boolean {
+  return ALLOWED_HOST_SUFFIXES.some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
+}
 
 function assertPublicHttpsUrl(rawUrl: string): URL {
   let parsed: URL;
@@ -26,12 +38,28 @@ function assertPublicHttpsUrl(rawUrl: string): URL {
     host.endsWith('.local') ||
     /^10\./.test(host) ||
     /^192\.168\./.test(host) ||
-    /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(host) ||
+    /^169\.254\./.test(host)
   ) {
     throw httpError(400, 'private_hosts_not_allowed');
   }
+  if (!isAllowedStoreHost(host)) {
+    throw httpError(400, 'store_domain_not_allowed');
+  }
 
   return parsed;
+}
+
+async function fetchWithCheckedRedirects(url: URL, init: RequestInit, redirectsLeft = 3): Promise<Response> {
+  const res = await fetch(url, { ...init, redirect: 'manual' });
+  if ([301, 302, 303, 307, 308].includes(res.status)) {
+    if (redirectsLeft <= 0) throw httpError(400, 'too_many_redirects');
+    const location = res.headers.get('location');
+    if (!location) return res;
+    const nextUrl = assertPublicHttpsUrl(new URL(location, url).toString());
+    return fetchWithCheckedRedirects(nextUrl, init, redirectsLeft - 1);
+  }
+  return res;
 }
 
 Deno.serve(async (req) => {
@@ -44,8 +72,7 @@ Deno.serve(async (req) => {
     const body = await readJson<Body>(req);
     const url = assertPublicHttpsUrl((body.url ?? '').trim());
 
-    const res = await fetch(url, {
-      redirect: 'follow',
+    const res = await fetchWithCheckedRedirects(url, {
       headers: {
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7',

@@ -1,6 +1,7 @@
 import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
+import { useState } from 'react';
 
 import { ScreenBase } from '@/components/primitives/ScreenBase';
 import { colors, radii, shadow } from '@/theme/tokens';
@@ -142,6 +143,7 @@ function OrderCard({
 
 export default function BuildingTab() {
   const router = useRouter();
+  const [selectedCat, setSelectedCat] = useState(0);
   const { language, t } = useLocale();
   const isHebrew = language === 'he';
   const homeCopy = isHebrew
@@ -229,13 +231,16 @@ export default function BuildingTab() {
             {CATEGORY_CHIPS.map((category, index) => (
               <Pressable
                 key={category.enName}
-                style={[styles.categoryChip, index === 0 && styles.categoryChipActive]}
-                onPress={() => router.push(`/order/new?store=${encodeURIComponent(category.enName.toLowerCase())}`)}
+                style={[styles.categoryChip, index === selectedCat && styles.categoryChipActive]}
+                onPress={() => {
+                  setSelectedCat(index);
+                  router.push(`/order/new?store=${encodeURIComponent(category.enName.toLowerCase())}`);
+                }}
               >
-                <Text style={[styles.categoryChipText, index === 0 && styles.categoryChipTextActive]}>
+                <Text style={[styles.categoryChipText, index === selectedCat && styles.categoryChipTextActive]}>
                   {isHebrew ? category.heName : category.enName}
                 </Text>
-                <Text style={[styles.categoryChipDetail, index === 0 && styles.categoryChipDetailActive]}>
+                <Text style={[styles.categoryChipDetail, index === selectedCat && styles.categoryChipDetailActive]}>
                   {isHebrew ? category.heDetail : category.enDetail}
                 </Text>
               </Pressable>
@@ -296,18 +301,22 @@ export default function BuildingTab() {
 
 const styles = StyleSheet.create({
   scroll: {
-    paddingBottom: 28,
+    paddingBottom: 96,
   },
   shell: {
-    paddingHorizontal: 18,
-    paddingTop: 10,
-    gap: 18,
+    width: '100%',
+    maxWidth: 980,
+    alignSelf: 'center',
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    gap: 16,
   },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
+    flexWrap: 'wrap',
   },
   brandBlock: {
     flexDirection: 'row',
@@ -358,11 +367,11 @@ const styles = StyleSheet.create({
   heroCard: {
     borderRadius: radii.xxl,
     overflow: 'hidden',
-    backgroundColor: colors.lime,
+    backgroundColor: '#D4C5A9',
     ...shadow.card,
   },
   heroImage: {
-    minHeight: 320,
+    minHeight: 260,
     justifyContent: 'flex-end',
   },
   heroImageRadius: {
@@ -373,7 +382,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(28, 25, 23, 0.52)',
   },
   heroContent: {
-    padding: 18,
+    padding: 16,
     gap: 10,
   },
   heroKicker: {
@@ -384,8 +393,8 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontFamily: fontFamily.display,
-    fontSize: 32,
-    lineHeight: 36,
+    fontSize: 29,
+    lineHeight: 33,
     color: colors.white,
     maxWidth: 260,
   },
@@ -452,6 +461,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
+    flexWrap: 'wrap',
   },
   sectionTitle: {
     fontFamily: fontFamily.display,
@@ -465,11 +475,14 @@ const styles = StyleSheet.create({
   },
   featureGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 14,
     width: '100%',
   },
   featureCard: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 280,
     minWidth: 0,
     borderRadius: 26,
     backgroundColor: colors.white,
@@ -482,7 +495,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   featureImage: {
-    height: 190,
+    height: 164,
     justifyContent: 'space-between',
     borderRadius: 22,
     overflow: 'hidden',
@@ -526,7 +539,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   statCard: {
-    width: '48%',
+    flexGrow: 1,
+    flexBasis: 150,
     paddingVertical: 16,
     paddingHorizontal: 14,
     borderRadius: 24,

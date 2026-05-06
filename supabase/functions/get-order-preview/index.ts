@@ -1,13 +1,9 @@
 import { json, errorJson } from '../_shared/json.ts';
+import { corsHeadersFor } from '../_shared/cors.ts';
 import { admin, httpError } from '../_shared/supabaseAdmin.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'content-type, apikey, x-client-info',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-};
-
 Deno.serve(async (req) => {
+  const corsHeaders = corsHeadersFor(req);
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -45,35 +41,10 @@ Deno.serve(async (req) => {
     const isClosed =
       !['open', 'paying'].includes(order.status) || isExpired || isRevoked || isExhausted;
 
-    const { data: founder } = await admin
-      .from('profiles')
-      .select('first_name, apt, floor')
-      .eq('id', order.creator_id)
-      .maybeSingle();
-
     const { count: participantsCount } = await admin
       .from('participants')
       .select('id', { count: 'exact', head: true })
       .eq('order_id', order.id);
-
-    const { data: participants } = await admin
-      .from('participants')
-      .select('user_id, joined_at')
-      .eq('order_id', order.id)
-      .order('joined_at', { ascending: true });
-
-    let participantNames: string[] = [];
-    if (participants && participants.length > 0) {
-      const userIds = participants.map((p: { user_id: string }) => p.user_id);
-      const { data: profiles } = await admin
-        .from('profiles')
-        .select('id, first_name')
-        .in('id', userIds);
-      if (profiles) {
-        const profileMap = new Map((profiles as { id: string; first_name: string }[]).map(p => [p.id, p.first_name]));
-        participantNames = participants.map((p: { user_id: string }) => profileMap.get(p.user_id) ?? '').filter(Boolean);
-      }
-    }
 
     const body = JSON.stringify({
       order: {
@@ -88,11 +59,9 @@ Deno.serve(async (req) => {
         status: order.status,
         max_participants: order.max_participants,
       },
-      founder: founder
-        ? { first_name: founder.first_name, apt: founder.apt, floor: founder.floor }
-        : null,
+      founder: null,
       participants_count: participantsCount ?? 0,
-      participant_names: participantNames,
+      participant_names: [],
       is_closed: isClosed,
     });
 

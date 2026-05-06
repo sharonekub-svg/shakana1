@@ -25,17 +25,17 @@ export function ShakanaMark({ size = 88, style }: { size?: number; style?: ViewS
 
 const styles = StyleSheet.create({
   mark: {
-    backgroundColor: '#EDF4EF',
+    backgroundColor: colors.goldLight,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: '#C4DACB',
+    borderColor: colors.br,
     ...shadow.card,
   },
   wordmark: {
     fontFamily: fontFamily.body,
-    color: '#3D6B4F',
+    color: colors.acc,
     includeFontPadding: false,
     textAlign: 'center',
     textTransform: 'lowercase',

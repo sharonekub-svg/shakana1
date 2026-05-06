@@ -5,10 +5,11 @@ import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { ScreenBase } from '@/components/primitives/ScreenBase';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
+import { useDemoCommerceStore } from '@/stores/demoCommerceStore';
 import { colors } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import type { Profile } from '@/types/domain';
-import { consumePendingInvite } from '@/lib/deeplinks';
+import { consumePendingInvite, peekPendingInvite } from '@/lib/deeplinks';
 
 const isProfileComplete = (profile: Profile | null): boolean =>
   !!profile &&
@@ -24,6 +25,29 @@ const readWebHashParams = (): URLSearchParams | null => {
   }
 
   return new URLSearchParams(window.location.hash.replace(/^#/, ''));
+};
+
+const namesFromMetadata = (metadata: Record<string, unknown> | undefined) => {
+  const firstName = typeof metadata?.first_name === 'string' ? metadata.first_name.trim() : '';
+  const lastName = typeof metadata?.last_name === 'string' ? metadata.last_name.trim() : '';
+  if (firstName || lastName) {
+    return {
+      firstName,
+      lastName,
+    };
+  }
+
+  const fullName =
+    (typeof metadata?.full_name === 'string' && metadata.full_name.trim()) ||
+    (typeof metadata?.name === 'string' && metadata.name.trim()) ||
+    '';
+  if (!fullName) return { firstName: '', lastName: '' };
+
+  const [first, ...rest] = fullName.split(/\s+/);
+  return {
+    firstName: first || '',
+    lastName: rest.join(' '),
+  };
 };
 
 export default function AuthCallback() {
@@ -86,12 +110,16 @@ export default function AuthCallback() {
         return;
       }
 
-      const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
-      if (!profile) {
+      const pendingInvite = await peekPendingInvite();
+
+      const { data: rawProfile } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+      let resolvedProfile: Profile | null = (rawProfile as Profile | null) ?? null;
+      if (!resolvedProfile) {
+        const { firstName, lastName } = namesFromMetadata(sessionData.session?.user.user_metadata);
         const defaultProfile = {
           id: userId,
-          first_name: sessionData.session?.user.user_metadata?.first_name?.trim?.() ?? '',
-          last_name: sessionData.session?.user.user_metadata?.last_name?.trim?.() ?? '',
+          first_name: firstName,
+          last_name: lastName,
           phone: sessionData.session?.user.phone ?? '',
           city: '',
           street: '',
@@ -107,18 +135,24 @@ export default function AuthCallback() {
         if (createError) {
           throw createError;
         }
-        useAuthStore.getState().setProfile(created ?? defaultProfile);
+        resolvedProfile = (created ?? defaultProfile) as Profile;
+      }
+
+      useAuthStore.getState().setProfile(resolvedProfile);
+      if (pendingInvite) {
+        await consumePendingInvite();
+        useDemoCommerceStore.getState().setDemoMode(false);
+        useDemoCommerceStore.getState().setDemoRole(null);
       } else {
-        useAuthStore.getState().setProfile(profile);
+        useDemoCommerceStore.getState().resetDemo();
       }
 
-      if (!isProfileComplete(profile ?? null)) {
-        router.replace('/(auth)/name');
-        return;
-      }
-
-      const pendingInvite = await consumePendingInvite();
-      router.replace((pendingInvite ? `/join/${pendingInvite}` : '/(tabs)/building') as Href);
+      const nextRoute = pendingInvite
+        ? /^\d{4}$/.test(pendingInvite)
+          ? `/user?join=${pendingInvite}`
+          : `/join/${pendingInvite}`
+        : '/user';
+      router.replace(nextRoute as Href);
     };
 
     run().catch((error) => {

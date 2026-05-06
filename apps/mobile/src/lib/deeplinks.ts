@@ -46,3 +46,7 @@ export async function consumePendingInvite(): Promise<string | null> {
   if (v) await removeStoredValue(PENDING_KEY);
   return v;
 }
+
+export async function peekPendingInvite(): Promise<string | null> {
+  return getStoredValue(PENDING_KEY);
+}

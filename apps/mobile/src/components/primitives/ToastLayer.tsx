@@ -43,7 +43,7 @@ export function ToastLayer() {
   return (
     <View style={styles.layer} pointerEvents="none">
       {toasts.map((t) => (
-        <ToastItem key={t.id} {...t} />
+        <ToastItem key={t.id} id={t.id} message={t.message} kind={t.kind} />
       ))}
     </View>
   );

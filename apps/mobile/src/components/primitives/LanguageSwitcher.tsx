@@ -12,6 +12,11 @@ const OPTIONS: Array<{ language: Language; label: string }> = [
 export function LanguageSwitcher({ dark = false }: { dark?: boolean }) {
   const { language, setLanguage, t } = useLocale();
 
+  const selectLanguage = (nextLanguage: Language) => {
+    if (nextLanguage === language) return;
+    void setLanguage(nextLanguage);
+  };
+
   return (
     <View style={[styles.wrap, dark && styles.wrapDark]}>
       <View style={styles.textBlock}>
@@ -24,10 +29,26 @@ export function LanguageSwitcher({ dark = false }: { dark?: boolean }) {
           return (
             <Pressable
               key={option.language}
-              onPress={() => void setLanguage(option.language)}
-              style={[styles.pill, dark && styles.pillDark, active && (dark ? styles.pillActiveDark : styles.pillActive)]}
+              accessibilityRole="button"
+              accessibilityLabel={option.label}
+              accessibilityState={{ selected: active }}
+              onPress={() => selectLanguage(option.language)}
+              style={({ pressed }) => [
+                styles.pill,
+                dark && styles.pillDark,
+                active && (dark ? styles.pillActiveDark : styles.pillActive),
+                pressed && styles.pressed,
+              ]}
             >
-              <Text style={[styles.pillText, dark && styles.pillTextDark, active && (dark ? styles.pillTextActiveDark : styles.pillTextActive)]}>{option.label}</Text>
+              <Text
+                style={[
+                  styles.pillText,
+                  dark && styles.pillTextDark,
+                  active && (dark ? styles.pillTextActiveDark : styles.pillTextActive),
+                ]}
+              >
+                {option.label}
+              </Text>
             </Pressable>
           );
         })}
@@ -93,6 +114,10 @@ const styles = StyleSheet.create({
   pillActiveDark: {
     backgroundColor: '#FFFFFF',
     borderColor: '#FFFFFF',
+  },
+  pressed: {
+    transform: [{ translateY: 1 }],
+    opacity: 0.86,
   },
   pillText: {
     fontFamily: fontFamily.bodyBold,

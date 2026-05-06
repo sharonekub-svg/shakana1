@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   BrandPill,
@@ -16,9 +16,10 @@ import {
 } from '@/components/demo/DemoPrimitives';
 import { demoStores } from '@/demo/catalog';
 import {
-  demoParticipants,
+  getMerchantOrderState,
   getMasterPickingList,
   getOrderItemCount,
+  getOrderTimerTotal,
   getOrderTotal,
   getProductLine,
   initDemoCommerceSync,
@@ -26,12 +27,14 @@ import {
   type OrderStatus,
 } from '@/stores/demoCommerceStore';
 import { fontFamily } from '@/theme/fonts';
+import { colors } from '@/theme/tokens';
 
 export default function StoreOrderDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ orderId?: string }>();
   const orders = useDemoCommerceStore((state) => state.orders);
   const updateStatus = useDemoCommerceStore((state) => state.updateStatus);
+  const demoMode = useDemoCommerceStore((state) => state.demoMode);
   const setDemoRole = useDemoCommerceStore((state) => state.setDemoRole);
   const lastPulse = useDemoCommerceStore((state) => state.lastPulse);
   const activeParticipantId = useDemoCommerceStore((state) => state.activeParticipantId);
@@ -39,8 +42,8 @@ export default function StoreOrderDetailScreen() {
 
   useEffect(() => {
     initDemoCommerceSync();
-    setDemoRole('store');
-  }, [setDemoRole]);
+    if (demoMode) setDemoRole('store');
+  }, [demoMode, setDemoRole]);
 
   useEffect(() => {
     const interval = globalThis.setInterval(() => setNowMs(Date.now()), 1000);
@@ -65,7 +68,25 @@ export default function StoreOrderDetailScreen() {
 
   const store = demoStores[order.brand];
   const pickingList = getMasterPickingList(order);
-  const statuses: OrderStatus[] = ['Accepted', 'Packing', 'Ready', 'Shipped'];
+  const statuses: OrderStatus[] = ['accepted', 'packing', 'ready', 'shipped'];
+  const statusLabels: Record<OrderStatus, string> = {
+    collecting: 'Collecting',
+    accepted: 'Accepted',
+    packing: 'Packing',
+    ready: 'Ready',
+    shipped: 'Shipped',
+  };
+  const merchantState = getMerchantOrderState(order, nowMs);
+  const nextStep =
+    order.status === 'collecting'
+      ? 'Accept the order when the cart closes or once there are items ready to process.'
+      : order.status === 'accepted'
+        ? 'Start packing from the master picking list.'
+        : order.status === 'packing'
+          ? 'Mark ready when every line is packed.'
+          : order.status === 'ready'
+            ? 'Ship the package to the delivery address.'
+            : 'This order has been shipped.';
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
@@ -85,54 +106,69 @@ export default function StoreOrderDetailScreen() {
         </View>
 
         <CelebrationBanner pulse={lastPulse} />
+
         <Card style={styles.summary}>
+          <View style={styles.summaryTop}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.panelLabel}>Current operation</Text>
+              <Text style={styles.operationTitle}>{merchantState}</Text>
+              <Text style={styles.muted}>{nextStep}</Text>
+            </View>
+            <TimerRing remainingMs={Math.max(0, order.closesAt - nowMs)} totalMs={getOrderTimerTotal(order)} label="left" />
+          </View>
+
           <View style={styles.summaryGrid}>
-            <Metric label="Status" value={order.status} />
+            <Metric label="Status" value={merchantState} />
             <Metric label="Participants" value={String(order.participants.length)} />
             <Metric label="Total items" value={String(getOrderItemCount(order))} />
             <Metric label="Total price" value={`₪${getOrderTotal(order)}`} />
+            <Metric label="Delivery" value={order.deliveryAddress ? 'Address ready' : 'Missing'} />
           </View>
-          <View style={styles.timerRow}>
-            <TimerRing
-              remainingMs={Math.max(0, order.closesAt - nowMs)}
-              totalMs={15 * 60 * 1000}
-              label="left"
-            />
-            <Text style={styles.timerCopy}>
-              {Math.max(0, Math.ceil((order.closesAt - nowMs) / 60000))} min until the group closes.
-            </Text>
+
+          <View style={styles.deliveryBox}>
+            <Text style={styles.itemName}>Delivery address</Text>
+            <Text style={styles.muted}>{order.deliveryAddress || 'No delivery address added yet.'}</Text>
           </View>
+
           <StatusRail status={order.status} />
           <Text style={styles.muted}>{order.lastEvent}</Text>
         </Card>
 
-        <View style={styles.actions}>
-          {statuses.map((status) => (
-            <DemoButton
-              key={status}
-              label={status === 'Accepted' ? 'Accept Order' : `Mark ${status}`}
-              onPress={() => updateStatus(order.id, status)}
-              tone={order.status === status ? 'accent' : 'light'}
-              style={styles.statusButton}
-            />
-          ))}
-        </View>
+        <Card style={styles.actionPanel}>
+          <View>
+            <Text style={styles.panelLabel}>Status actions</Text>
+            <Text style={styles.muted}>These changes update the user cart instantly.</Text>
+          </View>
+          <View style={styles.actions}>
+            {statuses.map((status) => (
+              <DemoButton
+                key={status}
+                label={status === 'accepted' ? 'Accept Order' : `Mark ${statusLabels[status]}`}
+                onPress={() => updateStatus(order.id, status)}
+                tone={order.status === status ? 'accent' : 'light'}
+                style={styles.statusButton}
+              />
+            ))}
+          </View>
+        </Card>
 
         <View style={styles.grid}>
           <View style={styles.left}>
-            <SectionTitle title="Master picking list" kicker="Exact variants for packing" />
+            <SectionTitle title="Master picking list" kicker="Pick these exact items first" />
             <Card style={styles.listCard}>
               {pickingList.length === 0 ? (
                 <Text style={styles.muted}>No items yet. This list updates live as users add exact sizes and colors.</Text>
               ) : (
                 pickingList.map(({ product, item, quantity }) => (
                   <View key={`${product.id}-${item.size}-${item.color}`} style={styles.pickRow}>
+                    <Image source={{ uri: product.image }} style={styles.pickImage} resizeMode="cover" />
                     <View style={styles.qtyBadge}>
                       <Text style={styles.qtyBadgeText}>{quantity}x</Text>
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.itemName}>{product.name}</Text>
                       <Text style={styles.muted}>Size {item.size} | {item.color} | {product.sku} | {product.stockStatus}</Text>
+                      <Text style={styles.pickMeta}>Shelf task: pick, verify variant, place in order {order.id}</Text>
                     </View>
                   </View>
                 ))
@@ -158,11 +194,16 @@ export default function StoreOrderDetailScreen() {
                         const line = getProductLine(item);
                         return (
                           <View key={item.id} style={styles.breakdownLine}>
-                            <Text style={styles.itemName}>{line.displayName}</Text>
-                            <Text style={styles.muted}>
-                              {item.quantity}x | Size {item.size} | {item.color} | ₪{line.lineTotal}
-                              {item.private ? ' | Private for friends' : ''}
-                            </Text>
+                            {line.product?.image ? (
+                              <Image source={{ uri: line.product.image }} style={styles.breakdownImage} resizeMode="cover" />
+                            ) : null}
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.itemName}>{line.displayName}</Text>
+                              <Text style={styles.muted}>
+                                {item.quantity}x | Size {item.size} | {item.color} | ₪{line.lineTotal}
+                                {item.private ? ' | Private for friends' : ''}
+                              </Text>
+                            </View>
                           </View>
                         );
                       })
@@ -191,7 +232,7 @@ function Metric({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: '#F8F4EE' },
+  scroll: { flex: 1, backgroundColor: colors.bg },
   content: { flexGrow: 1 },
   topBar: {
     flexDirection: 'row',
@@ -203,46 +244,92 @@ const styles = StyleSheet.create({
   brandHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' },
   topActions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   backBtn: { width: 150, minHeight: 40 },
-  title: { color: '#171412', fontFamily: fontFamily.display, fontSize: 36 },
-  muted: { color: '#6D6258', fontFamily: fontFamily.body, fontSize: 14, lineHeight: 21 },
+  title: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 36 },
+  muted: { color: colors.mu, fontFamily: fontFamily.body, fontSize: 14, lineHeight: 21 },
   summary: { gap: 14 },
+  summaryTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  panelLabel: {
+    color: colors.acc,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+    textTransform: 'uppercase',
+  },
+  operationTitle: {
+    color: colors.tx,
+    fontFamily: fontFamily.display,
+    fontSize: 34,
+  },
   timerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' },
-  timerCopy: { color: '#171412', fontFamily: fontFamily.bodySemi, fontSize: 14 },
+  deliveryBox: {
+    gap: 4,
+    borderRadius: 8,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.br,
+    padding: 12,
+  },
   summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   metric: {
     flexGrow: 1,
     flexBasis: 160,
     padding: 12,
     borderRadius: 8,
-    backgroundColor: '#F6EFE8',
+    backgroundColor: colors.s2,
   },
-  metricValue: { color: '#171412', fontFamily: fontFamily.bodyBold, fontSize: 21 },
+  metricValue: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 21 },
+  actionPanel: { gap: 12 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   statusButton: { flexGrow: 1, flexBasis: 170 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', gap: 16 },
-  left: { flexGrow: 1, flexBasis: 460, gap: 12 },
-  right: { flexGrow: 1, flexBasis: 460, gap: 12 },
+  left: { flexGrow: 1, flexBasis: 520, gap: 12 },
+  right: { flexGrow: 1, flexBasis: 440, gap: 12 },
   listCard: { gap: 12 },
   pickRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#EFE7DE',
+    borderBottomColor: colors.br,
     paddingBottom: 12,
+  },
+  pickImage: {
+    width: 64,
+    height: 76,
+    borderRadius: 8,
+    backgroundColor: colors.s2,
   },
   qtyBadge: {
     width: 44,
     height: 44,
     borderRadius: 8,
-    backgroundColor: '#171412',
+    backgroundColor: colors.tx,
     alignItems: 'center',
     justifyContent: 'center',
   },
   qtyBadgeText: { color: '#FFFFFF', fontFamily: fontFamily.bodyBold, fontSize: 15 },
-  itemName: { color: '#171412', fontFamily: fontFamily.bodyBold, fontSize: 15 },
-  userBlock: { gap: 8, borderBottomWidth: 1, borderBottomColor: '#EFE7DE', paddingBottom: 12 },
-  userName: { color: '#171412', fontFamily: fontFamily.bodyBold, fontSize: 17 },
-  breakdownLine: { padding: 10, borderRadius: 8, backgroundColor: '#F8F4EE', gap: 2 },
+  itemName: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 15 },
+  pickMeta: { color: colors.acc, fontFamily: fontFamily.bodySemi, fontSize: 12, marginTop: 2 },
+  userBlock: { gap: 8, borderBottomWidth: 1, borderBottomColor: colors.br, paddingBottom: 12 },
+  userName: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 17 },
+  breakdownLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: colors.s2,
+  },
+  breakdownImage: {
+    width: 48,
+    height: 58,
+    borderRadius: 8,
+    backgroundColor: colors.white,
+  },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
 });

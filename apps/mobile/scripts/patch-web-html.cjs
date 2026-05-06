@@ -3,14 +3,16 @@ const path = require('node:path');
 
 const htmlPath = path.join(__dirname, '..', 'dist', 'index.html');
 let html = fs.readFileSync(htmlPath, 'utf8');
+html = html.replaceAll('\\', '/');
 
 const fallbackStyle = `
+    <meta name="theme-color" content="#F7F1E8" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet" />
     <style id="shakana-boot-fallback-style">
       body {
         margin: 0;
-        background: #F7F5F0;
+        background: #F7F1E8;
         font-family: 'Rubik', Arial, sans-serif;
       }
       #root {
@@ -25,7 +27,7 @@ const fallbackStyle = `
         align-items: center;
         justify-content: center;
         padding: 24px;
-        background: #F7F5F0;
+        background: #F7F1E8;
         text-align: center;
         animation: shakana-fade-out 0.4s ease 8s forwards;
       }
@@ -34,18 +36,18 @@ const fallbackStyle = `
       }
       .shakana-fallback-card {
         width: min(400px, 100%);
-        border: 1px solid #E8E2DA;
+        border: 1px solid #E3D5C6;
         border-radius: 20px;
-        background: #FFFFFF;
+        background: #FFFCF7;
         padding: 32px 28px;
-        box-shadow: 0 2px 16px rgba(28,25,23,0.07);
+        box-shadow: 0 2px 16px rgba(43,33,24,0.08);
       }
       .shakana-fallback-dot {
         display: inline-block;
         width: 7px;
         height: 7px;
         border-radius: 50%;
-        background: #3D6B4F;
+        background: #C96442;
         margin-bottom: 14px;
       }
       .shakana-fallback-logo {
@@ -54,11 +56,11 @@ const fallbackStyle = `
         font-weight: 700;
         letter-spacing: 0.18em;
         text-transform: uppercase;
-        color: #3D6B4F;
+        color: #B35C37;
       }
       .shakana-fallback-text {
         margin: 0;
-        color: #78716C;
+        color: #6F6257;
         font-size: 14px;
         line-height: 1.7;
       }
@@ -69,12 +71,12 @@ const fallbackMarkup = `
       <div class="shakana-fallback-card">
         <div class="shakana-fallback-dot"></div>
         <p class="shakana-fallback-logo">shakana</p>
-        <p class="shakana-fallback-text">האפליקציה נטענת. אם המסך נשאר כך, רענן פעם אחת כדי לקבל את הגרסה החדשה.</p>
+        <p class="shakana-fallback-text">Loading Shakana. If this stays on screen, refresh once to get the newest version.</p>
       </div>
     </div>`;
 
 html = html
-  .replace('<html lang="en">', '<html lang="he" dir="rtl">')
+  .replace('<html lang="en">', '<html lang="en" dir="ltr">')
   .replace('</head>', `${fallbackStyle}\n  </head>`)
   .replace('<!-- The root element for your Expo app. -->', `${fallbackMarkup}\n    <!-- The root element for your Expo app. -->`);
 

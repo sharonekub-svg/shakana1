@@ -16,20 +16,20 @@ const FLOW_STRIP = {
   en: ['Paste link', 'Detect store', 'Read price', 'Find deals', 'Invite friends', 'Shared cart'],
 };
 
-// Wispr Flow palette: warm cream, sage green, editorial warmth
+// Claude-inspired palette: warm paper, cocoa ink, and clay actions.
 const W = {
-  bg: '#F7F5F0',
-  surface: '#FFFFFF',
-  surfaceTint: '#F2EFE9',
-  tx: '#1C1917',
-  mu: '#78716C',
-  mu2: '#A8A29E',
-  acc: '#3D6B4F',
-  accLight: '#EDF4EF',
-  accBorder: '#C4DACB',
-  border: '#E8E2DA',
-  borderStrong: '#D4CEC6',
-  shadow: 'rgba(28,25,23,0.07)',
+  bg: '#F7F1E8',
+  surface: '#FFFCF7',
+  surfaceTint: '#F1E7DA',
+  tx: '#2B2118',
+  mu: '#6F6257',
+  mu2: '#A19183',
+  acc: '#B35C37',
+  accLight: '#F6E4D6',
+  accBorder: '#E3D5C6',
+  border: '#E3D5C6',
+  borderStrong: '#CDBBA9',
+  shadow: 'rgba(43,33,24,0.08)',
 } as const;
 
 function GoogleGlyph() {

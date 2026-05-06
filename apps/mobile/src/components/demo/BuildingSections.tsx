@@ -9,33 +9,6 @@ import {
   type DemoOrder,
 } from '@/stores/demoCommerceStore';
 
-const SHOPPING_FLOWS = [
-  {
-    id: 'paste-link',
-    name: 'Paste any link',
-    note: 'Shakana detects the store from the domain automatically.',
-    category: 'Fashion',
-    tone: '#A65F3C',
-    image: 'https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?auto=format&fit=crop&w=1200&q=80',
-  },
-  {
-    id: 'auto-product',
-    name: 'Auto product read',
-    note: 'Looks for product name, image, price, SKU and promotions.',
-    category: 'Product',
-    tone: '#2D7D46',
-    image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1200&q=80',
-  },
-  {
-    id: 'shared-cart',
-    name: 'Shared cart',
-    note: 'Friends join by link and add their own items before the timer ends.',
-    category: 'Cart',
-    tone: '#171412',
-    image: 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1200&q=80',
-  },
-];
-
 const CATEGORY_CHIPS = [
   { label: 'Fashion', detail: 'Clothes, shoes, sizes and color choices.', brand: 'hm' as const },
   { label: 'Beauty', detail: 'Care products, makeup and pharmacy essentials.', brand: 'zara' as const },
@@ -50,36 +23,6 @@ function HomeMark() {
     <View style={styles.markWrap}>
       <Text style={styles.markLetter}>S</Text>
     </View>
-  );
-}
-
-function FeaturedCard({
-  name,
-  note,
-  image,
-  tone,
-  onPress,
-}: {
-  name: string;
-  note: string;
-  image: string;
-  tone: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.featureCard, pressed && { transform: [{ scale: 0.98 }] }]}>
-      <View style={styles.featureImageWrap}>
-        <ImageBackground source={{ uri: image }} style={styles.featureImage} imageStyle={styles.featureImageRadius}>
-          <View style={[styles.featureChip, { backgroundColor: tone }]}>
-            <Text style={styles.featureChipText}>{name.slice(0, 1)}</Text>
-          </View>
-        </ImageBackground>
-      </View>
-      <View style={styles.featureBody}>
-        <Text style={styles.featureName}>{name}</Text>
-        <Text style={styles.featureNote}>{note}</Text>
-      </View>
-    </Pressable>
   );
 }
 
@@ -129,8 +72,8 @@ export function BuildingSections({
   onOpenLogin: () => void;
   onChooseBrand: (brand: 'hm' | 'zara' | 'amazon') => void;
 }) {
-  const openOrders = orders.filter((order) => order.status !== 'Shipped');
-  const completedOrders = orders.filter((order) => order.status === 'Shipped').length;
+  const openOrders = orders.filter((order) => order.status !== 'shipped');
+  const completedOrders = orders.filter((order) => order.status === 'shipped').length;
   const topOrders = orders.slice(0, 3);
   const heroImage = demoStores.hm.heroImage;
 
@@ -154,9 +97,9 @@ export function BuildingSections({
           <View style={styles.heroOverlay} />
           <View style={styles.heroContent}>
             <Text style={styles.heroKicker}>Promoted flow</Text>
-            <Text style={styles.heroTitle}>Paste any link, auto-detect the store, then share the cart.</Text>
+            <Text style={styles.heroTitle}>Open a shared cart, invite friends, and build one delivery together.</Text>
             <Text style={styles.heroBody}>
-              The demo reads products, keeps the timer visible, and updates the shared order as friends join.
+              Friends sign in from WhatsApp, browse the store catalog, add items, and the merchant sees the order when the timer ends.
             </Text>
             <Pressable style={styles.heroButton} onPress={onOpenStore}>
               <Text style={styles.heroButtonText}>Open order flow</Text>
@@ -191,24 +134,6 @@ export function BuildingSections({
           </Pressable>
         ))}
       </ScrollView>
-
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Smart order flow</Text>
-        <Text style={styles.sectionLink}>Any store link</Text>
-      </View>
-
-      <View style={styles.featureGrid}>
-        {SHOPPING_FLOWS.map((flow, index) => (
-          <FeaturedCard
-            key={flow.id}
-            name={flow.name}
-            note={flow.note}
-            image={flow.image}
-            tone={flow.tone}
-            onPress={() => onChooseBrand(index === 0 ? 'hm' : index === 1 ? 'zara' : 'amazon')}
-          />
-        ))}
-      </View>
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Recent</Text>
