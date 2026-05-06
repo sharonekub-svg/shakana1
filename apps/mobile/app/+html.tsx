@@ -3,22 +3,22 @@ import type { PropsWithChildren } from 'react';
 
 export default function Html({ children }: PropsWithChildren) {
   return (
-    <html lang="he" dir="rtl">
+    <html lang="en" dir="ltr">
       <head>
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-        <meta name="theme-color" content="#F7F5F0" />
+        <meta name="theme-color" content="#F7F1E8" />
         <title>Shakana</title>
         <ScrollViewStyleReset />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
         <style
           dangerouslySetInnerHTML={{
             __html: `
               body {
                 margin: 0;
-                background: #F7F5F0;
+                background: #F7F1E8;
                 font-family: 'Rubik', Arial, sans-serif;
               }
               #root {
@@ -33,7 +33,7 @@ export default function Html({ children }: PropsWithChildren) {
                 align-items: center;
                 justify-content: center;
                 padding: 24px;
-                background: #F7F5F0;
+                background: #F7F1E8;
                 text-align: center;
                 animation: shakana-fade-out 0.4s ease 8s forwards;
               }
@@ -42,18 +42,18 @@ export default function Html({ children }: PropsWithChildren) {
               }
               .shakana-fallback-card {
                 width: min(400px, 100%);
-                border: 1px solid #E8E2DA;
+                border: 1px solid #E3D5C6;
                 border-radius: 20px;
-                background: #FFFFFF;
+                background: #FFFCF7;
                 padding: 32px 28px;
-                box-shadow: 0 2px 16px rgba(28,25,23,0.07);
+                box-shadow: 0 2px 16px rgba(43,33,24,0.08);
               }
               .shakana-fallback-dot {
                 display: inline-block;
                 width: 7px;
                 height: 7px;
                 border-radius: 50%;
-                background: #3D6B4F;
+                background: #C96442;
                 margin-bottom: 14px;
               }
               .shakana-fallback-logo {
@@ -62,11 +62,11 @@ export default function Html({ children }: PropsWithChildren) {
                 font-weight: 700;
                 letter-spacing: 0.18em;
                 text-transform: uppercase;
-                color: #3D6B4F;
+                color: #B35C37;
               }
               .shakana-fallback-text {
                 margin: 0;
-                color: #78716C;
+                color: #6F6257;
                 font-size: 14px;
                 line-height: 1.7;
               }
@@ -80,7 +80,7 @@ export default function Html({ children }: PropsWithChildren) {
             <div className="shakana-fallback-dot" />
             <p className="shakana-fallback-logo">shakana</p>
             <p className="shakana-fallback-text">
-              האפליקציה נטענת. אם המסך נשאר כך, רענן פעם אחת כדי לקבל את הגרסה החדשה.
+              The app is loading. If this stays on screen, refresh once to get the newest version.
             </p>
           </div>
         </div>

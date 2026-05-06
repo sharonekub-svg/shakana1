@@ -76,8 +76,10 @@ export function DemoButton({
     >
       <Text
         style={[
-          styles.buttonText,
-          tone === 'light' && styles.lightButtonText,
+        styles.buttonText,
+        tone === 'light' && styles.lightButtonText,
+        tone === 'accent' && styles.accentButtonText,
+        tone === 'danger' && styles.dangerButtonText,
           disabled && styles.disabledButtonText,
         ]}
         numberOfLines={2}
@@ -152,7 +154,7 @@ export function TimerRing({
   const circumference = 2 * Math.PI * radius;
   const pct = Math.max(0, Math.min(1, remainingMs / totalMs));
   const strokeDashoffset = circumference * (1 - pct);
-  const tone = remainingMs > 5 * 60 * 1000 ? '#2D7D46' : remainingMs > 2 * 60 * 1000 ? '#B87915' : '#C0392B';
+  const tone = remainingMs > 5 * 60 * 1000 ? colors.acc : remainingMs > 2 * 60 * 1000 ? colors.gold : colors.err;
   const mins = Math.floor(remainingMs / 60000);
   const secs = Math.floor((remainingMs % 60000) / 1000)
     .toString()
@@ -298,16 +300,25 @@ export function SavingsPanel({ order, compact = false }: { order: DemoOrder; com
 }
 
 export function StatusRail({ status }: { status: OrderStatus }) {
-  const statuses: OrderStatus[] = ['Collecting', 'Accepted', 'Packing', 'Ready', 'Shipped'];
+  const statuses: OrderStatus[] = ['collecting', 'accepted', 'packing', 'ready', 'shipped'];
   const currentIndex = statuses.indexOf(status);
+  const labels: Record<OrderStatus, string> = {
+    collecting: 'Collecting',
+    accepted: 'Accepted',
+    packing: 'Packing',
+    ready: 'Ready',
+    shipped: 'Shipped',
+  };
   return (
     <View style={styles.statusRail}>
       {statuses.map((item, index) => {
-        const active = index <= currentIndex;
+        const completed = index < currentIndex;
+        const isCurrent = index === currentIndex;
         return (
-          <View key={item} style={styles.statusItem}>
-            <View style={[styles.statusDot, active && styles.statusDotActive]} />
-            <Text style={[styles.statusText, active && styles.statusTextActive]}>{item}</Text>
+          <View key={item} style={[styles.statusItem, completed && styles.statusItemDone, isCurrent && styles.statusItemCurrent]}>
+            <Text style={[styles.statusText, completed && styles.statusTextDone, isCurrent && styles.statusTextCurrent]}>
+              {labels[item]}
+            </Text>
           </View>
         );
       })}
@@ -328,7 +339,7 @@ const styles = StyleSheet.create({
   page: {
     flex: 1,
     minHeight: '100%',
-    backgroundColor: '#F8F4EE',
+    backgroundColor: colors.bg,
     alignItems: 'center',
   },
   shell: {
@@ -342,9 +353,9 @@ const styles = StyleSheet.create({
     maxWidth: 1320,
   },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.78)',
+    backgroundColor: 'rgba(255,252,247,0.82)',
     borderWidth: 1,
-    borderColor: 'rgba(70,55,40,0.10)',
+    borderColor: 'rgba(43,33,24,0.12)',
     borderRadius: 8,
     ...shadow.card,
   },
@@ -358,15 +369,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#171412',
+    backgroundColor: colors.tx,
   },
   lightButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: 'rgba(23,20,18,0.14)',
+    borderColor: 'rgba(43,33,24,0.14)',
   },
   accentButton: {
-    backgroundColor: '#A65F3C',
+    backgroundColor: colors.gold,
+    ...shadow.cta,
   },
   dangerButton: {
     backgroundColor: '#C0392B',
@@ -386,7 +398,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   lightButtonText: {
-    color: '#171412',
+    color: colors.tx,
+  },
+  accentButtonText: {
+    color: colors.tx,
+  },
+  dangerButtonText: {
+    color: '#FFFFFF',
   },
   disabledButtonText: {
     color: '#71685D',
@@ -395,24 +413,24 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   kicker: {
-    color: '#8B6F56',
+    color: colors.acc,
     fontFamily: fontFamily.bodyBold,
     fontSize: 12,
-    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   h2: {
-    color: '#171412',
+    color: colors.tx,
     fontFamily: fontFamily.display,
     fontSize: 28,
   },
   h3: {
-    color: '#171412',
+    color: colors.tx,
     fontFamily: fontFamily.bodyBold,
     fontSize: 18,
     marginBottom: 6,
   },
   muted: {
-    color: '#6D6258',
+    color: colors.mu,
     fontFamily: fontFamily.body,
     fontSize: 14,
     lineHeight: 21,
@@ -428,7 +446,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     alignSelf: 'flex-start',
   },
   brandPillText: {
@@ -439,13 +457,13 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 0.84,
     borderRadius: 8,
-    backgroundColor: '#E9E1D8',
+    backgroundColor: colors.s2,
   },
   progressOuter: {
     height: 9,
     borderRadius: 99,
     overflow: 'hidden',
-    backgroundColor: '#E8DED2',
+    backgroundColor: colors.s3,
   },
   progressInner: {
     height: '100%',
@@ -463,16 +481,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   timerValue: {
-    color: '#171412',
+    color: colors.tx,
     fontFamily: fontFamily.bodyBold,
     fontSize: 14,
     lineHeight: 16,
   },
   timerLabel: {
-    color: '#6D6258',
+    color: colors.mu,
     fontFamily: fontFamily.bodySemi,
     fontSize: 10,
-    textTransform: 'uppercase',
   },
   celebration: {
     flexDirection: 'row',
@@ -480,29 +497,29 @@ const styles = StyleSheet.create({
     gap: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(181,126,47,0.35)',
-    backgroundColor: 'rgba(255,244,215,0.95)',
+    borderColor: 'rgba(179,92,55,0.32)',
+    backgroundColor: 'rgba(246,228,214,0.96)',
     paddingHorizontal: 14,
     paddingVertical: 12,
-    shadowColor: '#B57E2F',
+    shadowColor: colors.acc,
     shadowOpacity: 0.18,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 8 },
     elevation: 3,
   },
   celebrationSpark: {
-    color: '#B57E2F',
+    color: colors.acc,
     fontFamily: fontFamily.bodyBold,
     fontSize: 18,
   },
   celebrationTitle: {
-    color: '#7D5424',
+    color: colors.acc,
     fontFamily: fontFamily.bodyBold,
     fontSize: 12,
-    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   celebrationBody: {
-    color: '#171412',
+    color: colors.tx,
     fontFamily: fontFamily.bodySemi,
     fontSize: 14,
   },
@@ -518,39 +535,38 @@ const styles = StyleSheet.create({
   socialBadge: {
     minWidth: 94,
     borderRadius: 8,
-    backgroundColor: '#EDF7E8',
+    backgroundColor: colors.goldLight,
     paddingHorizontal: 12,
     paddingVertical: 10,
     alignItems: 'center',
   },
   neutralBadge: {
-    backgroundColor: '#F6EFE8',
+    backgroundColor: colors.s2,
   },
   socialBadgeValue: {
-    color: '#171412',
+    color: colors.tx,
     fontFamily: fontFamily.display,
     fontSize: 26,
     lineHeight: 28,
   },
   socialBadgeLabel: {
-    color: '#6D6258',
+    color: colors.mu,
     fontFamily: fontFamily.bodySemi,
     fontSize: 11,
-    textTransform: 'uppercase',
   },
   savingsBig: {
-    color: '#171412',
+    color: colors.tx,
     fontFamily: fontFamily.bodyBold,
     fontSize: 20,
   },
   savingsBadge: {
     borderRadius: 8,
-    backgroundColor: '#EDF7E8',
+    backgroundColor: colors.goldLight,
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
   savingsBadgeText: {
-    color: '#24683A',
+    color: colors.acc,
     fontFamily: fontFamily.bodyBold,
     fontSize: 12,
   },
@@ -563,35 +579,49 @@ const styles = StyleSheet.create({
   },
   statusRail: {
     flexDirection: 'row',
+    gap: 3,
     flexWrap: 'wrap',
-    gap: 10,
-    alignItems: 'center',
   },
   statusItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: 999,
-    backgroundColor: '#EFE7DE',
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    borderRadius: 4,
+    backgroundColor: colors.s3,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  statusItemDone: {
+    backgroundColor: colors.goldLight,
+  },
+  statusItemCurrent: {
+    backgroundColor: colors.acc,
   },
   statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#B8AA9C',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.s3,
   },
   statusDotActive: {
-    backgroundColor: '#2D7D46',
+    backgroundColor: colors.acc,
+  },
+  statusDotCurrent: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.white,
+    borderWidth: 2,
+    borderColor: colors.acc,
   },
   statusText: {
-    color: '#6D6258',
+    color: colors.mu2,
     fontFamily: fontFamily.bodySemi,
-    fontSize: 12,
+    fontSize: 11,
   },
-  statusTextActive: {
-    color: '#171412',
+  statusTextDone: {
+    color: colors.acc,
+  },
+  statusTextCurrent: {
+    color: '#FFFFFF',
+    fontFamily: fontFamily.bodyBold,
   },
 });
 

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   BrandPill,
@@ -9,7 +9,6 @@ import {
   DemoPage,
   EmptyNotice,
   ProgressBar,
-  SavingsPanel,
   SavingsTracker,
   SectionTitle,
   TimerRing,
@@ -20,32 +19,75 @@ import { FREE_SHIPPING_GOAL, demoStores } from '@/demo/catalog';
 import {
   getGoalProgress,
   getGroupSavings,
+  getMerchantOrderState,
   getOrderItemCount,
+  getOrderTimerTotal,
   getOrderTotal,
   initDemoCommerceSync,
   useDemoCommerceStore,
+  type DemoOrder,
+  type OrderStatus,
 } from '@/stores/demoCommerceStore';
 import { fontFamily } from '@/theme/fonts';
+import { colors } from '@/theme/tokens';
+
+type QueueFilter = 'needsAction' | 'all' | OrderStatus;
+
+const FILTERS: { label: string; value: QueueFilter }[] = [
+  { label: 'Needs action', value: 'needsAction' },
+  { label: 'All', value: 'all' },
+  { label: 'Collecting', value: 'collecting' },
+  { label: 'Accepted', value: 'accepted' },
+  { label: 'Packing', value: 'packing' },
+  { label: 'Ready', value: 'ready' },
+  { label: 'Shipped', value: 'shipped' },
+];
 
 export default function StoreDashboardScreen() {
   const router = useRouter();
   const orders = useDemoCommerceStore((state) => state.orders);
   const lastPulse = useDemoCommerceStore((state) => state.lastPulse);
+  const demoMode = useDemoCommerceStore((state) => state.demoMode);
   const setDemoRole = useDemoCommerceStore((state) => state.setDemoRole);
   const activeParticipantId = useDemoCommerceStore((state) => state.activeParticipantId);
   const [nowMs, setNowMs] = useState(Date.now());
+  const [filter, setFilter] = useState<QueueFilter>('needsAction');
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
     initDemoCommerceSync();
-    setDemoRole('store');
-  }, [setDemoRole]);
+    if (demoMode) setDemoRole('store');
+  }, [demoMode, setDemoRole]);
 
   useEffect(() => {
     const interval = globalThis.setInterval(() => setNowMs(Date.now()), 1000);
     return () => globalThis.clearInterval(interval);
   }, []);
 
-  const activeOrders = orders.filter((order) => order.status !== 'Shipped');
+  const activeOrders = orders.filter((order) => order.status !== 'shipped');
+  const readyToProcess = activeOrders.filter((order) => order.items.length > 0 || order.closesAt <= nowMs).length;
+  const itemsToPick = activeOrders.reduce((total, order) => total + getOrderItemCount(order), 0);
+  const totalGmv = orders.reduce((total, order) => total + getOrderTotal(order), 0);
+  const totalSavings = Math.round(orders.reduce((total, order) => total + getGroupSavings(order), 0));
+
+  const filteredOrders = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return orders.filter((order) => {
+      const store = demoStores[order.brand];
+      const timerEnded = order.closesAt <= nowMs;
+      const matchesFilter =
+        filter === 'all' ||
+        (filter === 'needsAction' && order.status !== 'shipped' && (timerEnded || order.items.length > 0)) ||
+        order.status === filter;
+      const matchesQuery =
+        !normalizedQuery ||
+        order.id.toLowerCase().includes(normalizedQuery) ||
+        order.inviteCode.includes(normalizedQuery) ||
+        store.name.toLowerCase().includes(normalizedQuery) ||
+        order.deliveryAddress.toLowerCase().includes(normalizedQuery);
+      return matchesFilter && matchesQuery;
+    });
+  }, [filter, nowMs, orders, query]);
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
@@ -54,6 +96,7 @@ export default function StoreDashboardScreen() {
           <View>
             <Text style={styles.logo}>Agent M</Text>
             <Text style={styles.title}>Merchant dashboard</Text>
+            <Text style={styles.muted}>A clean work queue for accepting, picking, and shipping group orders.</Text>
           </View>
           <View style={styles.topActions}>
             <DemoButton label="User view" onPress={() => router.push('/user')} tone="light" style={styles.smallBtn} />
@@ -62,87 +105,154 @@ export default function StoreDashboardScreen() {
         </View>
 
         <CelebrationBanner pulse={lastPulse} />
+
         <View style={styles.metricsGrid}>
-          <Metric label="Incoming orders" value={String(activeOrders.length)} />
-          <Metric
-            label="Total GMV"
-            value={`₪${orders.reduce((total, order) => total + getOrderTotal(order), 0)}`}
-          />
-          <Metric
-            label="Items to pick"
-            value={String(activeOrders.reduce((total, order) => total + getOrderItemCount(order), 0))}
-          />
-          <Metric
-            label="Group savings"
-            value={`₪${Math.round(orders.reduce((total, order) => total + getGroupSavings(order), 0))}`}
+          <Metric label="Needs action" value={String(readyToProcess)} highlight />
+          <Metric label="Open orders" value={String(activeOrders.length)} />
+          <Metric label="Items to pick" value={String(itemsToPick)} />
+          <Metric label="Total GMV" value={`₪${totalGmv}`} />
+          <Metric label="Group savings" value={`₪${totalSavings}`} />
+        </View>
+
+        <View style={styles.queueHeader}>
+          <SectionTitle title="Order queue" kicker="Track every live cart" />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search order, code, brand, or address"
+            style={styles.searchInput}
+            accessibilityLabel="Search merchant orders"
           />
         </View>
 
-        <SectionTitle title="Live incoming group orders" kicker="Wolt Merchant style" />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+          {FILTERS.map((option) => (
+            <FilterChip
+              key={option.value}
+              label={option.label}
+              active={filter === option.value}
+              onPress={() => setFilter(option.value)}
+            />
+          ))}
+        </ScrollView>
+
         {orders.length === 0 ? (
           <EmptyNotice
             title="No group orders yet"
-            body="Open the user demo, choose H&M or Zara, and create a group order. It will appear here instantly."
+            body="Open the user demo, choose Amazon, H&M, or Zara, and create a group order. It will appear here instantly."
+          />
+        ) : filteredOrders.length === 0 ? (
+          <EmptyNotice
+            title="No orders match this view"
+            body="Clear the search or switch filters to see the rest of the merchant queue."
           />
         ) : (
           <View style={styles.orderList}>
-            {orders.map((order) => {
-              const store = demoStores[order.brand];
-              const progress = getGoalProgress(order);
-              const minutesLeft = Math.max(0, Math.ceil((order.closesAt - Date.now()) / 60000));
-              return (
-                <Pressable
-                  key={order.id}
-                  accessibilityRole="button"
-                  onPress={() => router.push(`/store/orders/${order.id}`)}
-                  style={({ pressed }) => [styles.orderCard, pressed && demoStyles.pressed]}
-                >
-                  <View style={styles.orderHeader}>
-                    <View style={styles.brandHeader}>
-                      <BrandPill brand={order.brand} />
-                      <View>
-                        <Text style={styles.orderId}>{order.id}</Text>
-                        <Text style={styles.muted}>{store.name} | {minutesLeft} min left</Text>
-                      </View>
-                    </View>
-                    <View style={styles.orderHeaderRight}>
-                      <TimerRing
-                        remainingMs={Math.max(0, order.closesAt - nowMs)}
-                        totalMs={15 * 60 * 1000}
-                        label="left"
-                      />
-                      <Text style={[styles.statusBadge, { borderColor: store.accent }]}>{order.status}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.orderStats}>
-                    <Stat label="Participants" value={String(order.participants.length)} />
-                    <Stat label="Items" value={String(getOrderItemCount(order))} />
-                    <Stat label="Total" value={`₪${getOrderTotal(order)}`} />
-                    <Stat label="Goal" value={`${progress}%`} />
-                  </View>
-                  <ProgressBar progress={progress} accent={store.accent} />
-                  <Text style={styles.muted}>
-                    ₪{getOrderTotal(order)} / ₪{FREE_SHIPPING_GOAL} toward free shipping. Group saved ₪{Math.round(getGroupSavings(order))} on delivery.
-                  </Text>
-                  <StatusRail status={order.status} />
-                </Pressable>
-              );
-            })}
+            {filteredOrders.map((order) => (
+              <OrderQueueCard
+                key={order.id}
+                order={order}
+                nowMs={nowMs}
+                onOpen={() => router.push(`/store/orders/${order.id}`)}
+              />
+            ))}
           </View>
         )}
 
-        {orders[0] ? <SavingsPanel order={orders[0]} compact /> : null}
         <SavingsTracker orders={orders} activeParticipantId={activeParticipantId} />
       </DemoPage>
     </ScrollView>
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function OrderQueueCard({ order, nowMs, onOpen }: { order: DemoOrder; nowMs: number; onOpen: () => void }) {
+  const store = demoStores[order.brand];
+  const progress = getGoalProgress(order);
+  const minutesLeft = Math.max(0, Math.ceil((order.closesAt - nowMs) / 60000));
+  const merchantState = getMerchantOrderState(order, nowMs);
+  const priority = getOrderPriority(order, nowMs);
+  const totalItems = getOrderItemCount(order);
+
   return (
-    <Card style={styles.metric}>
-      <Text style={styles.metricValue}>{value}</Text>
-      <Text style={styles.muted}>{label}</Text>
+    <Pressable
+      accessibilityRole="button"
+      onPress={onOpen}
+      style={({ pressed }) => [styles.orderCard, pressed && demoStyles.pressed]}
+    >
+      <View style={styles.orderHeader}>
+        <View style={styles.brandHeader}>
+          <BrandPill brand={order.brand} />
+          <View style={styles.orderIdentity}>
+            <View style={styles.inlineRow}>
+              <Text style={styles.orderId}>{order.id}</Text>
+              <Text style={[styles.priorityBadge, priority.tone === 'hot' && styles.priorityHot]}>
+                {priority.label}
+              </Text>
+            </View>
+            <Text style={styles.muted}>
+              {store.name} | Code {order.inviteCode} | {minutesLeft > 0 ? `${minutesLeft} min left` : 'timer ended'}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.orderHeaderRight}>
+          <TimerRing remainingMs={Math.max(0, order.closesAt - nowMs)} totalMs={getOrderTimerTotal(order)} label="left" />
+          <Text style={[styles.statusBadge, { borderColor: store.accent }]}>{merchantState}</Text>
+        </View>
+      </View>
+
+      <View style={styles.fulfillmentStrip}>
+        <View>
+          <Text style={styles.fulfillmentTitle}>
+            {totalItems > 0 ? `${totalItems} units ready for picking` : 'Waiting for cart items'}
+          </Text>
+          <Text style={styles.muted}>{order.deliveryAddress || 'Delivery address not added yet'}</Text>
+        </View>
+        <Text style={styles.openText}>Open order</Text>
+      </View>
+
+      <View style={styles.orderStats}>
+        <Stat label="Participants" value={String(order.participants.length)} />
+        <Stat label="Items" value={String(totalItems)} />
+        <Stat label="Total" value={`₪${getOrderTotal(order)}`} />
+        <Stat label="Goal" value={`${progress}%`} />
+      </View>
+
+      <ProgressBar progress={progress} accent={store.accent} />
+      <Text style={styles.muted}>
+        ₪{getOrderTotal(order)} / ₪{FREE_SHIPPING_GOAL} toward free shipping. Group saved ₪{Math.round(getGroupSavings(order))}.
+      </Text>
+      <StatusRail status={order.status} />
+    </Pressable>
+  );
+}
+
+function getOrderPriority(order: DemoOrder, nowMs: number) {
+  if (order.status === 'shipped') return { label: 'Done', tone: 'calm' as const };
+  if (order.status === 'ready') return { label: 'Ship next', tone: 'hot' as const };
+  if (order.status === 'packing') return { label: 'Packing', tone: 'hot' as const };
+  if (order.status === 'accepted') return { label: 'Accepted', tone: 'calm' as const };
+  if (order.closesAt <= nowMs) return { label: 'Timer ended', tone: 'hot' as const };
+  if (order.items.length > 0) return { label: 'New items', tone: 'hot' as const };
+  return { label: 'Collecting', tone: 'calm' as const };
+}
+
+function FilterChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [styles.filterChip, active && styles.filterChipActive, pressed && demoStyles.pressed]}
+    >
+      <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function Metric({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <Card style={highlight ? styles.metricHighlighted : styles.metric}>
+      <Text style={[styles.metricValue, highlight && styles.metricValueHighlighted]}>{value}</Text>
+      <Text style={[styles.muted, highlight && styles.metricLabelHighlighted]}>{label}</Text>
     </Card>
   );
 }
@@ -157,7 +267,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: '#F8F4EE' },
+  scroll: { flex: 1, backgroundColor: colors.bg },
   content: { flexGrow: 1 },
   topBar: {
     flexDirection: 'row',
@@ -169,13 +279,13 @@ const styles = StyleSheet.create({
   topActions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   smallBtn: { width: 140, minHeight: 40 },
   logo: {
-    color: '#A65F3C',
+    color: colors.acc,
     fontFamily: fontFamily.bodyBold,
     fontSize: 13,
-    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   title: {
-    color: '#171412',
+    color: colors.tx,
     fontFamily: fontFamily.display,
     fontSize: 40,
   },
@@ -186,21 +296,74 @@ const styles = StyleSheet.create({
   },
   metric: {
     flexGrow: 1,
-    flexBasis: 190,
+    flexBasis: 170,
+  },
+  metricHighlighted: {
+    flexGrow: 1,
+    flexBasis: 170,
+    backgroundColor: colors.acc,
+    borderColor: colors.acc,
   },
   metricValue: {
-    color: '#171412',
+    color: colors.tx,
     fontFamily: fontFamily.display,
     fontSize: 32,
   },
+  metricValueHighlighted: {
+    color: '#FFFFFF',
+    fontSize: 40,
+  },
+  metricLabelHighlighted: {
+    color: 'rgba(255,255,255,0.72)',
+  },
+  queueHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  searchInput: {
+    flexGrow: 1,
+    flexBasis: 280,
+    maxWidth: 520,
+    minHeight: 46,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.brBr,
+    backgroundColor: colors.white,
+    color: colors.tx,
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 14,
+    paddingHorizontal: 14,
+  },
+  filterRow: { gap: 8, paddingVertical: 4 },
+  filterChip: {
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.br,
+    backgroundColor: colors.white,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  filterChipActive: {
+    backgroundColor: colors.tx,
+    borderColor: colors.tx,
+  },
+  filterChipText: {
+    color: colors.mu,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
+  },
+  filterChipTextActive: { color: '#FFFFFF' },
   orderList: { gap: 12 },
   orderCard: {
     gap: 14,
     padding: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(70,55,40,0.12)',
-    backgroundColor: '#FFFFFF',
+    borderColor: colors.br,
+    backgroundColor: colors.white,
   },
   orderHeader: {
     flexDirection: 'row',
@@ -209,27 +372,55 @@ const styles = StyleSheet.create({
     gap: 12,
     flexWrap: 'wrap',
   },
-  brandHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  brandHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap', flex: 1 },
+  orderIdentity: { flex: 1, minWidth: 210 },
+  inlineRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   orderHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  orderId: { color: '#171412', fontFamily: fontFamily.bodyBold, fontSize: 18 },
+  orderId: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 18 },
   statusBadge: {
     borderWidth: 1,
-    borderRadius: 999,
+    borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 7,
-    color: '#171412',
+    color: colors.tx,
     fontFamily: fontFamily.bodyBold,
     fontSize: 12,
   },
+  priorityBadge: {
+    overflow: 'hidden',
+    borderRadius: 4,
+    backgroundColor: colors.s2,
+    color: colors.mu,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 11,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  priorityHot: {
+    backgroundColor: colors.goldLight,
+    color: colors.acc,
+  },
+  fulfillmentStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    borderRadius: 8,
+    backgroundColor: colors.s2,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  fulfillmentTitle: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 14 },
+  openText: { color: colors.acc, fontFamily: fontFamily.bodyBold, fontSize: 13 },
   orderStats: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   stat: {
     flexGrow: 1,
     flexBasis: 120,
     borderRadius: 8,
-    backgroundColor: '#F6EFE8',
+    backgroundColor: colors.s2,
     padding: 12,
   },
-  statValue: { color: '#171412', fontFamily: fontFamily.bodyBold, fontSize: 20 },
-  statLabel: { color: '#6D6258', fontFamily: fontFamily.body, fontSize: 12 },
-  muted: { color: '#6D6258', fontFamily: fontFamily.body, fontSize: 14, lineHeight: 21 },
+  statValue: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 20 },
+  statLabel: { color: colors.mu, fontFamily: fontFamily.body, fontSize: 12 },
+  muted: { color: colors.mu, fontFamily: fontFamily.body, fontSize: 14, lineHeight: 21 },
 });

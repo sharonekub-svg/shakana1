@@ -8,7 +8,7 @@ import {
 } from '@expo-google-fonts/rubik';
 import { Platform } from 'react-native';
 
-const webFont = 'Trebuchet MS, Verdana, sans-serif';
+const webFont = "'Rubik', system-ui, sans-serif";
 
 export function useAppFonts(): boolean {
   const [rubikLoaded] = useRubik({
