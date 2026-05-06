@@ -34,7 +34,7 @@ export const supabase: SupabaseLike =
           storage: secureAuthStorage,
           autoRefreshToken: true,
           persistSession: true,
-          detectSessionInUrl: Platform.OS === 'web',
+          detectSessionInUrl: false,
           flowType: 'pkce',
         },
         global: {
