@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -12,6 +12,13 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { stashPendingInvite } from '@/lib/deeplinks';
 import { useAuthStore } from '@/stores/authStore';
 import { useClaimInvite } from '@/api/invites';
+import {
+  getOrderItemCount,
+  getOrderTotal,
+  readSharedDemoOrderSnapshot,
+  useDemoCommerceStore,
+} from '@/stores/demoCommerceStore';
+import { demoStores } from '@/demo/catalog';
 
 const C = {
   bg: '#F7F1E8',
@@ -74,9 +81,10 @@ function Skeleton({ width, height }: { width: number | string; height: number })
 }
 
 export default function JoinPreviewWeb() {
-  const { token } = useLocalSearchParams<{ token: string }>();
+  const { token, demo } = useLocalSearchParams<{ token: string; demo?: string }>();
   const router = useRouter();
   const session = useAuthStore((s) => s.session);
+  const restoreSharedOrder = useDemoCommerceStore((s) => s.restoreSharedOrder);
   const claim = useClaimInvite();
   const [claiming, setClaiming] = useState(false);
   const [claimError, setClaimError] = useState<string | null>(null);
@@ -85,10 +93,22 @@ export default function JoinPreviewWeb() {
   const [fetchError, setFetchError] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const demoOrder = useMemo(() => readSharedDemoOrderSnapshot(demo), [demo]);
+
+  useEffect(() => {
+    if (!token || !demoOrder) return;
+    restoreSharedOrder(demoOrder);
+    void stashPendingInvite(String(token));
+  }, [demoOrder, restoreSharedOrder, token]);
 
   // Authenticated user arriving here (post-login redirect): skip preview, claim immediately.
   useEffect(() => {
     if (!token || !session || claiming) return;
+    if (demoOrder) {
+      restoreSharedOrder(demoOrder);
+      router.replace(`/user?join=${encodeURIComponent(String(token))}` as any);
+      return;
+    }
     setClaiming(true);
     claim.mutateAsync(String(token))
       .then((res) => {
@@ -99,10 +119,14 @@ export default function JoinPreviewWeb() {
         setClaimError(e instanceof Error ? e.message : 'invite_error');
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, session]);
+  }, [token, session, demoOrder, restoreSharedOrder, router]);
 
   useEffect(() => {
     if (!token) return;
+    if (demoOrder) {
+      setLoading(false);
+      return;
+    }
     const url = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/get-order-preview?token=${encodeURIComponent(token)}`;
     fetch(url)
       .then((r) => r.json())
@@ -140,8 +164,9 @@ export default function JoinPreviewWeb() {
 
   const handleJoin = async () => {
     if (!token) return;
+    if (demoOrder) restoreSharedOrder(demoOrder);
     await stashPendingInvite(String(token));
-    router.replace('/(auth)/phone' as any);
+    router.replace(session ? (`/user?join=${encodeURIComponent(String(token))}` as any) : ('/login' as any));
   };
 
   if (claiming && !claimError) {
@@ -186,6 +211,51 @@ export default function JoinPreviewWeb() {
             <Skeleton width="70%" height={16} />
           </View>
         </ScrollView>
+      </View>
+    );
+  }
+
+  if (demoOrder && !data) {
+    const store = demoStores[demoOrder.brand];
+    return (
+      <View style={styles.root}>
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <View style={styles.header}>
+            <Text style={styles.wordmark}>shakana</Text>
+            <Text style={styles.storeName}>{store.name}</Text>
+          </View>
+          <View style={styles.storeSign}>
+            <Text style={styles.storeSignKicker}>Shared cart invite</Text>
+            <Text style={styles.storeSignName}>{store.name}</Text>
+            <Text style={styles.storeSignBody}>
+              This cart is ready to join. Sign in first, then add your own products to the same combined order.
+            </Text>
+          </View>
+          <View style={styles.groupSection}>
+            <View style={styles.shippingRow}>
+              <Text style={styles.shippingLabel}>Order code</Text>
+              <Text style={styles.shippingValue}>{demoOrder.inviteCode}</Text>
+            </View>
+            <View style={styles.shippingRow}>
+              <Text style={styles.shippingLabel}>Participants</Text>
+              <Text style={styles.shippingValue}>{demoOrder.participants.length}</Text>
+            </View>
+            <View style={styles.shippingRow}>
+              <Text style={styles.shippingLabel}>Items already added</Text>
+              <Text style={styles.shippingValue}>{getOrderItemCount(demoOrder)}</Text>
+            </View>
+            <View style={styles.shippingRow}>
+              <Text style={styles.shippingLabel}>Combined total</Text>
+              <Text style={styles.shippingValue}>₪{getOrderTotal(demoOrder)}</Text>
+            </View>
+          </View>
+        </ScrollView>
+        <View style={styles.stickyBottom}>
+          <Pressable style={styles.ctaBtn} onPress={handleJoin} accessibilityRole="button">
+            <Text style={styles.ctaBtnText}>{session ? 'Open shared cart' : 'Sign in and join cart'}</Text>
+          </Pressable>
+          <Text style={styles.ctaCaption}>You will see the shared cart after login.</Text>
+        </View>
       </View>
     );
   }

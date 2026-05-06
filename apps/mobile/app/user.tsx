@@ -24,6 +24,7 @@ import {
   getOrderTotal,
   getProductLine,
   initDemoCommerceSync,
+  buildSharedDemoInviteLink,
   useDemoCommerceStore,
 } from '@/stores/demoCommerceStore';
 import { fontFamily } from '@/theme/fonts';
@@ -77,6 +78,7 @@ export default function DemoUserScreen() {
   const createNewOrder = useDemoCommerceStore((state) => state.createNewOrder);
   const claimOrderFounder = useDemoCommerceStore((state) => state.claimOrderFounder);
   const joinParticipant = useDemoCommerceStore((state) => state.joinParticipant);
+  const restoreSharedOrder = useDemoCommerceStore((state) => state.restoreSharedOrder);
   const setActiveParticipant = useDemoCommerceStore((state) => state.setActiveParticipant);
   const setDemoRole = useDemoCommerceStore((state) => state.setDemoRole);
   const updateTimer = useDemoCommerceStore((state) => state.updateTimer);
@@ -129,6 +131,17 @@ export default function DemoUserScreen() {
       selectBrand(joinedOrder.brand);
     }
   }, [accountParticipant, activeParticipantId, joinedOrder, joinParticipant, selectBrand]);
+
+  useEffect(() => {
+    if (!params.join || joinedOrder) return;
+    fetch(`/api/demo-order-sync?code=${encodeURIComponent(params.join)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((payload: { orders?: unknown[] } | null) => {
+        const order = payload?.orders?.[0];
+        if (order) restoreSharedOrder(order);
+      })
+      .catch(() => {});
+  }, [joinedOrder, params.join, restoreSharedOrder]);
 
   useEffect(() => {
     if (params.new !== '1') return;
@@ -185,8 +198,9 @@ export default function DemoUserScreen() {
     }
   };
 
+  const inviteLink = order ? buildSharedDemoInviteLink(order) : '';
   const shareMessage = order
-    ? buildInviteMessage(activeParticipant.name, order.brand, order.inviteLink, order.inviteCode)
+    ? buildInviteMessage(activeParticipant.name, order.brand, inviteLink, order.inviteCode)
     : '';
 
   const copyInvite = async () => {

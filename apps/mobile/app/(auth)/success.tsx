@@ -21,7 +21,7 @@ export default function Success() {
       (async () => {
         const pendingInvite = await consumePendingInvite();
         if (pendingInvite) {
-          router.replace(`/join/${pendingInvite}` as any);
+          router.replace((/^\d{4}$/.test(pendingInvite) ? `/user?join=${pendingInvite}` : `/join/${pendingInvite}`) as any);
           return;
         }
         const shared = await peekPendingSharedProduct();

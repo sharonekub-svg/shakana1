@@ -70,6 +70,7 @@ type DemoState = {
   updateTimer: (orderId: string, minutes: number) => void;
   updateDeliveryAddress: (orderId: string, deliveryAddress: string) => void;
   updateStatus: (orderId: string, status: OrderStatus) => void;
+  restoreSharedOrder: (order: unknown) => void;
   resetDemo: () => void;
 };
 
@@ -109,6 +110,8 @@ let channel: BroadcastChannel | null = null;
 let applyingRemote = false;
 let syncInitialized = false;
 let persistTimer: ReturnType<typeof globalThis.setTimeout> | null = null;
+let remoteSyncTimer: ReturnType<typeof globalThis.setTimeout> | null = null;
+let remotePollTimer: ReturnType<typeof globalThis.setInterval> | null = null;
 let pendingPayload: PersistedDemoState | null = null;
 
 const canUseWindow = () => typeof window !== 'undefined';
@@ -131,7 +134,7 @@ function createOrder(brand: DemoBrandId, creator = primaryDemoParticipant): Demo
     brand,
     status: 'collecting',
     inviteCode,
-    inviteLink: `${DEMO_ORIGIN}/user?join=${inviteCode}`,
+    inviteLink: `${DEMO_ORIGIN}/join/${inviteCode}`,
     createdBy: creator.id,
     createdAt,
     closesAt: createdAt + 30 * 60 * 1000,
@@ -152,6 +155,94 @@ function defaultState(): PersistedDemoState {
     lastNotice: null,
     lastPulse: null,
   };
+}
+
+function orderVersion(order: DemoOrder) {
+  return Math.max(
+    order.createdAt,
+    order.closesAt,
+    ...order.participants.map((participant) => participant.joinedAt),
+    ...order.items.map((item) => item.addedAt),
+  );
+}
+
+function mergeOrder(localOrder: DemoOrder | undefined, remoteOrder: DemoOrder): DemoOrder {
+  if (!localOrder) return remoteOrder;
+  const participants = [
+    ...localOrder.participants,
+    ...remoteOrder.participants.filter(
+      (remoteParticipant) => !localOrder.participants.some((localParticipant) => localParticipant.id === remoteParticipant.id),
+    ),
+  ];
+  const items = [
+    ...localOrder.items,
+    ...remoteOrder.items.filter((remoteItem) => !localOrder.items.some((localItem) => localItem.id === remoteItem.id)),
+  ].sort((a, b) => b.addedAt - a.addedAt);
+  const remoteIsNewer = orderVersion(remoteOrder) >= orderVersion(localOrder);
+  return {
+    ...localOrder,
+    ...remoteOrder,
+    participants,
+    items,
+    status: remoteIsNewer ? remoteOrder.status : localOrder.status,
+    deliveryAddress: remoteOrder.deliveryAddress || localOrder.deliveryAddress,
+    lastEvent: remoteIsNewer ? remoteOrder.lastEvent : localOrder.lastEvent,
+  };
+}
+
+function mergeRemoteOrders(state: DemoState, remoteOrders: DemoOrder[]): PersistedDemoState {
+  const sanitizedRemote = sanitizeState({ orders: remoteOrders }).orders;
+  if (sanitizedRemote.length === 0) return persistedFromState(state);
+  const localByCode = new Map(state.orders.map((order) => [order.inviteCode, order]));
+  const mergedRemote = sanitizedRemote.map((remoteOrder) => mergeOrder(localByCode.get(remoteOrder.inviteCode), remoteOrder));
+  const remoteCodes = new Set(mergedRemote.map((order) => order.inviteCode));
+  return {
+    ...persistedFromState(state),
+    selectedBrand: state.selectedBrand ?? mergedRemote[0]?.brand ?? null,
+    orders: [
+      ...mergedRemote,
+      ...state.orders.filter((order) => !remoteCodes.has(order.inviteCode)),
+    ],
+  };
+}
+
+function scheduleRemoteSync(orders: DemoOrder[]) {
+  if (!canUseWindow() || orders.length === 0) return;
+  if (remoteSyncTimer) globalThis.clearTimeout(remoteSyncTimer);
+  remoteSyncTimer = globalThis.setTimeout(() => {
+    remoteSyncTimer = null;
+    window.fetch('/api/demo-order-sync', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ orders }),
+    }).catch(() => {});
+  }, 220);
+}
+
+function encodeOrderForUrl(order: DemoOrder): string {
+  return encodeURIComponent(JSON.stringify({ v: 1, order }));
+}
+
+export function buildSharedDemoInviteLink(order: DemoOrder): string {
+  return `${DEMO_ORIGIN}/join/${encodeURIComponent(order.inviteCode)}?demo=${encodeOrderForUrl(order)}`;
+}
+
+export function readSharedDemoOrderSnapshot(value: string | string[] | undefined): DemoOrder | null {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    const sanitized = sanitizeState({ orders: [parsed?.order] });
+    return sanitized.orders[0] ?? null;
+  } catch {
+    try {
+      const parsed = JSON.parse(decodeURIComponent(raw));
+      const sanitized = sanitizeState({ orders: [parsed?.order] });
+      return sanitized.orders[0] ?? null;
+    } catch {
+      return null;
+    }
+  }
 }
 
 function sanitizeState(value: unknown): PersistedDemoState {
@@ -243,7 +334,7 @@ function sanitizeState(value: unknown): PersistedDemoState {
           inviteLink:
             typeof incomingOrder.inviteLink === 'string' && incomingOrder.inviteLink
               ? incomingOrder.inviteLink
-              : `${DEMO_ORIGIN}/user?join=${incomingOrder.inviteCode ?? ''}`,
+              : `${DEMO_ORIGIN}/join/${incomingOrder.inviteCode ?? ''}`,
           createdBy:
             typeof incomingOrder.createdBy === 'string' && incomingOrder.createdBy
               ? incomingOrder.createdBy
@@ -319,6 +410,7 @@ function persistAndBroadcast(state: DemoState) {
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextPayload));
       channel?.postMessage(nextPayload);
+      scheduleRemoteSync(nextPayload.orders);
     } catch {
       // The demo continues in memory when browser storage is unavailable.
     }
@@ -336,6 +428,7 @@ function persistNow(state: DemoState) {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     channel?.postMessage(payload);
+    scheduleRemoteSync(payload.orders);
   } catch {
     // The demo continues in memory when browser storage is unavailable.
   }
@@ -590,6 +683,28 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
       persistAndBroadcast(next);
       return next;
     }),
+  restoreSharedOrder: (incomingOrder) =>
+    set((state) => {
+      const order = sanitizeState({ orders: [incomingOrder] }).orders[0];
+      if (!order) return state;
+      const otherOrders = state.orders.filter(
+        (existing) => existing.id !== order.id && existing.inviteCode !== order.inviteCode,
+      );
+      const existing = state.orders.find(
+        (candidate) => candidate.id === order.id || candidate.inviteCode === order.inviteCode,
+      );
+      const mergedOrder = mergeOrder(existing, order);
+      const next = {
+        ...state,
+        demoMode: false,
+        demoRole: 'user' as DemoRole,
+        selectedBrand: mergedOrder.brand,
+        orders: [mergedOrder, ...otherOrders],
+        lastNotice: `Loaded ${demoStores[mergedOrder.brand].name} shared order`,
+      };
+      persistNow(next);
+      return next;
+    }),
   resetDemo: () =>
     set((state) => {
       const next = { ...state, ...defaultState() };
@@ -621,6 +736,24 @@ export function initDemoCommerceSync() {
       applyingRemote = false;
     }
   });
+  if (!remotePollTimer) {
+    remotePollTimer = globalThis.setInterval(() => {
+      const state = useDemoCommerceStore.getState();
+      const codes = state.orders.map((order) => order.inviteCode).filter(Boolean);
+      if (codes.length === 0) return;
+      window.fetch(`/api/demo-order-sync?codes=${encodeURIComponent(codes.join(','))}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((payload: { orders?: unknown[] } | null) => {
+          if (!payload?.orders?.length) return;
+          const next = mergeRemoteOrders(useDemoCommerceStore.getState(), payload.orders as DemoOrder[]);
+          applyingRemote = true;
+          useDemoCommerceStore.setState(next);
+          applyingRemote = false;
+          persistNow(useDemoCommerceStore.getState());
+        })
+        .catch(() => {});
+    }, 2500);
+  }
 }
 
 export function getOrderTotal(order: DemoOrder) {

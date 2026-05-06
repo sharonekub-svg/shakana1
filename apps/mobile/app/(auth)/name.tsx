@@ -66,7 +66,7 @@ export default function Name() {
       await clearDraft();
       const pending = await consumePendingInvite();
       if (pending) {
-        router.replace(`/join/${pending}`);
+        router.replace((/^\d{4}$/.test(pending) ? `/user?join=${pending}` : `/join/${pending}`) as never);
       } else {
         router.replace('/(auth)/success');
       }
