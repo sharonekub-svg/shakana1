@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
@@ -18,17 +18,38 @@ export default function JoinByToken() {
   const claim = useClaimInvite();
   const pushToast = useUiStore((s) => s.pushToast);
   const restoreSharedOrder = useDemoCommerceStore((s) => s.restoreSharedOrder);
+  const snapshotDemoOrder = useMemo(() => readSharedDemoOrderSnapshot(demo), [demo]);
+  const [remoteDemoOrder, setRemoteDemoOrder] = useState<typeof snapshotDemoOrder | undefined>(undefined);
+  const demoOrder = snapshotDemoOrder ?? remoteDemoOrder ?? null;
+
+  useEffect(() => {
+    if (!token || snapshotDemoOrder) return;
+    let cancelled = false;
+    fetch(`/api/demo-order-sync?code=${encodeURIComponent(String(token))}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((payload: { orders?: unknown[] } | null) => {
+        if (cancelled) return;
+        const order = payload?.orders?.[0]
+          ? readSharedDemoOrderSnapshot(encodeURIComponent(JSON.stringify({ v: 1, order: payload.orders[0] })))
+          : null;
+        setRemoteDemoOrder(order);
+      })
+      .catch(() => setRemoteDemoOrder(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [snapshotDemoOrder, token]);
 
   useEffect(() => {
     (async () => {
       if (!token) return;
-      const demoOrder = readSharedDemoOrderSnapshot(demo);
       if (demoOrder) {
         restoreSharedOrder(demoOrder);
         await stashPendingInvite(String(token));
         router.replace(session ? (`/user?join=${String(token)}` as any) : '/login');
         return;
       }
+      if (!snapshotDemoOrder && remoteDemoOrder === undefined) return;
       if (!session) {
         await stashPendingInvite(String(token));
         router.replace('/login');
@@ -43,7 +64,7 @@ export default function JoinByToken() {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [demo, restoreSharedOrder, token, session, router, claim, pushToast]);
+  }, [demoOrder, remoteDemoOrder, restoreSharedOrder, token, session, router, claim, pushToast]);
 
   return (
     <ScreenBase style={{ alignItems: 'center', justifyContent: 'center', gap: 16 }}>

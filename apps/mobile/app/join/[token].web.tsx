@@ -93,7 +93,9 @@ export default function JoinPreviewWeb() {
   const [fetchError, setFetchError] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const demoOrder = useMemo(() => readSharedDemoOrderSnapshot(demo), [demo]);
+  const snapshotDemoOrder = useMemo(() => readSharedDemoOrderSnapshot(demo), [demo]);
+  const [remoteDemoOrder, setRemoteDemoOrder] = useState<typeof snapshotDemoOrder | undefined>(undefined);
+  const demoOrder = snapshotDemoOrder ?? remoteDemoOrder ?? null;
 
   useEffect(() => {
     if (!token || !demoOrder) return;
@@ -101,9 +103,28 @@ export default function JoinPreviewWeb() {
     void stashPendingInvite(String(token));
   }, [demoOrder, restoreSharedOrder, token]);
 
+  useEffect(() => {
+    if (!token || snapshotDemoOrder) return;
+    let cancelled = false;
+    fetch(`/api/demo-order-sync?code=${encodeURIComponent(String(token))}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((payload: { orders?: unknown[] } | null) => {
+        if (cancelled) return;
+        const order = payload?.orders?.[0]
+          ? readSharedDemoOrderSnapshot(encodeURIComponent(JSON.stringify({ v: 1, order: payload.orders[0] })))
+          : null;
+        setRemoteDemoOrder(order);
+      })
+      .catch(() => setRemoteDemoOrder(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [snapshotDemoOrder, token]);
+
   // Authenticated user arriving here (post-login redirect): skip preview, claim immediately.
   useEffect(() => {
     if (!token || !session || claiming) return;
+    if (!snapshotDemoOrder && remoteDemoOrder === undefined) return;
     if (demoOrder) {
       restoreSharedOrder(demoOrder);
       router.replace(`/user?join=${encodeURIComponent(String(token))}` as any);
@@ -119,7 +140,7 @@ export default function JoinPreviewWeb() {
         setClaimError(e instanceof Error ? e.message : 'invite_error');
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, session, demoOrder, restoreSharedOrder, router]);
+  }, [token, session, claiming, snapshotDemoOrder, remoteDemoOrder, demoOrder, restoreSharedOrder, router]);
 
   useEffect(() => {
     if (!token) return;
@@ -127,6 +148,7 @@ export default function JoinPreviewWeb() {
       setLoading(false);
       return;
     }
+    if (!snapshotDemoOrder && remoteDemoOrder === undefined) return;
     const url = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/get-order-preview?token=${encodeURIComponent(token)}`;
     fetch(url)
       .then((r) => r.json())
@@ -143,7 +165,7 @@ export default function JoinPreviewWeb() {
       })
       .catch(() => setFetchError(true))
       .finally(() => setLoading(false));
-  }, [token]);
+  }, [demoOrder, remoteDemoOrder, snapshotDemoOrder, token]);
 
   useEffect(() => {
     if (secondsLeft === null) return;
