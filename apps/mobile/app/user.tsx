@@ -89,6 +89,7 @@ export default function DemoUserScreen() {
   const [nowMs, setNowMs] = useState(Date.now());
   const [customTimer, setCustomTimer] = useState('45');
   const [newOrderMode, setNewOrderMode] = useState(false);
+  const [productSearch, setProductSearch] = useState('');
   const timerRef = useRef<ReturnType<typeof globalThis.setInterval> | null>(null);
 
   useEffect(() => {
@@ -164,11 +165,25 @@ export default function DemoUserScreen() {
     : null;
   const store = brand ? demoStores[brand] : null;
   const products = brand ? productsForBrand(brand) : [];
-  const categoryProducts = products.filter((product) => product.category === category);
+  const categoryProducts = useMemo(() => {
+    const query = productSearch.trim().toLowerCase();
+    return products.filter((product) => {
+      const inCategory = product.category === category;
+      const matchesSearch =
+        !query ||
+        product.name.toLowerCase().includes(query) ||
+        product.description.toLowerCase().includes(query) ||
+        product.sku.toLowerCase().includes(query) ||
+        product.colors.some((color) => color.toLowerCase().includes(query));
+      return inCategory && matchesSearch;
+    });
+  }, [category, productSearch, products]);
   const activeParticipant =
     order?.participants.find((participant) => participant.id === activeParticipantId) ?? accountParticipant;
   const remainingMs = order ? Math.max(0, order.closesAt - nowMs) : 0;
   const totalTimerMs = order ? Math.max(60 * 1000, order.closesAt - order.createdAt) : 30 * 60 * 1000;
+  const orderLocked = order ? order.closesAt <= nowMs || order.status !== 'collecting' : false;
+  const addressMissing = order ? order.deliveryAddress.trim().length < 8 : false;
   const isFounder = order?.createdBy === activeParticipantId;
   const isAuthenticated = !!session?.user;
   const customTimerMinutes = normalizeTimerMinutes(customTimer);
@@ -336,9 +351,18 @@ export default function DemoUserScreen() {
               ))}
             </ScrollView>
 
+            <TextInput
+              value={productSearch}
+              onChangeText={setProductSearch}
+              placeholder={`Search ${store.name} catalog`}
+              placeholderTextColor={colors.mu2}
+              style={styles.productSearchInput}
+              accessibilityLabel="Search products"
+            />
+
             <SectionTitle title={category} kicker={`${store.name} scraped-style catalog`} />
             {categoryProducts.length === 0 ? (
-              <EmptyNotice title="No products here yet" body="Choose another category to keep browsing the demo inventory." />
+              <EmptyNotice title="No products match" body="Clear search or choose another category to keep browsing." />
             ) : (
               <View style={styles.productGrid}>
                 {categoryProducts.map((product) => (
@@ -349,6 +373,7 @@ export default function DemoUserScreen() {
                     activeParticipantId={activeParticipantId}
                     activeParticipant={activeParticipant}
                     isAuthenticated={isAuthenticated}
+                    orderLocked={orderLocked}
                     onRequireLogin={async () => {
                       if (order) await stashPendingInvite(order.inviteCode);
                       router.push('/login');
@@ -394,6 +419,14 @@ export default function DemoUserScreen() {
                     <Text style={styles.total}>₪{getOrderTotal(order)}</Text>
                   </View>
                   <StatusRail status={order.status} />
+                  {orderLocked ? (
+                    <Card style={styles.lockNotice}>
+                      <Text style={styles.lockTitle}>Cart locked for merchant review</Text>
+                      <Text style={styles.muted}>
+                        The timer ended or the store already started fulfillment. New items are paused for this order.
+                      </Text>
+                    </Card>
+                  ) : null}
                   <View style={styles.timerPanel}>
                     <View style={styles.rowBetween}>
                       <View style={{ flex: 1 }}>
@@ -454,7 +487,7 @@ export default function DemoUserScreen() {
                       value={order.deliveryAddress}
                       onChangeText={(value) => updateDeliveryAddress(order.id, value)}
                       placeholder="Street, building, apartment, city"
-                      style={styles.addressInput}
+                      style={[styles.addressInput, addressMissing && styles.addressInputMissing]}
                       accessibilityLabel="Shared order delivery address"
                     />
                     {addressSuggestions.length > 0 ? (
@@ -474,7 +507,11 @@ export default function DemoUserScreen() {
                         ))}
                       </View>
                     ) : null}
-                    <Text style={styles.muted}>This is the address the merchant sees for the final shipment.</Text>
+                    <Text style={addressMissing ? styles.validationText : styles.muted}>
+                      {addressMissing
+                        ? 'Add a full delivery address before the store can accept and ship this order.'
+                        : 'This is the address the merchant sees for the final shipment.'}
+                    </Text>
                   </View>
                   <View style={styles.shareProofRow}>
                     <View style={styles.trustPill}>
@@ -578,6 +615,7 @@ function ProductCard({
   activeParticipantId,
   activeParticipant,
   isAuthenticated,
+  orderLocked,
   onRequireLogin,
   onCreateOrder,
 }: {
@@ -586,6 +624,7 @@ function ProductCard({
   activeParticipantId: string;
   activeParticipant: DemoParticipant;
   isAuthenticated: boolean;
+  orderLocked: boolean;
   onRequireLogin: () => void;
   onCreateOrder: () => void;
 }) {
@@ -594,7 +633,7 @@ function ProductCard({
   const [color, setColor] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [privateItem, setPrivateItem] = useState(false);
-  const ready = !!orderId && isAuthenticated && !!size && !!color && quantity > 0;
+  const ready = !!orderId && isAuthenticated && !orderLocked && !!size && !!color && quantity > 0;
   const productSaving = Math.max(0, product.compareAtPrice - product.price);
 
   return (
@@ -652,6 +691,8 @@ function ProductCard({
           <DemoButton label="Create group order first" onPress={onCreateOrder} tone="accent" />
         ) : !isAuthenticated ? (
           <DemoButton label="Log in to add item" onPress={onRequireLogin} tone="accent" />
+        ) : orderLocked ? (
+          <DemoButton label="Cart locked" onPress={() => {}} disabled tone="light" />
         ) : (
           <DemoButton
             testID={`add-${product.id}`}
@@ -782,6 +823,17 @@ const styles = StyleSheet.create({
   },
   categoryText: { color: colors.mu, fontFamily: fontFamily.bodyBold, fontSize: 13 },
   categoryTextActive: { color: '#FFFFFF' },
+  productSearchInput: {
+    minHeight: 48,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.brBr,
+    backgroundColor: colors.white,
+    color: colors.tx,
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 14,
+    paddingHorizontal: 14,
+  },
   productGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
   productCard: { flexGrow: 1, flexBasis: 260, overflow: 'hidden', padding: 0 },
   productInfo: { padding: 14, gap: 10 },
@@ -831,6 +883,16 @@ const styles = StyleSheet.create({
   total: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 28 },
    muted: { color: colors.mu, fontFamily: fontFamily.body, fontSize: 14, lineHeight: 21 },
   kicker: { color: colors.acc, fontFamily: fontFamily.bodyBold, fontSize: 12, textTransform: 'uppercase' },
+  lockNotice: {
+    gap: 6,
+    backgroundColor: colors.s2,
+    borderColor: colors.br,
+  },
+  lockTitle: {
+    color: colors.tx,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 15,
+  },
   timerPanel: {
     gap: 12,
     borderRadius: 8,
@@ -902,6 +964,10 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodySemi,
     fontSize: 14,
     paddingHorizontal: 12,
+  },
+  addressInputMissing: {
+    borderColor: colors.acc,
+    backgroundColor: colors.goldLight,
   },
   addressSuggestionList: {
     gap: 6,

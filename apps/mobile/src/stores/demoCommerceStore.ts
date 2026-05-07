@@ -572,6 +572,12 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
       };
       const orders = state.orders.map((order) => {
         if (order.id !== orderId) return order;
+        if (order.closesAt <= now()) {
+          return {
+            ...order,
+            lastEvent: 'This cart timer ended. The store can now process the order.',
+          };
+        }
         const participantExists = order.participants.some(
           (participant) => participant.id === input.participantId,
         );
@@ -597,16 +603,17 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
         };
       });
       const changedOrder = orders.find((order) => order.id === orderId);
+      const timerBlocked = changedOrder?.closesAt !== undefined && changedOrder.closesAt <= now();
       const pulse: DemoPulse = {
         id: now(),
-        kind: 'item',
-        message: changedOrder?.lastEvent ?? 'Item added',
+        kind: timerBlocked ? 'status' : 'item',
+        message: changedOrder?.lastEvent ?? (timerBlocked ? 'Timer ended' : 'Item added'),
       };
       const next = {
         ...state,
         orders,
         activeParticipantId: input.participantId,
-        lastNotice: changedOrder?.lastEvent ?? 'Item added',
+        lastNotice: changedOrder?.lastEvent ?? (timerBlocked ? 'Timer ended' : 'Item added'),
         lastPulse: pulse,
       };
       persistAndBroadcast(next);
@@ -667,17 +674,21 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
     set((state) => {
       const orders = state.orders.map((order) =>
         order.id === orderId
-          ? { ...order, status, lastEvent: `Store marked order as ${status}` }
+          ? order.deliveryAddress.trim().length < 8 && status !== 'collecting'
+            ? { ...order, lastEvent: 'Add a delivery address before the store can process this order' }
+            : { ...order, status, lastEvent: `Store marked order as ${status}` }
           : order,
       );
+      const changedOrder = orders.find((order) => order.id === orderId);
+      const addressBlocked = (changedOrder?.deliveryAddress.trim().length ?? 0) < 8 && status !== 'collecting';
       const next = {
         ...state,
         orders,
-        lastNotice: `Order status updated to ${status}`,
+        lastNotice: addressBlocked ? 'Delivery address is required before fulfillment.' : `Order status updated to ${status}`,
         lastPulse: {
           id: now(),
-          kind: status === 'shipped' ? 'goal' : 'status',
-          message: `Order status updated to ${status}`,
+          kind: addressBlocked ? 'status' : status === 'shipped' ? 'goal' : 'status',
+          message: addressBlocked ? 'Delivery address is required before fulfillment.' : `Order status updated to ${status}`,
         } as DemoPulse,
       };
       persistAndBroadcast(next);

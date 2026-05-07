@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { type Href, useRouter } from 'expo-router';
 
 import { ScreenBase } from '@/components/primitives/ScreenBase';
@@ -44,6 +45,7 @@ export default function ProfileScreen() {
   const resetAuth = useAuthStore((s) => s.reset);
   const demoOrders = useDemoCommerceStore((s) => s.orders);
   const activeParticipantId = useDemoCommerceStore((s) => s.activeParticipantId);
+  const resetDemo = useDemoCommerceStore((s) => s.resetDemo);
   const paymentSettings = usePaymentSettingsStore((s) => s.settings);
   const paymentHydrated = usePaymentSettingsStore((s) => s.hydrated);
   const loadPayments = usePaymentSettingsStore((s) => s.load);
@@ -75,6 +77,9 @@ export default function ProfileScreen() {
     (method) => method.enabled && method.link.trim().length > 0,
   ).length;
   const openOrders = demoOrders.filter((order) => order.status !== 'shipped').length;
+  const latestOrder = demoOrders[0] ?? null;
+  const savingsThisYear = Math.round(stats.totalSavings);
+  const verifiedBadge = session ? 'Verified member' : 'Guest mode';
   const initial = displayName.charAt(0).toUpperCase() || 'S';
   const email = session?.user.email ?? 'Sign in to attach orders to your account';
 
@@ -107,6 +112,15 @@ export default function ProfileScreen() {
     globalThis.setTimeout(() => setSavedPulse(''), 1800);
   };
 
+  const copyLatestInvite = async () => {
+    if (!latestOrder) {
+      savePulse('Create an order first, then copy its invite.');
+      return;
+    }
+    await Clipboard.setStringAsync(`https://shakana1.vercel.app/join/${latestOrder.inviteCode}`);
+    savePulse(`Invite ${latestOrder.inviteCode} copied`);
+  };
+
   return (
     <ScreenBase padded={false}>
       <ScrollView contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
@@ -127,6 +141,7 @@ export default function ProfileScreen() {
           <View style={styles.identityCopy}>
             <Text style={styles.name} numberOfLines={1}>{displayName}</Text>
             <Text style={styles.email} numberOfLines={1}>{email}</Text>
+            <Text style={styles.verifiedBadge}>{verifiedBadge}</Text>
           </View>
           <Pressable
             accessibilityRole="button"
@@ -147,6 +162,7 @@ export default function ProfileScreen() {
           <QuickAction title="New Order" body="Choose Amazon, H&M, or Zara and open a new cart." badge="+" primary onPress={() => router.push('/user?new=1' as Href)} />
           <QuickAction title="Open orders" body="Live carts you are tracking now." badge={String(openOrders)} onPress={() => router.push('/user')} />
           <QuickAction title="Store mode" body="Merchant dashboard for active orders." badge="M" onPress={() => router.push('/store')} />
+          <QuickAction title="Copy invite" body="Copy the latest short WhatsApp link." badge="Go" onPress={copyLatestInvite} />
         </View>
 
         <View style={styles.section}>
@@ -176,7 +192,16 @@ export default function ProfileScreen() {
           <Stat label="Open" value={String(openOrders)} />
           <Stat label="Completed" value={String(stats.shippedOrders)} />
           <Stat label="My saves" value={String(personalSaves)} />
+          <Stat label="Saved this year" value={`₪${savingsThisYear}`} />
           <Stat label="Wallets" value={String(readyPayments)} />
+        </View>
+
+        <View style={styles.savingsHero}>
+          <Text style={styles.savingsHeroValue}>₪{savingsThisYear}</Text>
+          <Text style={styles.savingsHeroTitle}>Personal savings tracker</Text>
+          <Text style={styles.sectionBody}>
+            Your completed group orders feed this total. It gives returning users a clear reason to keep using Shakana.
+          </Text>
         </View>
 
         <View style={styles.section}>
@@ -265,6 +290,16 @@ export default function ProfileScreen() {
             <Text style={styles.deleteText}>Delete account</Text>
           </Pressable>
         ) : null}
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            resetDemo();
+            savePulse('Demo reset. You can start a fresh investor flow.');
+          }}
+          style={styles.resetButton}
+        >
+          <Text style={styles.resetText}>Reset investor demo</Text>
+        </Pressable>
       </ScrollView>
     </ScreenBase>
   );
@@ -368,6 +403,18 @@ const styles = StyleSheet.create({
   identityCopy: { flex: 1, minWidth: 0 },
   name: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 18 },
   email: { marginTop: 3, color: colors.mu, fontFamily: fontFamily.body, fontSize: 13 },
+  verifiedBadge: {
+    marginTop: 7,
+    alignSelf: 'flex-start',
+    overflow: 'hidden',
+    borderRadius: radii.pill,
+    backgroundColor: colors.goldLight,
+    color: colors.acc,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 11,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
   authPill: {
     minHeight: 40,
     borderRadius: radii.pill,
@@ -471,6 +518,26 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
+  savingsHero: {
+    gap: 5,
+    padding: 16,
+    borderRadius: radii.lg,
+    backgroundColor: colors.goldLight,
+    borderWidth: 1,
+    borderColor: colors.br,
+  },
+  savingsHeroValue: {
+    color: colors.tx,
+    fontFamily: fontFamily.display,
+    fontSize: 34,
+    lineHeight: 38,
+  },
+  savingsHeroTitle: {
+    color: colors.acc,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
+    textTransform: 'uppercase',
+  },
   paymentList: { gap: 10 },
   paymentCard: {
     gap: 10,
@@ -545,5 +612,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   deleteText: { color: colors.err, fontFamily: fontFamily.bodyBold, fontSize: 14 },
+  resetButton: {
+    minHeight: 48,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.br,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.s2,
+  },
+  resetText: { color: colors.acc, fontFamily: fontFamily.bodyBold, fontSize: 14 },
   pressed: { transform: [{ scale: 0.98 }], opacity: 0.9 },
 });

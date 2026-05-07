@@ -10,6 +10,14 @@ const allowedOrigins = new Set([
 const store = globalThis.__shakanaDemoOrderStore ?? new Map();
 globalThis.__shakanaDemoOrderStore = store;
 
+const supabaseUrl = process.env.SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+function hasDurableStore() {
+  return Boolean(supabaseUrl && supabaseServiceKey);
+}
+
 function setCors(req, res) {
   const origin = req.headers.origin;
   if (origin && allowedOrigins.has(origin)) {
@@ -77,6 +85,66 @@ function mergeOrder(existing, incoming) {
   };
 }
 
+async function readDurableOrders(codes) {
+  if (!hasDurableStore() && supabaseUrl && supabaseAnonKey && codes.length > 0) {
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/demo-order-sync?codes=${encodeURIComponent(codes.join(','))}`,
+      { headers: { apikey: supabaseAnonKey, authorization: `Bearer ${supabaseAnonKey}` } },
+    );
+    if (!response.ok) return [];
+    const payload = await response.json();
+    return Array.isArray(payload?.orders)
+      ? payload.orders.flatMap((order) => (isValidOrder(order) ? [order] : []))
+      : [];
+  }
+  if (!hasDurableStore() || codes.length === 0) return [];
+  const quotedCodes = codes.map((code) => `"${String(code).replace(/"/g, '')}"`).join(',');
+  const url = `${supabaseUrl}/rest/v1/demo_group_orders?invite_code=in.(${encodeURIComponent(quotedCodes)})&select=invite_code,order_payload`;
+  const response = await fetch(url, {
+    headers: {
+      apikey: supabaseServiceKey,
+      authorization: `Bearer ${supabaseServiceKey}`,
+    },
+  });
+  if (!response.ok) return [];
+  const rows = await response.json();
+  return Array.isArray(rows)
+    ? rows.flatMap((row) => (isValidOrder(row?.order_payload) ? [row.order_payload] : []))
+    : [];
+}
+
+async function writeDurableOrders(orders) {
+  if (!hasDurableStore() && supabaseUrl && supabaseAnonKey && orders.length > 0) {
+    const response = await fetch(`${supabaseUrl}/functions/v1/demo-order-sync`, {
+      method: 'POST',
+      headers: {
+        apikey: supabaseAnonKey,
+        authorization: `Bearer ${supabaseAnonKey}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ orders }),
+    });
+    return response.ok;
+  }
+  if (!hasDurableStore() || orders.length === 0) return false;
+  const rows = orders.map((order) => ({
+    invite_code: order.inviteCode,
+    order_payload: order,
+    updated_at: new Date().toISOString(),
+  }));
+  const response = await fetch(`${supabaseUrl}/rest/v1/demo_group_orders`, {
+    method: 'POST',
+    headers: {
+      apikey: supabaseServiceKey,
+      authorization: `Bearer ${supabaseServiceKey}`,
+      'content-type': 'application/json',
+      prefer: 'resolution=merge-duplicates',
+    },
+    body: JSON.stringify(rows),
+  });
+  return response.ok;
+}
+
 export default async function handler(req, res) {
   setCors(req, res);
   if (req.method === 'OPTIONS') return res.status(204).end();
@@ -84,6 +152,11 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     const rawCodes = String(req.query.codes || req.query.code || '');
     const codes = rawCodes.split(',').map((code) => code.trim()).filter(Boolean);
+    const durableOrders = await readDurableOrders(codes).catch(() => []);
+    for (const order of durableOrders) {
+      const existing = store.get(order.inviteCode);
+      store.set(order.inviteCode, mergeOrder(existing, order));
+    }
     const orders = codes.flatMap((code) => {
       const order = store.get(code);
       return order ? [order] : [];
@@ -98,12 +171,16 @@ export default async function handler(req, res) {
   const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body;
   const incoming = Array.isArray(body?.orders) ? body.orders : [body?.order];
   const saved = [];
+  const mergedOrders = [];
   for (const order of incoming) {
     if (!isValidOrder(order)) continue;
     const existing = store.get(order.inviteCode);
-    store.set(order.inviteCode, mergeOrder(existing, order));
+    const merged = mergeOrder(existing, order);
+    store.set(order.inviteCode, merged);
+    mergedOrders.push(merged);
     saved.push(order.inviteCode);
   }
+  await writeDurableOrders(mergedOrders).catch(() => false);
 
   return res.status(200).json({ ok: true, saved });
 }

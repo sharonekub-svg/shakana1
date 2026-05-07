@@ -55,6 +55,17 @@
   ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
+    {
+      "source": "/join/:code",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(WhatsApp|whatsapp|facebookexternalhit|Twitterbot|twitterbot|Slackbot|slackbot|LinkedInBot|linkedinbot|Discordbot|discordbot|TelegramBot|telegrambot|SkypeUriPreview|skypeuripreview).*"
+        }
+      ],
+      "destination": "/api/join-preview?code=:code"
+    },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

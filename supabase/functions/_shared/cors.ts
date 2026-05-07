@@ -1,5 +1,6 @@
 const ALLOWED_ORIGINS = new Set([
   'https://shakana1.vercel.app',
+  'https://shakana.vercel.app',
   'http://localhost:8081',
   'http://127.0.0.1:8081',
   'http://localhost:19006',
@@ -18,7 +19,7 @@ export function corsHeadersFor(req?: Request): Record<string, string> {
     'Vary': 'Origin',
     'Access-Control-Allow-Headers':
       'authorization, x-client-info, apikey, content-type, stripe-signature',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   };
 }
 
