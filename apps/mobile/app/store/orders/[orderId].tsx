@@ -23,10 +23,24 @@ import {
   getProductLine,
   initDemoCommerceSync,
   useDemoCommerceStore,
+  type DemoOrder,
   type OrderStatus,
 } from '@/stores/demoCommerceStore';
 import { fontFamily } from '@/theme/fonts';
 import { colors } from '@/theme/tokens';
+
+function isDisplayableMerchantOrder(order: DemoOrder | undefined): order is DemoOrder {
+  return (
+    !!order &&
+    !!demoStores[order.brand] &&
+    Array.isArray(order.items) &&
+    Array.isArray(order.participants) &&
+    typeof order.id === 'string' &&
+    typeof order.inviteCode === 'string' &&
+    typeof order.createdAt === 'number' &&
+    typeof order.closesAt === 'number'
+  );
+}
 
 export default function StoreOrderDetailScreen() {
   const router = useRouter();
@@ -44,16 +58,17 @@ export default function StoreOrderDetailScreen() {
     if (demoMode) setDemoRole('store');
   }, [demoMode, setDemoRole]);
 
-  const order = orders.find((candidate) => candidate.id === params.orderId);
+  const displayableOrders = orders.filter(isDisplayableMerchantOrder);
+  const order = displayableOrders.find((candidate) => candidate.id === params.orderId);
 
-  if (!order) {
+  if (!isDisplayableMerchantOrder(order)) {
     return (
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <DemoPage wide>
           <DemoButton label="Back to dashboard" onPress={() => router.replace('/store')} tone="light" style={styles.backBtn} />
           <EmptyNotice
-            title="Order not found"
-            body="The group order may have been reset. Return to the dashboard or create a new user order."
+            title="Order unavailable"
+            body="This order was created by an older demo version or was reset. Return to the dashboard and open a current order."
           />
         </DemoPage>
       </ScrollView>
@@ -130,7 +145,7 @@ export default function StoreOrderDetailScreen() {
           </View>
 
           <StatusRail status={order.status} />
-          <Text style={styles.muted}>{order.lastEvent}</Text>
+          <Text style={styles.muted}>{order.lastEvent || 'Waiting for merchant update.'}</Text>
         </Card>
 
         <Card style={styles.actionPanel}>
@@ -215,7 +230,7 @@ export default function StoreOrderDetailScreen() {
         </View>
 
         <SavingsPanel order={order} />
-        <SavingsTracker orders={orders} activeParticipantId={activeParticipantId} />
+        <SavingsTracker orders={displayableOrders} activeParticipantId={activeParticipantId} />
       </DemoPage>
     </ScrollView>
   );

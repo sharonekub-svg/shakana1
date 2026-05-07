@@ -1,10 +1,7 @@
 import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useRouter, useSegments } from 'expo-router';
 import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { useAuthStore } from '@/stores/authStore';
-
-const HIDDEN_SEGMENTS = new Set(['(auth)', 'auth-callback', 'login', 'welcome', 'profile']);
 
 function getMetadataString(metadata: Record<string, unknown> | undefined, keys: string[]) {
   for (const key of keys) {
@@ -14,14 +11,11 @@ function getMetadataString(metadata: Record<string, unknown> | undefined, keys: 
   return '';
 }
 
-export function FloatingProfileButton() {
-  const router = useRouter();
-  const segments = useSegments();
+export function FloatingProfileButton({ visible, onPress }: { visible: boolean; onPress: () => void }) {
   const session = useAuthStore((state) => state.session);
   const profile = useAuthStore((state) => state.profile);
-  const topSegment = segments[0];
 
-  if (topSegment && HIDDEN_SEGMENTS.has(topSegment)) return null;
+  if (!visible) return null;
 
   const metadata = session?.user.user_metadata as Record<string, unknown> | undefined;
   const avatarUrl = getMetadataString(metadata, ['avatar_url', 'picture']);
@@ -35,7 +29,7 @@ export function FloatingProfileButton() {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={session ? 'Open profile' : 'Sign in'}
-      onPress={() => router.push(session ? '/profile' : '/login')}
+      onPress={onPress}
       style={({ pressed }) => [styles.button, pressed && styles.pressed]}
     >
       <View style={styles.avatar}>

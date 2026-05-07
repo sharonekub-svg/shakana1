@@ -29,6 +29,8 @@ import { env } from '@/lib/env';
 
 import '../global.css';
 
+const PROFILE_SHORTCUT_HIDDEN_SEGMENTS = new Set(['(auth)', 'auth-callback', 'login', 'welcome', 'profile']);
+
 if (Platform.OS !== 'web') {
   SplashScreen.preventAutoHideAsync().catch(() => {});
 }
@@ -104,11 +106,20 @@ function RootLayoutInner() {
   const profile = profileQuery.data;
   const fontsLoaded = useAppFonts();
   const navReady = !!rootNavigationState?.key;
+  const topSegment = segments[0];
+  const secondSegment = segments[1];
   const navReadyRef = useRef(navReady);
   const pendingRoute = useRef<Href | null>(null);
   const pendingShareRoute = useRef<Href | null>(null);
+  const pendingGuardRedirect = useRef<Href | null>(null);
+  const routerRef = useRef(router);
 
   navReadyRef.current = navReady;
+  routerRef.current = router;
+
+  useEffect(() => {
+    pendingGuardRedirect.current = null;
+  }, [topSegment, secondSegment]);
 
   // Boot: RTL, Sentry, PostHog, Supabase session, deep link intake.
   useEffect(() => {
@@ -170,9 +181,9 @@ function RootLayoutInner() {
             return;
           }
           if (!hasSession) {
-            router.replace(nextRoute);
+            routerRef.current.replace(nextRoute);
           } else {
-            router.push(nextRoute);
+            routerRef.current.push(nextRoute);
           }
         }
       });
@@ -195,17 +206,24 @@ function RootLayoutInner() {
       authSub?.subscription.unsubscribe();
       linkSub?.remove();
     };
-  }, [router, setHydrated, setSession]);
+  }, [setHydrated, setSession]);
 
   // Route gating.
   useEffect(() => {
     if (!navReady || !hydrated || !bootstrapped) return;
-    const inAuth = segments[0] === '(auth)';
-    const inCallback = segments[0] === 'auth-callback';
-    const inShare = segments[0] === 'share';
-    const inJoin = segments[0] === 'join';
-    const isPublicRoute = segments[0] === 'welcome' || segments[0] === 'login';
-    const isDemoRoute = segments[0] === 'user' || segments[0] === 'store';
+    const replaceFromGuard = (route: Href) => {
+      if (pendingGuardRedirect.current === route) return;
+      pendingGuardRedirect.current = route;
+      setTimeout(() => {
+        routerRef.current.replace(route);
+      }, 0);
+    };
+    const inAuth = topSegment === '(auth)';
+    const inCallback = topSegment === 'auth-callback';
+    const inShare = topSegment === 'share';
+    const inJoin = topSegment === 'join';
+    const isPublicRoute = topSegment === 'welcome' || topSegment === 'login';
+    const isDemoRoute = topSegment === 'user' || topSegment === 'store';
     if (inCallback) return;
     if (inShare) return;
     if (inJoin && Platform.OS === 'web') return;
@@ -222,11 +240,11 @@ function RootLayoutInner() {
       draft.last_name.trim().length > 0;
 
     if (!session && !inAuth && !(Platform.OS === 'web' && inJoin)) {
-      if (segments[0] === 'user' && Platform.OS === 'web' && typeof window !== 'undefined') {
+      if (topSegment === 'user' && Platform.OS === 'web' && typeof window !== 'undefined') {
         const join = new URLSearchParams(window.location.search).get('join');
         if (join) void stashPendingInvite(join);
       }
-      router.replace('/login');
+      replaceFromGuard('/login');
     } else if (session && profileComplete && inAuth) {
       void consumePendingInvite().then((pending) => {
         const nextRoute = pending
@@ -234,17 +252,29 @@ function RootLayoutInner() {
             ? `/user?join=${pending}`
             : `/join/${pending}`
           : '/user';
-        router.replace(nextRoute as Href);
+        replaceFromGuard(nextRoute as Href);
       });
     } else if (session && !profileComplete) {
       const nextRoute = (draftHasName ? '/(auth)/address' : '/(auth)/name') as Href;
       if (!inAuth) {
-        router.replace(nextRoute);
-      } else if (segments[1] !== (draftHasName ? 'address' : 'name')) {
-        router.replace(nextRoute);
+        replaceFromGuard(nextRoute);
+      } else if (secondSegment !== (draftHasName ? 'address' : 'name')) {
+        replaceFromGuard(nextRoute);
       }
     }
-  }, [bootstrapped, demoMode, hydrated, navReady, session, profile, profileQuery.isFetched, profileQuery.isError, draft, segments, router]);
+  }, [
+    bootstrapped,
+    demoMode,
+    hydrated,
+    navReady,
+    session,
+    profile,
+    profileQuery.isFetched,
+    profileQuery.isError,
+    draft,
+    topSegment,
+    secondSegment,
+  ]);
 
   useEffect(() => {
     setProfile(profile ?? null);
@@ -284,6 +314,7 @@ function RootLayoutInner() {
   }, [fontsLoaded, bootstrapped]);
 
   const showSplash = Platform.OS !== 'web' && (!fontsLoaded || !bootstrapped);
+  const showProfileShortcut = navReady && !(topSegment && PROFILE_SHORTCUT_HIDDEN_SEGMENTS.has(topSegment));
 
   return (
     <View style={styles.container}>
@@ -307,7 +338,10 @@ function RootLayoutInner() {
         <Stack.Screen name="user" />
       </Stack>
       {showSplash ? <View pointerEvents="none" style={styles.splashOverlay} /> : null}
-      <FloatingProfileButton />
+      <FloatingProfileButton
+        visible={showProfileShortcut}
+        onPress={() => routerRef.current.push(session ? '/profile' : '/login')}
+      />
       <FloatingNewOrderButton />
       <CookieConsentBanner />
       <ToastLayer />

@@ -42,6 +42,18 @@ const FILTERS: { label: string; value: QueueFilter }[] = [
   { label: 'Shipped', value: 'shipped' },
 ];
 
+function isDisplayableMerchantOrder(order: DemoOrder) {
+  return (
+    !!demoStores[order.brand] &&
+    Array.isArray(order.items) &&
+    Array.isArray(order.participants) &&
+    typeof order.id === 'string' &&
+    typeof order.inviteCode === 'string' &&
+    typeof order.closesAt === 'number' &&
+    typeof order.createdAt === 'number'
+  );
+}
+
 export default function StoreDashboardScreen() {
   const router = useRouter();
   const orders = useDemoCommerceStore((state) => state.orders);
@@ -58,15 +70,16 @@ export default function StoreDashboardScreen() {
     if (demoMode) setDemoRole('store');
   }, [demoMode, setDemoRole]);
 
-  const activeOrders = orders.filter((order) => order.status !== 'shipped');
+  const merchantOrders = useMemo(() => orders.filter(isDisplayableMerchantOrder), [orders]);
+  const activeOrders = merchantOrders.filter((order) => order.status !== 'shipped');
   const readyToProcess = activeOrders.filter((order) => order.items.length > 0 || order.closesAt <= nowMs).length;
   const itemsToPick = activeOrders.reduce((total, order) => total + getOrderItemCount(order), 0);
-  const totalGmv = orders.reduce((total, order) => total + getOrderTotal(order), 0);
-  const totalSavings = Math.round(orders.reduce((total, order) => total + getGroupSavings(order), 0));
+  const totalGmv = merchantOrders.reduce((total, order) => total + getOrderTotal(order), 0);
+  const totalSavings = Math.round(merchantOrders.reduce((total, order) => total + getGroupSavings(order), 0));
 
   const filteredOrders = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return orders.filter((order) => {
+    return merchantOrders.filter((order) => {
       const store = demoStores[order.brand];
       const timerEnded = order.closesAt <= nowMs;
       const matchesFilter =
@@ -78,10 +91,10 @@ export default function StoreDashboardScreen() {
         order.id.toLowerCase().includes(normalizedQuery) ||
         order.inviteCode.includes(normalizedQuery) ||
         store.name.toLowerCase().includes(normalizedQuery) ||
-        order.deliveryAddress.toLowerCase().includes(normalizedQuery);
+        (order.deliveryAddress ?? '').toLowerCase().includes(normalizedQuery);
       return matchesFilter && matchesQuery;
     });
-  }, [filter, nowMs, orders, query]);
+  }, [filter, merchantOrders, nowMs, query]);
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
@@ -130,7 +143,7 @@ export default function StoreDashboardScreen() {
           ))}
         </ScrollView>
 
-        {orders.length === 0 ? (
+        {merchantOrders.length === 0 ? (
           <EmptyNotice
             title="No group orders yet"
             body="Open the user demo, choose Amazon, H&M, or Zara, and create a group order. It will appear here instantly."
@@ -154,7 +167,7 @@ export default function StoreDashboardScreen() {
           </View>
         )}
 
-        <SavingsTracker orders={orders} activeParticipantId={activeParticipantId} />
+        <SavingsTracker orders={merchantOrders} activeParticipantId={activeParticipantId} />
       </DemoPage>
     </ScrollView>
   );
@@ -172,6 +185,7 @@ function OrderQueueCard({
   onTimerEnd?: () => void;
 }) {
   const store = demoStores[order.brand];
+  if (!store) return null;
   const progress = getGoalProgress(order);
   const minutesLeft = Math.max(0, Math.ceil((order.closesAt - nowMs) / 60000));
   const merchantState = getMerchantOrderState(order, nowMs);

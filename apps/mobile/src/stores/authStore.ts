@@ -18,8 +18,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   profile: null,
   hydrated: false,
-  setSession: (session) => set({ session, user: session?.user ?? null }),
-  setProfile: (profile) => set({ profile }),
-  setHydrated: (hydrated) => set({ hydrated }),
+  setSession: (session) =>
+    set((state) => (state.session === session && state.user === (session?.user ?? null) ? state : { session, user: session?.user ?? null })),
+  setProfile: (profile) => set((state) => (state.profile === profile ? state : { profile })),
+  setHydrated: (hydrated) => set((state) => (state.hydrated === hydrated ? state : { hydrated })),
   reset: () => set({ session: null, user: null, profile: null }),
 }));

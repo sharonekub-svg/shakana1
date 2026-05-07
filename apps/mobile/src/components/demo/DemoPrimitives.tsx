@@ -208,27 +208,26 @@ export function SelfUpdatingTimerRing({
   const [now, setNow] = useState(Date.now());
   const totalMs = Math.max(60 * 1000, closesAt - createdAt);
   const remainingMs = Math.max(0, closesAt - now);
-  const endedRef = useRef(false);
+  const onTimerEndRef = useRef(onTimerEnd);
+  const notifiedClosesAtRef = useRef<number | null>(null);
+
+  onTimerEndRef.current = onTimerEnd;
 
   useEffect(() => {
-    if (remainingMs <= 0) {
-      if (!endedRef.current) {
-        endedRef.current = true;
-        onTimerEnd?.();
-      }
-      return;
-    }
-
     const interval = setInterval(() => {
       const nextNow = Date.now();
-      setNow(nextNow);
-      if (closesAt <= nextNow && !endedRef.current) {
-        endedRef.current = true;
-        onTimerEnd?.();
+      setNow((current) => (current === nextNow ? current : nextNow));
+      if (closesAt <= nextNow && notifiedClosesAtRef.current !== closesAt) {
+        notifiedClosesAtRef.current = closesAt;
+        onTimerEndRef.current?.();
       }
     }, 1000);
+    if (closesAt <= Date.now() && notifiedClosesAtRef.current !== closesAt) {
+      notifiedClosesAtRef.current = closesAt;
+      setTimeout(() => onTimerEndRef.current?.(), 0);
+    }
     return () => clearInterval(interval);
-  }, [closesAt, onTimerEnd, remainingMs]);
+  }, [closesAt]);
 
   return <TimerRing remainingMs={remainingMs} totalMs={totalMs} label={label} />;
 }

@@ -446,24 +446,28 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
   ...initialState,
   setDemoRole: (demoRole) =>
     set((state) => {
+      if (state.demoRole === demoRole) return state;
       const next = { ...state, demoRole };
       persistAndBroadcast(next);
       return next;
     }),
   setDemoMode: (demoMode) =>
     set((state) => {
+      if (state.demoMode === demoMode) return state;
       const next = { ...state, demoMode };
       persistAndBroadcast(next);
       return next;
     }),
   selectBrand: (selectedBrand) =>
     set((state) => {
+      if (state.selectedBrand === selectedBrand) return state;
       const next = { ...state, selectedBrand };
       persistAndBroadcast(next);
       return next;
     }),
   setActiveParticipant: (activeParticipantId) =>
     set((state) => {
+      if (state.activeParticipantId === activeParticipantId) return state;
       const next = { ...state, activeParticipantId };
       persistAndBroadcast(next);
       return next;
