@@ -23,6 +23,7 @@ import { loadStoredLanguage, useLocaleStore } from '@/i18n/locale';
 import { useProfileDraftStore } from '@/stores/profileDraftStore';
 import { ToastLayer } from '@/components/primitives/ToastLayer';
 import { FloatingNewOrderButton } from '@/components/demo/FloatingNewOrderButton';
+import { FloatingProfileButton } from '@/components/demo/FloatingProfileButton';
 import { CookieConsentBanner } from '@/components/primitives/CookieConsentBanner';
 import { env } from '@/lib/env';
 
@@ -306,6 +307,7 @@ function RootLayoutInner() {
         <Stack.Screen name="user" />
       </Stack>
       {showSplash ? <View pointerEvents="none" style={styles.splashOverlay} /> : null}
+      <FloatingProfileButton />
       <FloatingNewOrderButton />
       <CookieConsentBanner />
       <ToastLayer />
