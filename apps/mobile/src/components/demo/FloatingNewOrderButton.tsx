@@ -21,6 +21,7 @@ export function FloatingNewOrderButton() {
       return;
     }
 
+    let frame: number | null = null;
     const update = () => {
       const pathname = window.location.pathname;
       const scrollTop =
@@ -32,13 +33,21 @@ export function FloatingNewOrderButton() {
       const nextVisible = !hidden && scrollTop > 220;
       setVisible((current) => (current === nextVisible ? current : nextVisible));
     };
+    const requestUpdate = () => {
+      if (frame !== null) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = null;
+        update();
+      });
+    };
 
     update();
-    window.addEventListener('scroll', update, { passive: true, capture: true });
-    window.addEventListener('popstate', update);
+    window.addEventListener('scroll', requestUpdate, { passive: true, capture: true });
+    window.addEventListener('popstate', requestUpdate);
     return () => {
-      window.removeEventListener('scroll', update, { capture: true });
-      window.removeEventListener('popstate', update);
+      if (frame !== null) window.cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', requestUpdate, { capture: true });
+      window.removeEventListener('popstate', requestUpdate);
     };
   }, []);
 

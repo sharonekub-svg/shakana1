@@ -28,8 +28,14 @@ const readWebHashParams = (): URLSearchParams | null => {
 };
 
 const namesFromMetadata = (metadata: Record<string, unknown> | undefined) => {
-  const firstName = typeof metadata?.first_name === 'string' ? metadata.first_name.trim() : '';
-  const lastName = typeof metadata?.last_name === 'string' ? metadata.last_name.trim() : '';
+  const firstName =
+    (typeof metadata?.first_name === 'string' && metadata.first_name.trim()) ||
+    (typeof metadata?.given_name === 'string' && metadata.given_name.trim()) ||
+    '';
+  const lastName =
+    (typeof metadata?.last_name === 'string' && metadata.last_name.trim()) ||
+    (typeof metadata?.family_name === 'string' && metadata.family_name.trim()) ||
+    '';
   if (firstName || lastName) {
     return {
       firstName,
@@ -115,6 +121,7 @@ export default function AuthCallback() {
       const { data: rawProfile } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
       let resolvedProfile: Profile | null = (rawProfile as Profile | null) ?? null;
       if (!resolvedProfile) {
+        setMessage('Creating your profile...');
         const { firstName, lastName } = namesFromMetadata(sessionData.session?.user.user_metadata);
         const defaultProfile = {
           id: userId,
@@ -133,9 +140,11 @@ export default function AuthCallback() {
           .select('*')
           .single();
         if (createError) {
-          throw createError;
+          setMessage('Signed in. Finish your profile to continue.');
+          resolvedProfile = defaultProfile as Profile;
+        } else {
+          resolvedProfile = (created ?? defaultProfile) as Profile;
         }
-        resolvedProfile = (created ?? defaultProfile) as Profile;
       }
 
       useAuthStore.getState().setProfile(resolvedProfile);
@@ -147,7 +156,9 @@ export default function AuthCallback() {
         useDemoCommerceStore.getState().resetDemo();
       }
 
-      const nextRoute = pendingInvite
+      const nextRoute = !isProfileComplete(resolvedProfile)
+        ? '/(auth)/name'
+        : pendingInvite
         ? /^\d{4}$/.test(pendingInvite)
           ? `/user?join=${pendingInvite}`
           : `/join/${pendingInvite}`

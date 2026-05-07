@@ -72,9 +72,11 @@ export function ErrorBoundary({ error, retry }: { error: Error; retry: () => voi
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 2,
-      staleTime: 10_000,
-      refetchOnWindowFocus: true,
+      retry: 1,
+      staleTime: 60_000,
+      gcTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
     },
     mutations: { retry: 0 },
   },

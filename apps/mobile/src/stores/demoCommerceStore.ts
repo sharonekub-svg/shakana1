@@ -749,6 +749,7 @@ export function initDemoCommerceSync() {
   });
   if (!remotePollTimer) {
     remotePollTimer = globalThis.setInterval(() => {
+      if (document.visibilityState === 'hidden') return;
       const state = useDemoCommerceStore.getState();
       const codes = state.orders.map((order) => order.inviteCode).filter(Boolean);
       if (codes.length === 0) return;
@@ -763,7 +764,7 @@ export function initDemoCommerceSync() {
           persistNow(useDemoCommerceStore.getState());
         })
         .catch(() => {});
-    }, 2500);
+    }, 5000);
   }
 }
 

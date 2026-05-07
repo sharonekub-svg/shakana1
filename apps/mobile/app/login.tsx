@@ -6,6 +6,7 @@ import { Card, DemoButton, DemoPage, SectionTitle } from '@/components/demo/Demo
 import { LanguageSwitcher } from '@/components/primitives/LanguageSwitcher';
 import { useGoogleSignIn } from '@/api/auth';
 import { initDemoCommerceSync, useDemoCommerceStore } from '@/stores/demoCommerceStore';
+import { useUiStore } from '@/stores/uiStore';
 import { colors } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { useLocale } from '@/i18n/locale';
@@ -19,6 +20,7 @@ export default function LoginScreen() {
   const setDemoMode = useDemoCommerceStore((state) => state.setDemoMode);
   const resetDemo = useDemoCommerceStore((state) => state.resetDemo);
   const googleSignIn = useGoogleSignIn();
+  const pushToast = useUiStore((state) => state.pushToast);
 
   useEffect(() => {
     initDemoCommerceSync();
@@ -68,7 +70,21 @@ export default function LoginScreen() {
             <View style={styles.buttonStack}>
               <DemoButton
                 label={googleSignIn.isPending ? (isHebrew ? 'פותח את Google...' : 'Opening Google...') : (isHebrew ? 'המשך עם Google' : 'Continue with Google')}
-                onPress={() => googleSignIn.mutate()}
+                onPress={() =>
+                  googleSignIn.mutate(undefined, {
+                    onError: (error) => {
+                      pushToast(
+                        error instanceof Error
+                          ? error.message
+                          : isHebrew
+                            ? 'לא הצלחנו לפתוח את Google. נסה שוב.'
+                            : 'Could not open Google sign-in. Try again.',
+                        'error',
+                      );
+                    },
+                  })
+                }
+                disabled={googleSignIn.isPending}
                 tone="accent"
               />
               <DemoButton label={isHebrew ? 'המשך עם טלפון' : 'Continue with phone'} onPress={() => router.push('/(auth)/phone')} tone="light" />

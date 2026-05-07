@@ -2,11 +2,15 @@ import { Platform } from 'react-native';
 import * as Linking from 'expo-linking';
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { env } from '@/lib/env';
 import { phoneDigitsOnly } from '@/utils/format';
 
 export function useSendOtp() {
   return useMutation({
     mutationFn: async (phoneFormatted: string) => {
+      if (!env.supabaseUrl || !env.supabaseAnonKey) {
+        throw new Error('Phone sign-in is not configured yet.');
+      }
       const digits = phoneDigitsOnly(phoneFormatted);
       const e164 = `+972${digits.replace(/^0/, '')}`;
       const { error } = await supabase.auth.signInWithOtp({
@@ -22,6 +26,9 @@ export function useSendOtp() {
 export function useVerifyOtp() {
   return useMutation({
     mutationFn: async ({ phone, token }: { phone: string; token: string }) => {
+      if (!env.supabaseUrl || !env.supabaseAnonKey) {
+        throw new Error('Phone sign-in is not configured yet.');
+      }
       const { data, error } = await supabase.auth.verifyOtp({
         phone,
         token,
@@ -37,6 +44,9 @@ export function useVerifyOtp() {
 export function useGoogleSignIn() {
   return useMutation({
     mutationFn: async () => {
+      if (!env.supabaseUrl || !env.supabaseAnonKey) {
+        throw new Error('Google sign-in is not configured yet.');
+      }
       await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
       const redirectTo =
         Platform.OS === 'web'
@@ -46,7 +56,7 @@ export function useGoogleSignIn() {
         provider: 'google',
         options: {
           redirectTo,
-          skipBrowserRedirect: true,
+          skipBrowserRedirect: Platform.OS !== 'web',
           queryParams: {
             access_type: 'offline',
             prompt: 'select_account',
@@ -54,12 +64,15 @@ export function useGoogleSignIn() {
         },
       });
       if (error) throw error;
-      if (!data.url) throw new Error('Could not start Google sign-in');
 
       if (Platform.OS === 'web') {
-        window.location.assign(data.url);
+        if (data.url) {
+          window.location.assign(data.url);
+        }
         return;
       }
+
+      if (!data.url) throw new Error('Could not start Google sign-in');
 
       await Linking.openURL(data.url);
     },

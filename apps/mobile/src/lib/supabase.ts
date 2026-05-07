@@ -19,6 +19,27 @@ const createStubSupabase = (): SupabaseLike =>
       onAuthStateChange: () => ({
         data: { subscription: { unsubscribe: () => {} } },
       }),
+      signInWithOtp: async () => ({
+        data: null,
+        error: new Error('Supabase auth is not configured for this build.'),
+      }),
+      verifyOtp: async () => ({
+        data: { session: null, user: null },
+        error: new Error('Supabase auth is not configured for this build.'),
+      }),
+      signInWithOAuth: async () => ({
+        data: { provider: 'google', url: null },
+        error: new Error('Supabase auth is not configured for this build.'),
+      }),
+      signOut: async () => ({ error: null }),
+      exchangeCodeForSession: async () => ({
+        data: { session: null, user: null },
+        error: new Error('Supabase auth is not configured for this build.'),
+      }),
+      setSession: async () => ({
+        data: { session: null, user: null },
+        error: new Error('Supabase auth is not configured for this build.'),
+      }),
       startAutoRefresh: () => {},
       stopAutoRefresh: () => {},
     },
