@@ -828,6 +828,18 @@ export function getOrdersForStore() {
   return useDemoCommerceStore.getState().orders;
 }
 
+export function canParticipantSeeOrder(order: DemoOrder, participantId: string | null | undefined) {
+  if (!participantId) return false;
+  return (
+    order.createdBy === participantId ||
+    order.participants.some((participant) => participant.id === participantId)
+  );
+}
+
+export function getVisibleOrdersForParticipant(orders: DemoOrder[], participantId: string | null | undefined) {
+  return orders.filter((order) => canParticipantSeeOrder(order, participantId));
+}
+
 export function getDemoOrderStats(orders: DemoOrder[]) {
   const shippedOrders = orders.filter((order) => order.status === 'shipped');
   const totalSavings = shippedOrders.reduce((total, order) => total + getGroupSavings(order), 0);

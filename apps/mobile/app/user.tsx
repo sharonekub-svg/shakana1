@@ -23,6 +23,7 @@ import {
   getOrderItemCount,
   getOrderTotal,
   getProductLine,
+  getVisibleOrdersForParticipant,
   initDemoCommerceSync,
   buildSharedDemoInviteLink,
   useDemoCommerceStore,
@@ -126,6 +127,17 @@ export default function DemoUserScreen() {
     };
   }, [session?.user.id, session?.user.user_metadata]);
 
+  const visibleOrders = useMemo(
+    () => getVisibleOrdersForParticipant(orders, accountParticipant.id),
+    [accountParticipant.id, orders],
+  );
+  const visibleOrJoinedOrders = useMemo(() => {
+    if (!joinedOrder) return visibleOrders;
+    return visibleOrders.some((order) => order.id === joinedOrder.id)
+      ? visibleOrders
+      : [joinedOrder, ...visibleOrders];
+  }, [joinedOrder, visibleOrders]);
+
   useEffect(() => {
     if (joinedOrder && !joinedOrder.participants.some((participant) => participant.id === activeParticipantId)) {
       joinParticipant(joinedOrder.id, accountParticipant);
@@ -160,8 +172,8 @@ export default function DemoUserScreen() {
   const order = brand
     ? newOrderMode
       ? null
-      : orders.find((candidate) => candidate.brand === brand && candidate.status !== 'shipped') ??
-        orders.find((candidate) => candidate.brand === brand)
+      : visibleOrJoinedOrders.find((candidate) => candidate.brand === brand && candidate.status !== 'shipped') ??
+        visibleOrJoinedOrders.find((candidate) => candidate.brand === brand)
     : null;
   const store = brand ? demoStores[brand] : null;
   const products = brand ? productsForBrand(brand) : [];
@@ -243,7 +255,7 @@ export default function DemoUserScreen() {
             </View>
           </View>
           <BuildingSections
-            orders={orders}
+            orders={visibleOrders}
             onOpenStore={() => router.push('/store')}
             onOpenLogin={() => router.push('/login')}
             onChooseBrand={(brand) => {
@@ -557,7 +569,7 @@ export default function DemoUserScreen() {
                 </Card>
 
                 <SavingsPanel order={order} />
-                <SavingsTracker orders={orders} activeParticipantId={activeParticipantId} />
+                <SavingsTracker orders={visibleOrders} activeParticipantId={activeParticipantId} />
 
                 <Card style={styles.cartCard}>
                   <View style={styles.rowBetween}>

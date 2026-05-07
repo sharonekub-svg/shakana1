@@ -16,6 +16,7 @@ import { useNotificationSettingsStore } from '@/stores/notificationSettingsStore
 import {
   getDemoOrderStats,
   getParticipantSuccessCount,
+  getVisibleOrdersForParticipant,
   useDemoCommerceStore,
 } from '@/stores/demoCommerceStore';
 
@@ -71,13 +72,18 @@ export default function ProfileScreen() {
     return profileName || authName || (session ? 'Shakana member' : 'Guest');
   }, [profile, session]);
 
-  const stats = getDemoOrderStats(demoOrders);
-  const personalSaves = getParticipantSuccessCount(demoOrders, activeParticipantId);
+  const accountParticipantId = session?.user.id ?? activeParticipantId;
+  const visibleDemoOrders = useMemo(
+    () => getVisibleOrdersForParticipant(demoOrders, accountParticipantId),
+    [accountParticipantId, demoOrders],
+  );
+  const stats = getDemoOrderStats(visibleDemoOrders);
+  const personalSaves = getParticipantSuccessCount(visibleDemoOrders, accountParticipantId);
   const readyPayments = Object.values(paymentSettings).filter(
     (method) => method.enabled && method.link.trim().length > 0,
   ).length;
-  const openOrders = demoOrders.filter((order) => order.status !== 'shipped').length;
-  const latestOrder = demoOrders[0] ?? null;
+  const openOrders = visibleDemoOrders.filter((order) => order.status !== 'shipped').length;
+  const latestOrder = visibleDemoOrders[0] ?? null;
   const savingsThisYear = Math.round(stats.totalSavings);
   const verifiedBadge = session ? 'Verified member' : 'Guest mode';
   const initial = displayName.charAt(0).toUpperCase() || 'S';
