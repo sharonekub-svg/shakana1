@@ -95,7 +95,7 @@ export default function JoinPreviewWeb() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const snapshotDemoOrder = useMemo(() => readSharedDemoOrderSnapshot(demo), [demo]);
   const [remoteDemoOrder, setRemoteDemoOrder] = useState<typeof snapshotDemoOrder | undefined>(undefined);
-  const demoOrder = snapshotDemoOrder ?? remoteDemoOrder ?? null;
+  const demoOrder = remoteDemoOrder ?? snapshotDemoOrder ?? null;
 
   useEffect(() => {
     if (!token || !demoOrder) return;
@@ -104,7 +104,7 @@ export default function JoinPreviewWeb() {
   }, [demoOrder, restoreSharedOrder, token]);
 
   useEffect(() => {
-    if (!token || snapshotDemoOrder) return;
+    if (!token) return;
     let cancelled = false;
     fetch(`/api/demo-order-sync?code=${encodeURIComponent(String(token))}`)
       .then((res) => (res.ok ? res.json() : null))

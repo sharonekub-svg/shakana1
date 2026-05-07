@@ -40,6 +40,43 @@ function orderVersion(order) {
   return Math.max(Number(order.createdAt) || 0, Number(order.closesAt) || 0, itemTime, participantTime);
 }
 
+function mergeById(existingItems, incomingItems) {
+  const byId = new Map();
+  for (const item of existingItems || []) {
+    if (item && typeof item.id === 'string') byId.set(item.id, item);
+  }
+  for (const item of incomingItems || []) {
+    if (item && typeof item.id === 'string') byId.set(item.id, item);
+  }
+  return Array.from(byId.values());
+}
+
+function mergeByParticipantId(existingParticipants, incomingParticipants) {
+  const byId = new Map();
+  for (const participant of existingParticipants || []) {
+    if (participant && typeof participant.id === 'string') byId.set(participant.id, participant);
+  }
+  for (const participant of incomingParticipants || []) {
+    if (participant && typeof participant.id === 'string') byId.set(participant.id, participant);
+  }
+  return Array.from(byId.values());
+}
+
+function mergeOrder(existing, incoming) {
+  if (!existing) return incoming;
+  const existingVersion = orderVersion(existing);
+  const incomingVersion = orderVersion(incoming);
+  const base = incomingVersion >= existingVersion ? incoming : existing;
+  const other = base === incoming ? existing : incoming;
+  return {
+    ...base,
+    participants: mergeByParticipantId(other.participants, base.participants),
+    items: mergeById(other.items, base.items),
+    deliveryAddress: base.deliveryAddress || other.deliveryAddress || '',
+    lastEvent: base.lastEvent || other.lastEvent || `${base.brand} group order`,
+  };
+}
+
 export default async function handler(req, res) {
   setCors(req, res);
   if (req.method === 'OPTIONS') return res.status(204).end();
@@ -64,10 +101,8 @@ export default async function handler(req, res) {
   for (const order of incoming) {
     if (!isValidOrder(order)) continue;
     const existing = store.get(order.inviteCode);
-    if (!existing || orderVersion(order) >= orderVersion(existing)) {
-      store.set(order.inviteCode, order);
-      saved.push(order.inviteCode);
-    }
+    store.set(order.inviteCode, mergeOrder(existing, order));
+    saved.push(order.inviteCode);
   }
 
   return res.status(200).json({ ok: true, saved });

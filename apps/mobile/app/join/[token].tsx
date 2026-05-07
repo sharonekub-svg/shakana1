@@ -20,10 +20,10 @@ export default function JoinByToken() {
   const restoreSharedOrder = useDemoCommerceStore((s) => s.restoreSharedOrder);
   const snapshotDemoOrder = useMemo(() => readSharedDemoOrderSnapshot(demo), [demo]);
   const [remoteDemoOrder, setRemoteDemoOrder] = useState<typeof snapshotDemoOrder | undefined>(undefined);
-  const demoOrder = snapshotDemoOrder ?? remoteDemoOrder ?? null;
+  const demoOrder = remoteDemoOrder ?? snapshotDemoOrder ?? null;
 
   useEffect(() => {
-    if (!token || snapshotDemoOrder) return;
+    if (!token) return;
     let cancelled = false;
     fetch(`/api/demo-order-sync?code=${encodeURIComponent(String(token))}`)
       .then((res) => (res.ok ? res.json() : null))
