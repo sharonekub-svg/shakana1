@@ -224,7 +224,7 @@ function encodeOrderForUrl(order: DemoOrder): string {
 }
 
 export function buildSharedDemoInviteLink(order: DemoOrder): string {
-  return `${DEMO_ORIGIN}/join/${encodeURIComponent(order.inviteCode)}?demo=${encodeOrderForUrl(order)}`;
+  return `${DEMO_ORIGIN}/join/${encodeURIComponent(order.inviteCode)}`;
 }
 
 export function readSharedDemoOrderSnapshot(value: string | string[] | undefined): DemoOrder | null {
