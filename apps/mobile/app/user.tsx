@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Image, ImageBackground, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, ImageBackground, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -34,6 +34,7 @@ import { BuildingSections } from '@/components/demo/BuildingSections';
 import { useLocale } from '@/i18n/locale';
 import { useAuthStore } from '@/stores/authStore';
 import { stashPendingInvite } from '@/lib/deeplinks';
+import { searchCities, searchStreets } from '@/lib/locationAutocomplete';
 
 const ADDRESS_SUGGESTIONS = [
   'Rothschild Boulevard 12, Tel Aviv',
@@ -54,6 +55,32 @@ function getAddressSuggestions(value: string) {
   const query = value.trim().toLowerCase();
   if (query.length < 2) return [];
   return ADDRESS_SUGGESTIONS.filter((address) => address.toLowerCase().includes(query)).slice(0, 5);
+}
+
+function uniqueAddressSuggestions(values: string[]) {
+  const seen = new Set<string>();
+  return values.filter((value) => {
+    const normalized = value.trim().toLocaleLowerCase();
+    if (!normalized || seen.has(normalized)) return false;
+    seen.add(normalized);
+    return true;
+  });
+}
+
+function splitAddressQuery(value: string) {
+  const parts = value.split(',').map((part) => part.trim()).filter(Boolean);
+  if (parts.length >= 2) {
+    return {
+      street: parts.slice(0, -1).join(', '),
+      city: parts[parts.length - 1] ?? '',
+      hasCityPart: true,
+    };
+  }
+  return {
+    street: value.trim(),
+    city: value.trim(),
+    hasCityPart: false,
+  };
 }
 
 function normalizeTimerMinutes(value: string) {
@@ -91,6 +118,8 @@ export default function DemoUserScreen() {
   const [customTimer, setCustomTimer] = useState('45');
   const [newOrderMode, setNewOrderMode] = useState(false);
   const [productSearch, setProductSearch] = useState('');
+  const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
+  const [addressLoading, setAddressLoading] = useState(false);
 
   useEffect(() => {
     initDemoCommerceSync();
@@ -185,15 +214,55 @@ export default function DemoUserScreen() {
   const isFounder = order?.createdBy === activeParticipantId;
   const isAuthenticated = !!session?.user;
   const customTimerMinutes = normalizeTimerMinutes(customTimer);
-  const addressSuggestions = useMemo(
-    () => (order ? getAddressSuggestions(order.deliveryAddress) : []),
-    [order?.deliveryAddress],
-  );
-
   useEffect(() => {
     if (!session?.user.id || !order || order.createdBy !== 'user-a') return;
     claimOrderFounder(order.id, accountParticipant);
   }, [accountParticipant, claimOrderFounder, order?.createdBy, order?.id, session?.user.id]);
+
+  useEffect(() => {
+    const value = order?.deliveryAddress.trim() ?? '';
+    const fallback = getAddressSuggestions(value);
+    if (value.length < 2) {
+      setAddressSuggestions([]);
+      setAddressLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = globalThis.setTimeout(() => {
+      setAddressLoading(true);
+      const query = splitAddressQuery(value);
+      Promise.all([
+        searchCities(query.city, language, controller.signal),
+        query.street.length >= 2
+          ? searchStreets(query.street, query.hasCityPart ? query.city : '', language, controller.signal)
+          : Promise.resolve([]),
+      ])
+        .then(([cities, streets]) => {
+          const bestCities = cities.slice(0, 5);
+          const streetCitySuggestions =
+            streets.length > 0
+              ? streets.slice(0, 5).flatMap((street) => {
+                  const cityMatches = bestCities.length > 0 ? bestCities.slice(0, 3) : query.hasCityPart && query.city ? [query.city] : [];
+                  return cityMatches.length > 0 ? cityMatches.map((city) => `${street}, ${city}`) : [street];
+                })
+              : [];
+          const cityOnlySuggestions = bestCities.map((city) => (query.hasCityPart && query.street ? `${query.street}, ${city}` : city));
+          setAddressSuggestions(uniqueAddressSuggestions([...streetCitySuggestions, ...cityOnlySuggestions, ...fallback]).slice(0, 6));
+        })
+        .catch(() => {
+          if (!controller.signal.aborted) setAddressSuggestions(fallback);
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setAddressLoading(false);
+        });
+    }, 220);
+
+    return () => {
+      controller.abort();
+      globalThis.clearTimeout(timer);
+    };
+  }, [language, order?.deliveryAddress]);
 
   useEffect(() => {
     if (!params.join || isAuthenticated) return;
@@ -519,10 +588,18 @@ export default function DemoUserScreen() {
                     <TextInput
                       value={order.deliveryAddress}
                       onChangeText={(value) => updateDeliveryAddress(order.id, value)}
-                      placeholder="Street, building, apartment, city"
+                      placeholder="Start typing street or city"
                       style={[styles.addressInput, addressMissing && styles.addressInputMissing]}
                       accessibilityLabel="Shared order delivery address"
+                      autoComplete="street-address"
+                      autoCorrect={false}
                     />
+                    {addressLoading ? (
+                      <View style={styles.addressLoadingRow}>
+                        <ActivityIndicator size="small" color={colors.acc} />
+                        <Text style={styles.addressLoadingText}>Looking for matching streets and cities</Text>
+                      </View>
+                    ) : null}
                     {addressSuggestions.length > 0 ? (
                       <View style={styles.addressSuggestionList}>
                         {addressSuggestions.map((suggestion) => (
@@ -1020,6 +1097,16 @@ const styles = StyleSheet.create({
   },
   addressSuggestionList: {
     gap: 6,
+  },
+  addressLoadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  addressLoadingText: {
+    color: colors.mu,
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 12,
   },
   addressSuggestion: {
     borderRadius: 8,
