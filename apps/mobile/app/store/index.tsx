@@ -11,7 +11,7 @@ import {
   ProgressBar,
   SavingsTracker,
   SectionTitle,
-  TimerRing,
+  SelfUpdatingTimerRing,
   StatusRail,
   demoStyles,
 } from '@/components/demo/DemoPrimitives';
@@ -21,7 +21,6 @@ import {
   getGroupSavings,
   getMerchantOrderState,
   getOrderItemCount,
-  getOrderTimerTotal,
   getOrderTotal,
   initDemoCommerceSync,
   useDemoCommerceStore,
@@ -58,11 +57,6 @@ export default function StoreDashboardScreen() {
     initDemoCommerceSync();
     if (demoMode) setDemoRole('store');
   }, [demoMode, setDemoRole]);
-
-  useEffect(() => {
-    const interval = globalThis.setInterval(() => setNowMs(Date.now()), 1000);
-    return () => globalThis.clearInterval(interval);
-  }, []);
 
   const activeOrders = orders.filter((order) => order.status !== 'shipped');
   const readyToProcess = activeOrders.filter((order) => order.items.length > 0 || order.closesAt <= nowMs).length;
@@ -154,6 +148,7 @@ export default function StoreDashboardScreen() {
                 order={order}
                 nowMs={nowMs}
                 onOpen={() => router.push(`/store/orders/${order.id}`)}
+                onTimerEnd={() => setNowMs(Date.now())}
               />
             ))}
           </View>
@@ -165,7 +160,17 @@ export default function StoreDashboardScreen() {
   );
 }
 
-function OrderQueueCard({ order, nowMs, onOpen }: { order: DemoOrder; nowMs: number; onOpen: () => void }) {
+function OrderQueueCard({
+  order,
+  nowMs,
+  onOpen,
+  onTimerEnd,
+}: {
+  order: DemoOrder;
+  nowMs: number;
+  onOpen: () => void;
+  onTimerEnd?: () => void;
+}) {
   const store = demoStores[order.brand];
   const progress = getGoalProgress(order);
   const minutesLeft = Math.max(0, Math.ceil((order.closesAt - nowMs) / 60000));
@@ -195,7 +200,12 @@ function OrderQueueCard({ order, nowMs, onOpen }: { order: DemoOrder; nowMs: num
           </View>
         </View>
         <View style={styles.orderHeaderRight}>
-          <TimerRing remainingMs={Math.max(0, order.closesAt - nowMs)} totalMs={getOrderTimerTotal(order)} label="left" />
+          <SelfUpdatingTimerRing
+            closesAt={order.closesAt}
+            createdAt={order.createdAt}
+            onTimerEnd={onTimerEnd}
+            label="left"
+          />
           <Text style={[styles.statusBadge, { borderColor: store.accent }]}>{merchantState}</Text>
         </View>
       </View>

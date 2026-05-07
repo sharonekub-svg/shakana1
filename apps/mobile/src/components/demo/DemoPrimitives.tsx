@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useState, useRef, type ReactNode } from 'react';
 import {
   Animated,
   Image,
@@ -192,6 +192,45 @@ export function TimerRing({
       </View>
     </View>
   );
+}
+
+export function SelfUpdatingTimerRing({
+  closesAt,
+  createdAt,
+  label = 'left',
+  onTimerEnd,
+}: {
+  closesAt: number;
+  createdAt: number;
+  label?: string;
+  onTimerEnd?: () => void;
+}) {
+  const [now, setNow] = useState(Date.now());
+  const totalMs = Math.max(60 * 1000, closesAt - createdAt);
+  const remainingMs = Math.max(0, closesAt - now);
+  const endedRef = useRef(false);
+
+  useEffect(() => {
+    if (remainingMs <= 0) {
+      if (!endedRef.current) {
+        endedRef.current = true;
+        onTimerEnd?.();
+      }
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const nextNow = Date.now();
+      setNow(nextNow);
+      if (closesAt <= nextNow && !endedRef.current) {
+        endedRef.current = true;
+        onTimerEnd?.();
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [closesAt, onTimerEnd, remainingMs]);
+
+  return <TimerRing remainingMs={remainingMs} totalMs={totalMs} label={label} />;
 }
 
 export function CelebrationBanner({ pulse }: { pulse: DemoPulse | null }) {

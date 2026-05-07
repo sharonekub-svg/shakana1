@@ -13,7 +13,7 @@ import {
   SavingsPanel,
   SavingsTracker,
   SectionTitle,
-  TimerRing,
+  SelfUpdatingTimerRing,
   StatusRail,
   demoStyles,
 } from '@/components/demo/DemoPrimitives';
@@ -91,23 +91,11 @@ export default function DemoUserScreen() {
   const [customTimer, setCustomTimer] = useState('45');
   const [newOrderMode, setNewOrderMode] = useState(false);
   const [productSearch, setProductSearch] = useState('');
-  const timerRef = useRef<ReturnType<typeof globalThis.setInterval> | null>(null);
 
   useEffect(() => {
     initDemoCommerceSync();
     if (demoMode) setDemoRole('user');
   }, [demoMode, setDemoRole]);
-
-  useEffect(() => {
-    if (timerRef.current) globalThis.clearInterval(timerRef.current);
-    timerRef.current = globalThis.setInterval(() => setNowMs(Date.now()), 1000);
-    return () => {
-      if (timerRef.current) {
-        globalThis.clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    };
-  }, []);
 
   const joinedOrder = useMemo(
     () => orders.find((order) => order.inviteCode === params.join),
@@ -192,8 +180,6 @@ export default function DemoUserScreen() {
   }, [category, productSearch, products]);
   const activeParticipant =
     order?.participants.find((participant) => participant.id === activeParticipantId) ?? accountParticipant;
-  const remainingMs = order ? Math.max(0, order.closesAt - nowMs) : 0;
-  const totalTimerMs = order ? Math.max(60 * 1000, order.closesAt - order.createdAt) : 30 * 60 * 1000;
   const orderLocked = order ? order.closesAt <= nowMs || order.status !== 'collecting' : false;
   const addressMissing = order ? order.deliveryAddress.trim().length < 8 : false;
   const isFounder = order?.createdBy === activeParticipantId;
@@ -217,7 +203,7 @@ export default function DemoUserScreen() {
   const createOrder = (nextBrand: DemoBrandId) => {
     selectBrand(nextBrand);
     if (newOrderMode) {
-      createNewOrder(nextBrand, accountParticipant);
+      createNewOrder(nextBrand, accountParticipant, customTimerMinutes || 30);
       setNewOrderMode(false);
       router.replace('/user');
     } else {
@@ -278,6 +264,22 @@ export default function DemoUserScreen() {
             </Card>
           ) : null}
           <View style={styles.storeGrid}>
+            {newOrderMode ? (
+              <Card style={styles.preLaunchTimer}>
+                <Text style={styles.timerTitle}>Pre-launch: Set order duration</Text>
+                <View style={styles.customTimerBox}>
+                  <TextInput
+                    value={customTimer}
+                    onChangeText={(value) => setCustomTimer(value.replace(/[^\d]/g, '').slice(0, 3))}
+                    keyboardType="number-pad"
+                    placeholder="45"
+                    style={styles.customTimerInput}
+                  />
+                  <Text style={styles.timerText}>minutes</Text>
+                </View>
+                <Text style={styles.muted}>This timer starts as soon as you select a store below.</Text>
+              </Card>
+            ) : null}
             {(['hm', 'zara', 'amazon'] as DemoBrandId[]).map((brandId) => {
               const option = demoStores[brandId];
               return (
@@ -324,7 +326,13 @@ export default function DemoUserScreen() {
           <View style={styles.heroOverlay}>
             <View style={styles.heroHeaderRow}>
               <BrandPill brand={brand} />
-              {order ? <TimerRing remainingMs={remainingMs} totalMs={totalTimerMs} /> : null}
+              {order ? (
+                <SelfUpdatingTimerRing
+                  closesAt={order.closesAt}
+                  createdAt={order.createdAt}
+                  onTimerEnd={() => setNowMs(Date.now())}
+                />
+              ) : null}
             </View>
             <Text style={styles.heroTitle}>{store.name}</Text>
             <Text style={styles.heroSubtitle}>{store.tagline}</Text>
@@ -372,7 +380,15 @@ export default function DemoUserScreen() {
               accessibilityLabel="Search products"
             />
 
-            <SectionTitle title={category} kicker={`${store.name} scraped-style catalog`} />
+            <SectionTitle
+              title={category}
+              kicker={order ? `Browsing ${store.name} only (locked for group order)` : `${store.name} scraped-style catalog`}
+            />
+            {order ? (
+              <View style={styles.lockBadge}>
+                <Text style={styles.lockBadgeText}>Store Locked for Group Order {order.id}</Text>
+              </View>
+            ) : null}
             {categoryProducts.length === 0 ? (
               <EmptyNotice title="No products match" body="Clear search or choose another category to keep browsing." />
             ) : (
@@ -449,7 +465,12 @@ export default function DemoUserScreen() {
                             : 'Only the cart founder can change this timer.'}
                         </Text>
                       </View>
-                      <TimerRing remainingMs={remainingMs} totalMs={totalTimerMs} label="left" />
+                      <SelfUpdatingTimerRing
+                        closesAt={order.closesAt}
+                        createdAt={order.createdAt}
+                        onTimerEnd={() => setNowMs(Date.now())}
+                        label="left"
+                      />
                     </View>
                     <View style={styles.timerActions}>
                       <DemoButton
@@ -645,6 +666,7 @@ function ProductCard({
   const [color, setColor] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [privateItem, setPrivateItem] = useState(false);
+  const [isAdded, setIsAdded] = useState(false);
   const ready = !!orderId && isAuthenticated && !orderLocked && !!size && !!color && quantity > 0;
   const productSaving = Math.max(0, product.compareAtPrice - product.price);
 
@@ -708,8 +730,8 @@ function ProductCard({
         ) : (
           <DemoButton
             testID={`add-${product.id}`}
-            label={ready ? 'Add to group cart' : 'Select size and color'}
-            disabled={!ready}
+            label={isAdded ? 'Added! ✓' : ready ? 'Add to group cart' : 'Select size and color'}
+            disabled={!ready || isAdded}
             onPress={() => {
               if (!orderId) return;
               addItem(orderId, {
@@ -721,8 +743,10 @@ function ProductCard({
                 quantity,
                 private: privateItem,
               });
+              setIsAdded(true);
+              globalThis.setTimeout(() => setIsAdded(false), 1500);
             }}
-            tone="accent"
+            tone={isAdded ? 'light' : 'accent'}
           />
         )}
       </View>
@@ -929,6 +953,19 @@ const styles = StyleSheet.create({
     flexBasis: 92,
     minHeight: 40,
   },
+  preLaunchTimer: {
+    flexBasis: '100%',
+    gap: 12,
+    backgroundColor: colors.goldLight,
+    borderColor: colors.acc,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  timerText: {
+    fontFamily: fontFamily.bodyBold,
+    color: colors.tx,
+    fontSize: 16,
+  },
   customTimerBox: {
     flexGrow: 1,
     flexBasis: 180,
@@ -1009,6 +1046,20 @@ const styles = StyleSheet.create({
   participantRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   participantText: { color: colors.mu, fontFamily: fontFamily.bodyBold, fontSize: 12 },
   activePillText: { color: '#FFFFFF' },
+  lockBadge: {
+    backgroundColor: colors.s2,
+    borderWidth: 1,
+    borderColor: colors.br,
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12,
+  },
+  lockBadgeText: {
+    color: colors.mu,
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 12,
+    textAlign: 'center',
+  },
   participantBadge: {
     color: colors.acc,
     backgroundColor: colors.goldLight,

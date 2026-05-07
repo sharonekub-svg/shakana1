@@ -62,8 +62,8 @@ type DemoState = {
   setDemoMode: (enabled: boolean) => void;
   selectBrand: (brand: DemoBrandId | null) => void;
   setActiveParticipant: (participantId: string) => void;
-  ensureOrder: (brand: DemoBrandId, creator?: DemoParticipant) => string;
-  createNewOrder: (brand: DemoBrandId, creator?: DemoParticipant) => string;
+  ensureOrder: (brand: DemoBrandId, creator?: DemoParticipant, timerMinutes?: number) => string;
+  createNewOrder: (brand: DemoBrandId, creator?: DemoParticipant, timerMinutes?: number) => string;
   claimOrderFounder: (orderId: string, participant: DemoParticipant) => void;
   joinParticipant: (orderId: string, participant: DemoParticipant | string) => void;
   addItem: (orderId: string, input: AddItemInput) => void;
@@ -125,10 +125,16 @@ function getParticipantName(participantId: string, order?: DemoOrder) {
   );
 }
 
-function createOrder(brand: DemoBrandId, creator = primaryDemoParticipant): DemoOrder {
+function normalizeOrderTimerMinutes(minutes?: number) {
+  if (!minutes || !Number.isFinite(minutes)) return 30;
+  return Math.max(1, Math.min(720, Math.round(minutes)));
+}
+
+function createOrder(brand: DemoBrandId, creator = primaryDemoParticipant, timerMinutes?: number): DemoOrder {
   const id = `SK-${Math.floor(1000 + Math.random() * 9000)}`;
   const inviteCode = String(Math.floor(1000 + Math.random() * 9000));
   const createdAt = now();
+  const safeTimerMinutes = normalizeOrderTimerMinutes(timerMinutes);
   return {
     id,
     brand,
@@ -137,11 +143,11 @@ function createOrder(brand: DemoBrandId, creator = primaryDemoParticipant): Demo
     inviteLink: `${DEMO_ORIGIN}/join/${inviteCode}`,
     createdBy: creator.id,
     createdAt,
-    closesAt: createdAt + 30 * 60 * 1000,
+    closesAt: createdAt + safeTimerMinutes * 60 * 1000,
     deliveryAddress: '',
     participants: [{ ...creator, joinedAt: createdAt }],
     items: [],
-    lastEvent: `${demoStores[brand].name} group order created`,
+    lastEvent: `${demoStores[brand].name} group order created with a ${safeTimerMinutes} minute timer`,
   };
 }
 
@@ -462,10 +468,10 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
       persistAndBroadcast(next);
       return next;
     }),
-  ensureOrder: (brand, creator = primaryDemoParticipant) => {
+  ensureOrder: (brand, creator = primaryDemoParticipant, timerMinutes) => {
     const existing = get().orders.find((order) => order.brand === brand && order.status !== 'shipped');
     if (existing) return existing.id;
-    const order = createOrder(brand, creator);
+    const order = createOrder(brand, creator, timerMinutes);
     set((state) => {
       const pulse: DemoPulse = { id: now(), kind: 'join', message: order.lastEvent };
       const next = {
@@ -480,8 +486,8 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
     });
     return order.id;
   },
-  createNewOrder: (brand, creator = primaryDemoParticipant) => {
-    const order = createOrder(brand, creator);
+  createNewOrder: (brand, creator = primaryDemoParticipant, timerMinutes) => {
+    const order = createOrder(brand, creator, timerMinutes);
     set((state) => {
       const pulse: DemoPulse = { id: now(), kind: 'join', message: order.lastEvent };
       const next = {

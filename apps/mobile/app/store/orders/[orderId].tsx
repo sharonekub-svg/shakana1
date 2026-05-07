@@ -11,7 +11,7 @@ import {
   SavingsPanel,
   SavingsTracker,
   SectionTitle,
-  TimerRing,
+  SelfUpdatingTimerRing,
   StatusRail,
 } from '@/components/demo/DemoPrimitives';
 import { demoStores } from '@/demo/catalog';
@@ -19,7 +19,6 @@ import {
   getMerchantOrderState,
   getMasterPickingList,
   getOrderItemCount,
-  getOrderTimerTotal,
   getOrderTotal,
   getProductLine,
   initDemoCommerceSync,
@@ -44,11 +43,6 @@ export default function StoreOrderDetailScreen() {
     initDemoCommerceSync();
     if (demoMode) setDemoRole('store');
   }, [demoMode, setDemoRole]);
-
-  useEffect(() => {
-    const interval = globalThis.setInterval(() => setNowMs(Date.now()), 1000);
-    return () => globalThis.clearInterval(interval);
-  }, []);
 
   const order = orders.find((candidate) => candidate.id === params.orderId);
 
@@ -114,7 +108,12 @@ export default function StoreOrderDetailScreen() {
               <Text style={styles.operationTitle}>{merchantState}</Text>
               <Text style={styles.muted}>{nextStep}</Text>
             </View>
-            <TimerRing remainingMs={Math.max(0, order.closesAt - nowMs)} totalMs={getOrderTimerTotal(order)} label="left" />
+            <SelfUpdatingTimerRing
+              closesAt={order.closesAt}
+              createdAt={order.createdAt}
+              onTimerEnd={() => setNowMs(Date.now())}
+              label="left"
+            />
           </View>
 
           <View style={styles.summaryGrid}>
