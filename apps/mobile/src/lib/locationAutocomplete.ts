@@ -1,3 +1,4 @@
+import { env } from '@/lib/env';
 import { IL_CITIES } from '@/lib/israeliCities';
 
 type NominatimAddress = {
@@ -29,10 +30,26 @@ type DataGovResponse = {
   };
 };
 
+type GooglePlacesAutocompleteResponse = {
+  suggestions?: Array<{
+    placePrediction?: {
+      text?: {
+        text?: string;
+      };
+    };
+    queryPrediction?: {
+      text?: {
+        text?: string;
+      };
+    };
+  }>;
+};
+
 type SearchKind = 'city' | 'street';
 
 const cache = new Map<string, string[]>();
 const DATA_GOV_URL = 'https://data.gov.il/api/3/action/datastore_search';
+const GOOGLE_PLACES_AUTOCOMPLETE_URL = 'https://places.googleapis.com/v1/places:autocomplete';
 const DATA_GOV_CITIES_RESOURCE_ID = '5c78e9fa-c2e2-4771-93ff-7f400a12f7ba';
 const DATA_GOV_STREETS_RESOURCE_ID = 'a7296d1a-f8c9-4b70-96c2-6ebb4352f8e3';
 const CITY_NAME_KEY = 'שם_ישוב';
@@ -198,6 +215,37 @@ async function searchDataGovStreets(query: string, city: string | undefined, sig
   }
 }
 
+async function searchGooglePlaces(query: string, language: 'he' | 'en', city?: string, signal?: AbortSignal): Promise<string[]> {
+  if (!env.googleMapsApiKey) return [];
+  const input = city ? `${query}, ${city}, Israel` : `${query}, Israel`;
+  try {
+    const res = await fetch(GOOGLE_PLACES_AUTOCOMPLETE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': env.googleMapsApiKey,
+        'X-Goog-FieldMask': 'suggestions.placePrediction.text.text,suggestions.queryPrediction.text.text',
+      },
+      body: JSON.stringify({
+        input,
+        includedRegionCodes: ['il'],
+        languageCode: language === 'he' ? 'he' : 'en',
+      }),
+      signal,
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as GooglePlacesAutocompleteResponse;
+    const values =
+      data.suggestions?.flatMap((suggestion) => {
+        const text = cleanName(suggestion.placePrediction?.text?.text ?? suggestion.queryPrediction?.text?.text);
+        return text ? [text.replace(/,\s*Israel$/i, '')] : [];
+      }) ?? [];
+    return sortByQuery(query, unique(values)).slice(0, 8);
+  } catch {
+    return [];
+  }
+}
+
 async function searchRemote(
   kind: SearchKind,
   query: string,
@@ -218,7 +266,8 @@ async function searchRemote(
   if (cached) return cached;
 
   try {
-    const [govResult, nominatimResult] = await Promise.all([
+    const [googleResult, govResult, nominatimResult] = await Promise.all([
+      searchGooglePlaces(trimmed, language, city, signal),
       kind === 'city' ? searchDataGovCities(trimmed, signal) : searchDataGovStreets(trimmed, city, signal),
       fetch(buildUrl(kind, trimmed, language, city), {
         headers: { 'Accept-Language': language },
@@ -231,7 +280,7 @@ async function searchRemote(
         })
         .catch(() => []),
     ]);
-    const merged = sortByQuery(trimmed, unique([...govResult, ...nominatimResult, ...fallback])).slice(0, 12);
+    const merged = sortByQuery(trimmed, unique([...googleResult, ...govResult, ...nominatimResult, ...fallback])).slice(0, 12);
     cache.set(cacheKey, merged);
     return merged;
   } catch {
