@@ -330,6 +330,16 @@ export default function DemoUserScreen() {
     setNowMs(Date.now());
   };
 
+  const goToOrderHome = () => {
+    setNewOrderMode(false);
+    setSetupBrand(null);
+    setSetupDeliveryAddress('');
+    setAddressSuggestions([]);
+    setProductSearch('');
+    selectBrand(null);
+    router.replace('/user');
+  };
+
   if (!brand || !store) {
     return (
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
@@ -337,6 +347,7 @@ export default function DemoUserScreen() {
           <View style={styles.topBar}>
             <Text style={styles.logo}>shakana</Text>
             <View style={styles.topActions}>
+              <DemoButton label="New order" onPress={() => openNewOrderSetup()} tone="accent" style={styles.smallBtn} />
               <DemoButton label="Profile" onPress={() => router.push('/profile')} tone="light" style={styles.smallBtn} />
               <DemoButton label="Store login" onPress={() => router.push('/store')} tone="light" style={styles.smallBtn} />
             </View>
@@ -487,11 +498,12 @@ export default function DemoUserScreen() {
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
       <DemoPage wide>
         <View style={styles.topBar}>
-          <Pressable onPress={() => selectBrand(null)} accessibilityRole="button">
+          <Pressable onPress={goToOrderHome} accessibilityRole="button">
             <Text style={styles.logo}>shakana demo</Text>
           </Pressable>
           <View style={styles.topActions}>
-            <DemoButton label="Switch store" onPress={() => selectBrand(null)} tone="light" style={styles.smallBtn} />
+            <DemoButton label="Home" onPress={goToOrderHome} tone="light" style={styles.smallBtn} />
+            <DemoButton label="New order" onPress={() => openNewOrderSetup()} tone="accent" style={styles.smallBtn} />
             <DemoButton label="Profile" onPress={() => router.push('/profile')} tone="light" style={styles.smallBtn} />
             <DemoButton label="Merchant view" onPress={() => router.push('/store')} tone="light" style={styles.smallBtn} />
           </View>
@@ -514,12 +526,12 @@ export default function DemoUserScreen() {
             <Text style={styles.heroMeta}>{store.deliveryEta}</Text>
             <View style={styles.heroActions}>
               <DemoButton
-                label={order ? `Group order ${order.id}` : 'Create group order'}
-                onPress={() => createOrder(brand)}
+                label={order ? 'Back to home' : 'Create group order'}
+                onPress={order ? goToOrderHome : () => createOrder(brand)}
                 tone="accent"
                 style={styles.heroBtn}
               />
-              <DemoButton label="Open login" onPress={() => router.push('/login')} tone="light" style={styles.heroBtn} />
+              <DemoButton label="New order" onPress={() => openNewOrderSetup()} tone="light" style={styles.heroBtn} />
             </View>
           </View>
         </ImageBackground>
@@ -628,6 +640,10 @@ export default function DemoUserScreen() {
                       <Text style={styles.muted}>
                         The timer ended or the store already started fulfillment. New items are paused for this order.
                       </Text>
+                      <View style={styles.lockActions}>
+                        <DemoButton label="Back to main page" onPress={goToOrderHome} tone="light" style={styles.lockActionBtn} />
+                        <DemoButton label="Open new order" onPress={() => openNewOrderSetup()} tone="accent" style={styles.lockActionBtn} />
+                      </View>
                     </Card>
                   ) : null}
                   <View style={styles.timerPanel}>
@@ -1110,6 +1126,17 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: colors.s2,
     borderColor: colors.br,
+  },
+  lockActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
+  },
+  lockActionBtn: {
+    flexGrow: 1,
+    flexBasis: 140,
+    minHeight: 40,
   },
   lockTitle: {
     color: colors.tx,
