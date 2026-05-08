@@ -21,9 +21,22 @@ type NominatimResult = {
   namedetails?: Record<string, string>;
 };
 
+type DataGovRecord = Record<string, unknown>;
+type DataGovResponse = {
+  success?: boolean;
+  result?: {
+    records?: DataGovRecord[];
+  };
+};
+
 type SearchKind = 'city' | 'street';
 
 const cache = new Map<string, string[]>();
+const DATA_GOV_URL = 'https://data.gov.il/api/3/action/datastore_search';
+const DATA_GOV_CITIES_RESOURCE_ID = '5c78e9fa-c2e2-4771-93ff-7f400a12f7ba';
+const DATA_GOV_STREETS_RESOURCE_ID = 'a7296d1a-f8c9-4b70-96c2-6ebb4352f8e3';
+const CITY_NAME_KEY = 'שם_ישוב';
+const STREET_NAME_KEY = 'שם_רחוב';
 const COMMON_STREETS: readonly string[] = [
   'הרצל',
   'ז׳בוטינסקי',
@@ -79,6 +92,12 @@ function unique(values: string[]): string[] {
   return out;
 }
 
+function cleanName(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const cleaned = value.replace(/\s+/g, ' ').trim();
+  return cleaned || null;
+}
+
 function scoreCandidate(query: string, candidate: string): number {
   const q = normalize(query);
   const c = normalize(candidate);
@@ -91,6 +110,15 @@ function scoreCandidate(query: string, candidate: string): number {
 
 function sortByQuery(query: string, values: string[]): string[] {
   return [...values].sort((a, b) => scoreCandidate(query, b) - scoreCandidate(query, a) || a.localeCompare(b, 'he'));
+}
+
+function dataGovUrl(resourceId: string, query: string, limit = 50): string {
+  const params = new URLSearchParams({
+    resource_id: resourceId,
+    limit: String(limit),
+    q: query,
+  });
+  return `${DATA_GOV_URL}?${params.toString()}`;
 }
 
 function buildUrl(kind: SearchKind, query: string, language: 'he' | 'en', city?: string): string {
@@ -134,6 +162,42 @@ function extractCandidates(kind: SearchKind, query: string, results: NominatimRe
   return ordered.slice(0, 10);
 }
 
+async function searchDataGovCities(query: string, signal?: AbortSignal): Promise<string[]> {
+  try {
+    const res = await fetch(dataGovUrl(DATA_GOV_CITIES_RESOURCE_ID, query, 30), { signal });
+    if (!res.ok) return [];
+    const data = (await res.json()) as DataGovResponse;
+    const values =
+      data.result?.records?.flatMap((record) => {
+        const city = cleanName(record[CITY_NAME_KEY]);
+        return city ? [city] : [];
+      }) ?? [];
+    return sortByQuery(query, unique(values)).slice(0, 10);
+  } catch {
+    return [];
+  }
+}
+
+async function searchDataGovStreets(query: string, city: string | undefined, signal?: AbortSignal): Promise<string[]> {
+  try {
+    const res = await fetch(dataGovUrl(DATA_GOV_STREETS_RESOURCE_ID, query, 80), { signal });
+    if (!res.ok) return [];
+    const data = (await res.json()) as DataGovResponse;
+    const normalizedCity = normalize(city ?? '');
+    const values =
+      data.result?.records?.flatMap((record) => {
+        const street = cleanName(record[STREET_NAME_KEY]);
+        const recordCity = cleanName(record[CITY_NAME_KEY]);
+        if (!street) return [];
+        if (normalizedCity && recordCity && !normalize(recordCity).includes(normalizedCity)) return [];
+        return city ? [street] : recordCity ? [`${street}, ${recordCity}`] : [street];
+      }) ?? [];
+    return sortByQuery(query, unique(values)).slice(0, 12);
+  } catch {
+    return [];
+  }
+}
+
 async function searchRemote(
   kind: SearchKind,
   query: string,
@@ -154,14 +218,20 @@ async function searchRemote(
   if (cached) return cached;
 
   try {
-    const res = await fetch(buildUrl(kind, trimmed, language, city), {
-      headers: { 'Accept-Language': language },
-      signal,
-    });
-    if (!res.ok) return fallback;
-    const data = (await res.json()) as NominatimResult[];
-    const result = extractCandidates(kind, trimmed, data);
-    const merged = result.length > 0 ? result : fallback;
+    const [govResult, nominatimResult] = await Promise.all([
+      kind === 'city' ? searchDataGovCities(trimmed, signal) : searchDataGovStreets(trimmed, city, signal),
+      fetch(buildUrl(kind, trimmed, language, city), {
+        headers: { 'Accept-Language': language },
+        signal,
+      })
+        .then(async (res) => {
+          if (!res.ok) return [];
+          const data = (await res.json()) as NominatimResult[];
+          return extractCandidates(kind, trimmed, data);
+        })
+        .catch(() => []),
+    ]);
+    const merged = sortByQuery(trimmed, unique([...govResult, ...nominatimResult, ...fallback])).slice(0, 12);
     cache.set(cacheKey, merged);
     return merged;
   } catch {

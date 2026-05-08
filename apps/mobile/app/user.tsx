@@ -269,6 +269,7 @@ export default function DemoUserScreen() {
           const streetCitySuggestions =
             streets.length > 0
               ? streets.slice(0, 5).flatMap((street) => {
+                  if (street.includes(',')) return [street];
                   const cityMatches = bestCities.length > 0 ? bestCities.slice(0, 3) : query.hasCityPart && query.city ? [query.city] : [];
                   return cityMatches.length > 0 ? cityMatches.map((city) => `${street}, ${city}`) : [street];
                 })
