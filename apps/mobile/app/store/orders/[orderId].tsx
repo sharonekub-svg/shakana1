@@ -29,6 +29,11 @@ import {
 import { fontFamily } from '@/theme/fonts';
 import { colors } from '@/theme/tokens';
 
+function isCompleteDeliveryAddress(value: string) {
+  const trimmed = value.trim();
+  return trimmed.length >= 8 && /\d+[א-תA-Za-z]?/.test(trimmed) && trimmed.includes(',');
+}
+
 function isDisplayableMerchantOrder(order: DemoOrder | undefined): order is DemoOrder {
   return (
     !!order &&
@@ -86,6 +91,7 @@ export default function StoreOrderDetailScreen() {
     shipped: 'Shipped',
   };
   const merchantState = getMerchantOrderState(order, nowMs);
+  const deliveryAddressReady = isCompleteDeliveryAddress(order.deliveryAddress);
   const nextStep =
     order.status === 'collecting'
       ? 'Accept the order when the cart closes or once there are items ready to process.'
@@ -136,12 +142,15 @@ export default function StoreOrderDetailScreen() {
             <Metric label="Participants" value={String(order.participants.length)} />
             <Metric label="Total items" value={String(getOrderItemCount(order))} />
             <Metric label="Total price" value={`₪${getOrderTotal(order)}`} />
-            <Metric label="Delivery" value={order.deliveryAddress ? 'Address ready' : 'Missing'} />
+            <Metric label="Delivery" value={deliveryAddressReady ? 'Exact address ready' : 'Needs number'} />
           </View>
 
-          <View style={styles.deliveryBox}>
+          <View style={[styles.deliveryBox, !deliveryAddressReady && styles.deliveryBoxWarning]}>
             <Text style={styles.itemName}>Delivery address</Text>
             <Text style={styles.muted}>{order.deliveryAddress || 'No delivery address added yet.'}</Text>
+            {!deliveryAddressReady ? (
+              <Text style={styles.warningText}>Do not accept or ship until the address includes street, house number, and city.</Text>
+            ) : null}
           </View>
 
           <StatusRail status={order.status} />
@@ -159,6 +168,7 @@ export default function StoreOrderDetailScreen() {
                 key={status}
                 label={status === 'accepted' ? 'Accept Order' : `Mark ${statusLabels[status]}`}
                 onPress={() => updateStatus(order.id, status)}
+                disabled={status !== 'shipped' && !deliveryAddressReady}
                 tone={order.status === status ? 'accent' : 'light'}
                 style={styles.statusButton}
               />
@@ -287,6 +297,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.br,
     padding: 12,
+  },
+  deliveryBoxWarning: {
+    backgroundColor: colors.goldLight,
+    borderColor: colors.acc,
+  },
+  warningText: {
+    color: colors.acc,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
+    lineHeight: 19,
   },
   summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   metric: {

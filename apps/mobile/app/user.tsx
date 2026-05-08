@@ -90,6 +90,23 @@ function normalizeTimerMinutes(value: string) {
   return Math.max(1, Math.min(720, Math.round(parsed)));
 }
 
+function hasAddressNumber(value: string) {
+  return /\d+[א-תA-Za-z]?/.test(value);
+}
+
+function isCompleteDeliveryAddress(value: string) {
+  const trimmed = value.trim();
+  return trimmed.length >= 8 && hasAddressNumber(trimmed) && trimmed.includes(',');
+}
+
+function addressValidationMessage(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return 'Required: street, house number, and city before opening the cart.';
+  if (!hasAddressNumber(trimmed)) return 'Add the house/building number so the store can ship to the exact address.';
+  if (!trimmed.includes(',')) return 'Add the city after the street and number, for example: Herzl 12, Petah Tikva.';
+  return 'Required: valid timer, one store, and full delivery address before opening the cart.';
+}
+
 export default function DemoUserScreen() {
   const router = useRouter();
   const { language } = useLocale();
@@ -234,12 +251,12 @@ export default function DemoUserScreen() {
   const activeParticipant =
     order?.participants.find((participant) => participant.id === activeParticipantId) ?? accountParticipant;
   const orderLocked = order ? order.closesAt <= nowMs || order.status !== 'collecting' : false;
-  const addressMissing = order ? order.deliveryAddress.trim().length < 8 : false;
+  const addressMissing = order ? !isCompleteDeliveryAddress(order.deliveryAddress) : false;
   const isFounder = order?.createdBy === activeParticipantId;
   const isAuthenticated = !!session?.user;
   const customTimerMinutes = normalizeTimerMinutes(customTimer);
   const addressQuery = newOrderMode ? setupDeliveryAddress : order?.deliveryAddress ?? '';
-  const setupReady = !!setupBrand && !!customTimerMinutes && setupDeliveryAddress.trim().length >= 8;
+  const setupReady = !!setupBrand && !!customTimerMinutes && isCompleteDeliveryAddress(setupDeliveryAddress);
   useEffect(() => {
     if (!session?.user.id || !order || order.createdBy !== 'user-a') return;
     claimOrderFounder(order.id, accountParticipant);
@@ -313,7 +330,7 @@ export default function DemoUserScreen() {
   };
 
   const createSetupOrder = () => {
-    if (!setupBrand || !customTimerMinutes || setupDeliveryAddress.trim().length < 8) return;
+    if (!setupBrand || !customTimerMinutes || !isCompleteDeliveryAddress(setupDeliveryAddress)) return;
     const orderId = createNewOrder(setupBrand, accountParticipant, customTimerMinutes);
     updateDeliveryAddress(orderId, setupDeliveryAddress.trim());
     selectBrand(setupBrand);
@@ -450,9 +467,9 @@ export default function DemoUserScreen() {
                   <Text style={styles.setupStepNumber}>2</Text>
                   <Text style={styles.setupStepText}>Store</Text>
                 </View>
-                <View style={[styles.setupStep, setupDeliveryAddress.trim().length >= 8 && styles.setupStepDone]}>
+                <View style={[styles.setupStep, isCompleteDeliveryAddress(setupDeliveryAddress) && styles.setupStepDone]}>
                   <Text style={styles.setupStepNumber}>3</Text>
-                  <Text style={styles.setupStepText}>Address</Text>
+                  <Text style={styles.setupStepText}>Exact address</Text>
                 </View>
               </View>
             </Card>
@@ -511,8 +528,8 @@ export default function DemoUserScreen() {
               <TextInput
                 value={setupDeliveryAddress}
                 onChangeText={setSetupDeliveryAddress}
-                placeholder="Start typing street or city"
-                style={[styles.addressInput, setupDeliveryAddress.trim().length > 0 && setupDeliveryAddress.trim().length < 8 && styles.addressInputMissing]}
+                placeholder="Street number, city"
+                style={[styles.addressInput, setupDeliveryAddress.trim().length > 0 && !isCompleteDeliveryAddress(setupDeliveryAddress) && styles.addressInputMissing]}
                 accessibilityLabel="New order delivery address"
                 autoComplete="street-address"
                 autoCorrect={false}
@@ -538,14 +555,14 @@ export default function DemoUserScreen() {
                 </View>
               ) : null}
               <DemoButton
-                label={setupReady ? 'Create order' : 'Select timer, store, and address'}
+                label={setupReady ? 'Create order' : 'Add timer, store, and exact address'}
                 onPress={createSetupOrder}
                 disabled={!setupReady}
                 tone="accent"
               />
               {!setupReady ? (
                 <Text style={styles.validationText}>
-                  Required: valid timer, one store, and full delivery address before opening the cart.
+                  {addressValidationMessage(setupDeliveryAddress)}
                 </Text>
               ) : null}
             </Card>
@@ -771,7 +788,7 @@ export default function DemoUserScreen() {
                     <TextInput
                       value={order.deliveryAddress}
                       onChangeText={(value) => updateDeliveryAddress(order.id, value)}
-                      placeholder="Start typing street or city"
+                      placeholder="Street number, city"
                       style={[styles.addressInput, addressMissing && styles.addressInputMissing]}
                       accessibilityLabel="Shared order delivery address"
                       autoComplete="street-address"
@@ -802,7 +819,7 @@ export default function DemoUserScreen() {
                     ) : null}
                     <Text style={addressMissing ? styles.validationText : styles.muted}>
                       {addressMissing
-                        ? 'Add a full delivery address before the store can accept and ship this order.'
+                        ? addressValidationMessage(order.deliveryAddress)
                         : 'This is the address the merchant sees for the final shipment.'}
                     </Text>
                   </View>
