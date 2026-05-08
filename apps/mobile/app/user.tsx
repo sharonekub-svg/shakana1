@@ -101,10 +101,10 @@ function isCompleteDeliveryAddress(value: string) {
 
 function addressValidationMessage(value: string) {
   const trimmed = value.trim();
-  if (!trimmed) return 'Required: street, house number, and city before opening the cart.';
-  if (!hasAddressNumber(trimmed)) return 'Add the house/building number so the store can ship to the exact address.';
-  if (!trimmed.includes(',')) return 'Add the city after the street and number, for example: Herzl 12, Petah Tikva.';
-  return 'Required: valid timer, one store, and full delivery address before opening the cart.';
+  if (!trimmed) return 'Required: enter street + house number + city before opening the cart.';
+  if (!hasAddressNumber(trimmed)) return 'House number is required. Example: Herzl 12, Petah Tikva.';
+  if (!trimmed.includes(',')) return 'Add the city after the street and house number. Example: Herzl 12, Petah Tikva.';
+  return 'Required: valid timer, one store, and full address with house number before opening the cart.';
 }
 
 export default function DemoUserScreen() {
@@ -469,7 +469,7 @@ export default function DemoUserScreen() {
                 </View>
                 <View style={[styles.setupStep, isCompleteDeliveryAddress(setupDeliveryAddress) && styles.setupStepDone]}>
                   <Text style={styles.setupStepNumber}>3</Text>
-                  <Text style={styles.setupStepText}>Exact address</Text>
+                  <Text style={styles.setupStepText}>Street + number + city</Text>
                 </View>
               </View>
             </Card>
@@ -525,10 +525,16 @@ export default function DemoUserScreen() {
           {newOrderMode ? (
             <Card style={styles.setupCard}>
               <Text style={styles.timerTitle}>3. Delivery address</Text>
+              <View style={styles.addressRequirementBox}>
+                <Text style={styles.addressRequirementTitle}>House number required</Text>
+                <Text style={styles.addressRequirementText}>
+                  Type the full address in this format: street + house number, city. Example: Herzl 12, Petah Tikva.
+                </Text>
+              </View>
               <TextInput
                 value={setupDeliveryAddress}
                 onChangeText={setSetupDeliveryAddress}
-                placeholder="Street number, city"
+                placeholder="Street + house number, city"
                 style={[styles.addressInput, setupDeliveryAddress.trim().length > 0 && !isCompleteDeliveryAddress(setupDeliveryAddress) && styles.addressInputMissing]}
                 accessibilityLabel="New order delivery address"
                 autoComplete="street-address"
@@ -555,7 +561,7 @@ export default function DemoUserScreen() {
                 </View>
               ) : null}
               <DemoButton
-                label={setupReady ? 'Create order' : 'Add timer, store, and exact address'}
+                label={setupReady ? 'Create order' : 'Add timer, store, street number, and city'}
                 onPress={createSetupOrder}
                 disabled={!setupReady}
                 tone="accent"
@@ -785,10 +791,16 @@ export default function DemoUserScreen() {
                   </View>
                   <View style={styles.addressPanel}>
                     <Text style={styles.timerTitle}>Delivery address</Text>
+                    <View style={styles.addressRequirementBox}>
+                      <Text style={styles.addressRequirementTitle}>House number required</Text>
+                      <Text style={styles.addressRequirementText}>
+                        The merchant needs the exact house/building number. Example: Herzl 12, Petah Tikva.
+                      </Text>
+                    </View>
                     <TextInput
                       value={order.deliveryAddress}
                       onChangeText={(value) => updateDeliveryAddress(order.id, value)}
-                      placeholder="Street number, city"
+                      placeholder="Street + house number, city"
                       style={[styles.addressInput, addressMissing && styles.addressInputMissing]}
                       accessibilityLabel="Shared order delivery address"
                       autoComplete="street-address"
@@ -1362,6 +1374,26 @@ const styles = StyleSheet.create({
     borderColor: colors.br,
     backgroundColor: colors.white,
     padding: 12,
+  },
+  addressRequirementBox: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.acc,
+    backgroundColor: colors.goldLight,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 4,
+  },
+  addressRequirementTitle: {
+    color: colors.tx,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+  },
+  addressRequirementText: {
+    color: colors.mu,
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 12,
+    lineHeight: 17,
   },
   addressInput: {
     minHeight: 46,
