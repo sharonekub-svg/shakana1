@@ -109,6 +109,7 @@ export default function DemoUserScreen() {
   const restoreSharedOrder = useDemoCommerceStore((state) => state.restoreSharedOrder);
   const setActiveParticipant = useDemoCommerceStore((state) => state.setActiveParticipant);
   const setDemoRole = useDemoCommerceStore((state) => state.setDemoRole);
+  const resetDemo = useDemoCommerceStore((state) => state.resetDemo);
   const updateTimer = useDemoCommerceStore((state) => state.updateTimer);
   const updateDeliveryAddress = useDemoCommerceStore((state) => state.updateDeliveryAddress);
 
@@ -122,6 +123,9 @@ export default function DemoUserScreen() {
   const [setupDeliveryAddress, setSetupDeliveryAddress] = useState('');
   const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
   const [addressLoading, setAddressLoading] = useState(false);
+  const [joinLoading, setJoinLoading] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [joinRetry, setJoinRetry] = useState(0);
   const consumedNewParamRef = useRef(false);
 
   useEffect(() => {
@@ -166,15 +170,29 @@ export default function DemoUserScreen() {
   }, [accountParticipant, activeParticipantId, joinedOrder, joinParticipant, selectBrand]);
 
   useEffect(() => {
-    if (!params.join || joinedOrder) return;
+    if (!params.join) return;
+    if (joinedOrder) {
+      setJoinLoading(false);
+      setJoinError(null);
+      return;
+    }
+    setJoinLoading(true);
+    setJoinError(null);
     fetch(`/api/demo-order-sync?code=${encodeURIComponent(params.join)}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((payload: { orders?: unknown[] } | null) => {
         const order = payload?.orders?.[0];
-        if (order) restoreSharedOrder(order);
+        if (order) {
+          restoreSharedOrder(order);
+        } else {
+          setJoinError('We could not find this shared order. Ask the founder to send the latest invite link.');
+        }
       })
-      .catch(() => {});
-  }, [joinedOrder, params.join, restoreSharedOrder]);
+      .catch(() => {
+        setJoinError('The invite did not load. Check your connection and try the link again.');
+      })
+      .finally(() => setJoinLoading(false));
+  }, [joinRetry, joinedOrder, params.join, restoreSharedOrder]);
 
   useEffect(() => {
     if (params.new !== '1' || consumedNewParamRef.current) return;
@@ -352,10 +370,30 @@ export default function DemoUserScreen() {
             <Text style={styles.logo}>shakana</Text>
             <View style={styles.topActions}>
               <DemoButton label="New order" onPress={() => openNewOrderSetup()} tone="accent" style={styles.smallBtn} />
+              <DemoButton label="How it works" onPress={() => router.push('/how-it-works')} tone="light" style={styles.smallBtn} />
               <DemoButton label="Profile" onPress={() => router.push('/profile')} tone="light" style={styles.smallBtn} />
               <DemoButton label="Store login" onPress={() => router.push('/store')} tone="light" style={styles.smallBtn} />
             </View>
           </View>
+          {joinLoading ? (
+            <Card style={styles.joinStateCard}>
+              <View style={styles.addressLoadingRow}>
+                <ActivityIndicator size="small" color={colors.acc} />
+                <Text style={styles.joinStateTitle}>Loading shared order</Text>
+              </View>
+              <Text style={styles.muted}>We are opening the invite and checking the latest cart state.</Text>
+            </Card>
+          ) : null}
+          {joinError ? (
+            <Card style={styles.joinStateCard}>
+              <Text style={styles.joinStateTitle}>Invite needs attention</Text>
+              <Text style={styles.muted}>{joinError}</Text>
+              <View style={styles.lockActions}>
+                <DemoButton label="Try again" onPress={() => setJoinRetry((value) => value + 1)} tone="accent" style={styles.lockActionBtn} />
+                <DemoButton label="Back home" onPress={goToOrderHome} tone="light" style={styles.lockActionBtn} />
+              </View>
+            </Card>
+          ) : null}
           <BuildingSections
             orders={visibleOrders}
             onOpenStore={() => router.push('/store')}
@@ -376,6 +414,24 @@ export default function DemoUserScreen() {
                 ? 'פותחים את קישור ההזמנה מ-WhatsApp והעגלה המשותפת נטענת ישר, בלי קוד ובלי הדבקה.'
                 : 'Open the invite link from WhatsApp and the shared cart loads directly, with no code and no paste field.'}
             </Text>
+          </Card>
+          <Card style={styles.demoScriptCard}>
+            <View style={styles.demoScriptCopy}>
+              <Text style={styles.whatsappTitle}>Presentation controls</Text>
+              <Text style={styles.muted}>Reset before a meeting, then follow the short founder demo script.</Text>
+            </View>
+            <View style={styles.lockActions}>
+              <DemoButton label="View script" onPress={() => router.push('/how-it-works')} tone="light" style={styles.lockActionBtn} />
+              <DemoButton
+                label="Reset demo"
+                onPress={() => {
+                  resetDemo();
+                  router.replace('/login');
+                }}
+                tone="danger"
+                style={styles.lockActionBtn}
+              />
+            </View>
           </Card>
           <SectionTitle title="Choose your store" kicker="User flow" />
           {newOrderMode ? (
@@ -984,6 +1040,27 @@ const styles = StyleSheet.create({
     backgroundColor: colors.goldLight,
     borderWidth: 1,
     borderColor: colors.br,
+  },
+  joinStateCard: {
+    gap: 10,
+    borderColor: colors.gold,
+    backgroundColor: colors.s2,
+  },
+  joinStateTitle: {
+    color: colors.tx,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 15,
+  },
+  demoScriptCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  demoScriptCopy: {
+    flex: 1,
+    minWidth: 220,
   },
   whatsappTitle: {
     color: colors.tx,

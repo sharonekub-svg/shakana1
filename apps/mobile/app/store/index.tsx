@@ -117,6 +117,7 @@ export default function StoreDashboardScreen() {
           </View>
           <View style={styles.topActions}>
             <DemoButton label="User view" onPress={() => router.push('/user')} tone="light" style={styles.smallBtn} />
+            <DemoButton label="How it works" onPress={() => router.push('/how-it-works')} tone="light" style={styles.smallBtn} />
             <DemoButton label="Login" onPress={() => router.push('/login')} tone="light" style={styles.smallBtn} />
           </View>
         </View>

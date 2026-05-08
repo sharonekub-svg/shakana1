@@ -29,7 +29,7 @@ import { env } from '@/lib/env';
 
 import '../global.css';
 
-const PROFILE_SHORTCUT_HIDDEN_SEGMENTS = new Set(['(auth)', 'auth-callback', 'login', 'welcome', 'profile']);
+const PROFILE_SHORTCUT_HIDDEN_SEGMENTS = new Set(['(auth)', 'auth-callback', 'how-it-works', 'login', 'welcome', 'profile']);
 
 if (Platform.OS !== 'web') {
   SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -222,7 +222,7 @@ function RootLayoutInner() {
     const inCallback = topSegment === 'auth-callback';
     const inShare = topSegment === 'share';
     const inJoin = topSegment === 'join';
-    const isPublicRoute = topSegment === 'welcome' || topSegment === 'login';
+    const isPublicRoute = topSegment === 'welcome' || topSegment === 'login' || String(topSegment) === 'how-it-works';
     const isDemoRoute = topSegment === 'user' || topSegment === 'store';
     if (inCallback) return;
     if (inShare) return;
@@ -329,6 +329,7 @@ function RootLayoutInner() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="auth-callback" />
+        <Stack.Screen name="how-it-works" />
         <Stack.Screen name="join/[token]" />
         <Stack.Screen name="login" />
         <Stack.Screen name="order" />

@@ -102,6 +102,7 @@ export default function LoginScreen() {
             <View style={styles.buttonStack}>
               <DemoButton label={isHebrew ? 'המשך כמשתמש' : 'Continue as User'} onPress={continueAsUser} tone="accent" />
               <DemoButton label={isHebrew ? 'המשך כחנות' : 'Continue as Store / Agent M'} onPress={continueAsStore} />
+              <DemoButton label={isHebrew ? 'מהלך הדמו' : 'How it works'} onPress={() => router.push('/how-it-works')} tone="light" />
               <Pressable
                 accessibilityRole="button"
                 onPress={() => {
