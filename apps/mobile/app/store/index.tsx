@@ -34,6 +34,7 @@ type QueueFilter = 'needsAction' | 'all' | OrderStatus;
 type StoreFilter = 'all' | DemoBrandId;
 
 const STORE_FILTERS: StoreFilter[] = ['all', 'zara', 'amazon', 'hm'];
+const money = (value: number) => `ILS ${Math.round(value)}`;
 
 const FILTERS: { label: string; value: QueueFilter }[] = [
   { label: 'Needs action', value: 'needsAction' },
@@ -140,8 +141,8 @@ export default function StoreDashboardScreen() {
           <Metric label="Needs action" value={String(readyToProcess)} highlight />
           <Metric label="Open orders" value={String(activeOrders.length)} />
           <Metric label="Items to pick" value={String(itemsToPick)} />
-          <Metric label="Total GMV" value={`₪${totalGmv}`} />
-          <Metric label="Group savings" value={`₪${totalSavings}`} />
+          <Metric label="Total GMV" value={money(totalGmv)} />
+          <Metric label="Group savings" value={money(totalSavings)} />
         </View>
 
         <View style={styles.queueHeader}>
@@ -239,7 +240,7 @@ function StoreFilterCard({
       <Text style={styles.muted}>{openOrders.length} open orders</Text>
       <View style={styles.storeFilterStats}>
         <Stat label="Items" value={String(totalItems)} />
-        <Stat label="Value" value={`ג‚×${totalValue}`} />
+        <Stat label="Value" value={money(totalValue)} />
       </View>
     </Pressable>
   );
@@ -309,13 +310,13 @@ function OrderQueueCard({
       <View style={styles.orderStats}>
         <Stat label="Participants" value={String(order.participants.length)} />
         <Stat label="Items" value={String(totalItems)} />
-        <Stat label="Total" value={`₪${getOrderTotal(order)}`} />
+        <Stat label="Total" value={money(getOrderTotal(order))} />
         <Stat label="Goal" value={`${progress}%`} />
       </View>
 
       <ProgressBar progress={progress} accent={store.accent} />
       <Text style={styles.muted}>
-        ₪{getOrderTotal(order)} / ₪{FREE_SHIPPING_GOAL} toward free shipping. Group saved ₪{Math.round(getGroupSavings(order))}.
+        {money(getOrderTotal(order))} / {money(FREE_SHIPPING_GOAL)} toward free shipping. Group saved {money(getGroupSavings(order))}.
       </Text>
       <StatusRail status={order.status} />
     </Pressable>
