@@ -118,6 +118,8 @@ export default function DemoUserScreen() {
   const [customTimer, setCustomTimer] = useState('45');
   const [newOrderMode, setNewOrderMode] = useState(false);
   const [productSearch, setProductSearch] = useState('');
+  const [setupBrand, setSetupBrand] = useState<DemoBrandId | null>(null);
+  const [setupDeliveryAddress, setSetupDeliveryAddress] = useState('');
   const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
   const [addressLoading, setAddressLoading] = useState(false);
 
@@ -177,6 +179,7 @@ export default function DemoUserScreen() {
     if (params.new !== '1') return;
     setNewOrderMode(true);
     selectBrand(null);
+    setSetupBrand(null);
     setCategory('Best Sellers');
   }, [params.new, selectBrand]);
 
@@ -214,13 +217,15 @@ export default function DemoUserScreen() {
   const isFounder = order?.createdBy === activeParticipantId;
   const isAuthenticated = !!session?.user;
   const customTimerMinutes = normalizeTimerMinutes(customTimer);
+  const addressQuery = newOrderMode ? setupDeliveryAddress : order?.deliveryAddress ?? '';
+  const setupReady = !!setupBrand && !!customTimerMinutes && setupDeliveryAddress.trim().length >= 8;
   useEffect(() => {
     if (!session?.user.id || !order || order.createdBy !== 'user-a') return;
     claimOrderFounder(order.id, accountParticipant);
   }, [accountParticipant, claimOrderFounder, order?.createdBy, order?.id, session?.user.id]);
 
   useEffect(() => {
-    const value = order?.deliveryAddress.trim() ?? '';
+    const value = addressQuery.trim();
     const fallback = getAddressSuggestions(value);
     if (value.length < 2) {
       setAddressSuggestions([]);
@@ -262,22 +267,49 @@ export default function DemoUserScreen() {
       controller.abort();
       globalThis.clearTimeout(timer);
     };
-  }, [language, order?.deliveryAddress]);
+  }, [addressQuery, language]);
 
   useEffect(() => {
     if (!params.join || isAuthenticated) return;
     void stashPendingInvite(params.join);
   }, [isAuthenticated, params.join]);
 
-  const createOrder = (nextBrand: DemoBrandId) => {
-    selectBrand(nextBrand);
+  const selectAddressSuggestion = (suggestion: string) => {
     if (newOrderMode) {
-      createNewOrder(nextBrand, accountParticipant, customTimerMinutes || 30);
-      setNewOrderMode(false);
-      router.replace('/user');
-    } else {
-      ensureOrder(nextBrand, accountParticipant);
+      setSetupDeliveryAddress(suggestion);
+    } else if (order) {
+      updateDeliveryAddress(order.id, suggestion);
     }
+  };
+
+  const openNewOrderSetup = (nextBrand?: DemoBrandId) => {
+    setNewOrderMode(true);
+    setSetupBrand(nextBrand ?? brand ?? null);
+    setSetupDeliveryAddress(order?.deliveryAddress ?? setupDeliveryAddress);
+    selectBrand(null);
+    setCategory('Best Sellers');
+  };
+
+  const createSetupOrder = () => {
+    if (!setupBrand || !customTimerMinutes || setupDeliveryAddress.trim().length < 8) return;
+    const orderId = createNewOrder(setupBrand, accountParticipant, customTimerMinutes);
+    updateDeliveryAddress(orderId, setupDeliveryAddress.trim());
+    selectBrand(setupBrand);
+    setNewOrderMode(false);
+    setSetupBrand(null);
+    setSetupDeliveryAddress('');
+    setAddressSuggestions([]);
+    router.replace('/user');
+  };
+
+  const createOrder = (nextBrand: DemoBrandId) => {
+    const existingOrder = visibleOrJoinedOrders.find((candidate) => candidate.brand === nextBrand && candidate.status !== 'shipped');
+    if (existingOrder) {
+      selectBrand(nextBrand);
+      ensureOrder(nextBrand, accountParticipant);
+      return;
+    }
+    openNewOrderSetup(nextBrand);
   };
 
   const inviteLink = order ? buildSharedDemoInviteLink(order) : '';
@@ -314,7 +346,11 @@ export default function DemoUserScreen() {
             onOpenStore={() => router.push('/store')}
             onOpenLogin={() => router.push('/login')}
             onChooseBrand={(brand) => {
-              selectBrand(brand);
+              if (newOrderMode) {
+                setSetupBrand(brand);
+              } else {
+                selectBrand(brand);
+              }
               setCategory('Best Sellers');
             }}
           />
@@ -328,14 +364,31 @@ export default function DemoUserScreen() {
           </Card>
           <SectionTitle title="Choose your store" kicker="User flow" />
           {newOrderMode ? (
-            <Card style={styles.notice}>
-              <Text style={styles.noticeText}>Choose a store to open a brand new shared cart.</Text>
+            <Card style={styles.setupCard}>
+              <Text style={styles.setupTitle}>Set up the order first</Text>
+              <Text style={styles.muted}>
+                Choose the store, timer, and delivery address. The group order opens only after all three are ready.
+              </Text>
+              <View style={styles.setupSteps}>
+                <View style={[styles.setupStep, !!customTimerMinutes && styles.setupStepDone]}>
+                  <Text style={styles.setupStepNumber}>1</Text>
+                  <Text style={styles.setupStepText}>Timer</Text>
+                </View>
+                <View style={[styles.setupStep, setupBrand && styles.setupStepDone]}>
+                  <Text style={styles.setupStepNumber}>2</Text>
+                  <Text style={styles.setupStepText}>Store</Text>
+                </View>
+                <View style={[styles.setupStep, setupDeliveryAddress.trim().length >= 8 && styles.setupStepDone]}>
+                  <Text style={styles.setupStepNumber}>3</Text>
+                  <Text style={styles.setupStepText}>Address</Text>
+                </View>
+              </View>
             </Card>
           ) : null}
           <View style={styles.storeGrid}>
             {newOrderMode ? (
               <Card style={styles.preLaunchTimer}>
-                <Text style={styles.timerTitle}>Pre-launch: Set order duration</Text>
+                <Text style={styles.timerTitle}>1. Set order duration</Text>
                 <View style={styles.customTimerBox}>
                   <TextInput
                     value={customTimer}
@@ -346,7 +399,7 @@ export default function DemoUserScreen() {
                   />
                   <Text style={styles.timerText}>minutes</Text>
                 </View>
-                <Text style={styles.muted}>This timer starts as soon as you select a store below.</Text>
+                <Text style={styles.muted}>This timer starts only when you press Create order.</Text>
               </Card>
             ) : null}
             {(['hm', 'zara', 'amazon'] as DemoBrandId[]).map((brandId) => {
@@ -356,10 +409,18 @@ export default function DemoUserScreen() {
                   key={brandId}
                   accessibilityRole="button"
                   onPress={() => {
-                    selectBrand(brandId);
+                    if (newOrderMode) {
+                      setSetupBrand(brandId);
+                    } else {
+                      selectBrand(brandId);
+                    }
                     setCategory('Best Sellers');
                   }}
-                  style={({ pressed }) => [styles.storeChoice, pressed && demoStyles.pressed]}
+                  style={({ pressed }) => [
+                    styles.storeChoice,
+                    newOrderMode && setupBrand === brandId && styles.storeChoiceSelected,
+                    pressed && demoStyles.pressed,
+                  ]}
                 >
                   <ImageBackground source={{ uri: option.heroImage }} resizeMode="cover" style={styles.storeChoiceImage}>
                     <View style={styles.storeOverlay}>
@@ -372,6 +433,51 @@ export default function DemoUserScreen() {
               );
             })}
           </View>
+          {newOrderMode ? (
+            <Card style={styles.setupCard}>
+              <Text style={styles.timerTitle}>3. Delivery address</Text>
+              <TextInput
+                value={setupDeliveryAddress}
+                onChangeText={setSetupDeliveryAddress}
+                placeholder="Start typing street or city"
+                style={[styles.addressInput, setupDeliveryAddress.trim().length > 0 && setupDeliveryAddress.trim().length < 8 && styles.addressInputMissing]}
+                accessibilityLabel="New order delivery address"
+                autoComplete="street-address"
+                autoCorrect={false}
+              />
+              {addressLoading ? (
+                <View style={styles.addressLoadingRow}>
+                  <ActivityIndicator size="small" color={colors.acc} />
+                  <Text style={styles.addressLoadingText}>Looking for matching streets and cities</Text>
+                </View>
+              ) : null}
+              {addressSuggestions.length > 0 ? (
+                <View style={styles.addressSuggestionList}>
+                  {addressSuggestions.map((suggestion) => (
+                    <Pressable
+                      key={suggestion}
+                      accessibilityRole="button"
+                      onPress={() => selectAddressSuggestion(suggestion)}
+                      style={({ pressed }) => [styles.addressSuggestion, pressed && demoStyles.pressed]}
+                    >
+                      <Text style={styles.addressSuggestionText}>{suggestion}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              ) : null}
+              <DemoButton
+                label={setupReady ? 'Create order' : 'Select timer, store, and address'}
+                onPress={createSetupOrder}
+                disabled={!setupReady}
+                tone="accent"
+              />
+              {!setupReady ? (
+                <Text style={styles.validationText}>
+                  Required: valid timer, one store, and full delivery address before opening the cart.
+                </Text>
+              ) : null}
+            </Card>
+          ) : null}
         </DemoPage>
       </ScrollView>
     );
@@ -606,7 +712,7 @@ export default function DemoUserScreen() {
                           <Pressable
                             key={suggestion}
                             accessibilityRole="button"
-                            onPress={() => updateDeliveryAddress(order.id, suggestion)}
+                            onPress={() => selectAddressSuggestion(suggestion)}
                             style={({ pressed }) => [
                               styles.addressSuggestion,
                               pressed && demoStyles.pressed,
@@ -872,6 +978,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: colors.s3,
   },
+  storeChoiceSelected: {
+    borderColor: colors.acc,
+    borderWidth: 2,
+  },
   storeChoiceImage: { flex: 1 },
   storeOverlay: {
     flex: 1,
@@ -1037,6 +1147,53 @@ const styles = StyleSheet.create({
     borderColor: colors.acc,
     borderWidth: 1,
     marginBottom: 8,
+  },
+  setupCard: {
+    gap: 12,
+  },
+  setupTitle: {
+    color: colors.tx,
+    fontFamily: fontFamily.display,
+    fontSize: 24,
+  },
+  setupSteps: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  setupStep: {
+    flexGrow: 1,
+    flexBasis: 120,
+    minHeight: 48,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.br,
+    backgroundColor: colors.s2,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  setupStepDone: {
+    borderColor: colors.acc,
+    backgroundColor: colors.goldLight,
+  },
+  setupStepNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: colors.tx,
+    color: colors.white,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+    lineHeight: 24,
+    textAlign: 'center',
+  },
+  setupStepText: {
+    color: colors.tx,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
   },
   timerText: {
     fontFamily: fontFamily.bodyBold,
