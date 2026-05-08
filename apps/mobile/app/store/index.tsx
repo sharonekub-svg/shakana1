@@ -15,7 +15,7 @@ import {
   StatusRail,
   demoStyles,
 } from '@/components/demo/DemoPrimitives';
-import { FREE_SHIPPING_GOAL, demoStores } from '@/demo/catalog';
+import { FREE_SHIPPING_GOAL, demoStores, type DemoBrandId } from '@/demo/catalog';
 import {
   getGoalProgress,
   getGroupSavings,
@@ -31,6 +31,9 @@ import { fontFamily } from '@/theme/fonts';
 import { colors } from '@/theme/tokens';
 
 type QueueFilter = 'needsAction' | 'all' | OrderStatus;
+type StoreFilter = 'all' | DemoBrandId;
+
+const STORE_FILTERS: StoreFilter[] = ['all', 'zara', 'amazon', 'hm'];
 
 const FILTERS: { label: string; value: QueueFilter }[] = [
   { label: 'Needs action', value: 'needsAction' },
@@ -63,6 +66,7 @@ export default function StoreDashboardScreen() {
   const activeParticipantId = useDemoCommerceStore((state) => state.activeParticipantId);
   const [nowMs, setNowMs] = useState(Date.now());
   const [filter, setFilter] = useState<QueueFilter>('needsAction');
+  const [storeFilter, setStoreFilter] = useState<StoreFilter>('all');
   const [query, setQuery] = useState('');
 
   useEffect(() => {
@@ -71,15 +75,19 @@ export default function StoreDashboardScreen() {
   }, [demoMode, setDemoRole]);
 
   const merchantOrders = useMemo(() => orders.filter(isDisplayableMerchantOrder), [orders]);
-  const activeOrders = merchantOrders.filter((order) => order.status !== 'shipped');
+  const visibleStoreOrders = useMemo(
+    () => merchantOrders.filter((order) => storeFilter === 'all' || order.brand === storeFilter),
+    [merchantOrders, storeFilter],
+  );
+  const activeOrders = visibleStoreOrders.filter((order) => order.status !== 'shipped');
   const readyToProcess = activeOrders.filter((order) => order.items.length > 0 || order.closesAt <= nowMs).length;
   const itemsToPick = activeOrders.reduce((total, order) => total + getOrderItemCount(order), 0);
-  const totalGmv = merchantOrders.reduce((total, order) => total + getOrderTotal(order), 0);
-  const totalSavings = Math.round(merchantOrders.reduce((total, order) => total + getGroupSavings(order), 0));
+  const totalGmv = visibleStoreOrders.reduce((total, order) => total + getOrderTotal(order), 0);
+  const totalSavings = Math.round(visibleStoreOrders.reduce((total, order) => total + getGroupSavings(order), 0));
 
   const filteredOrders = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return merchantOrders.filter((order) => {
+    return visibleStoreOrders.filter((order) => {
       const store = demoStores[order.brand];
       const timerEnded = order.closesAt <= nowMs;
       const matchesFilter =
@@ -94,7 +102,9 @@ export default function StoreDashboardScreen() {
         (order.deliveryAddress ?? '').toLowerCase().includes(normalizedQuery);
       return matchesFilter && matchesQuery;
     });
-  }, [filter, merchantOrders, nowMs, query]);
+  }, [filter, nowMs, query, visibleStoreOrders]);
+
+  const selectedStoreName = storeFilter === 'all' ? 'All stores' : demoStores[storeFilter].name;
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
@@ -103,7 +113,7 @@ export default function StoreDashboardScreen() {
           <View>
             <Text style={styles.logo}>Agent M</Text>
             <Text style={styles.title}>Merchant dashboard</Text>
-            <Text style={styles.muted}>A clean work queue for accepting, picking, and shipping group orders.</Text>
+            <Text style={styles.muted}>Choose Zara, Amazon, or H&M, then track only that store's orders and items.</Text>
           </View>
           <View style={styles.topActions}>
             <DemoButton label="User view" onPress={() => router.push('/user')} tone="light" style={styles.smallBtn} />
@@ -112,6 +122,18 @@ export default function StoreDashboardScreen() {
         </View>
 
         <CelebrationBanner pulse={lastPulse} />
+
+        <View style={styles.storeSwitcher}>
+          {STORE_FILTERS.map((brand) => (
+            <StoreFilterCard
+              key={brand}
+              brand={brand}
+              orders={brand === 'all' ? merchantOrders : merchantOrders.filter((order) => order.brand === brand)}
+              active={storeFilter === brand}
+              onPress={() => setStoreFilter(brand)}
+            />
+          ))}
+        </View>
 
         <View style={styles.metricsGrid}>
           <Metric label="Needs action" value={String(readyToProcess)} highlight />
@@ -122,7 +144,7 @@ export default function StoreDashboardScreen() {
         </View>
 
         <View style={styles.queueHeader}>
-          <SectionTitle title="Order queue" kicker="Track every live cart" />
+          <SectionTitle title={`${selectedStoreName} order queue`} kicker="Store-specific work queue" />
           <TextInput
             value={query}
             onChangeText={setQuery}
@@ -148,6 +170,11 @@ export default function StoreDashboardScreen() {
             title="No group orders yet"
             body="Open the user demo, choose Amazon, H&M, or Zara, and create a group order. It will appear here instantly."
           />
+        ) : visibleStoreOrders.length === 0 ? (
+          <EmptyNotice
+            title={`No ${selectedStoreName} orders yet`}
+            body="Choose another store, or create a new group order from the user side for this merchant."
+          />
         ) : filteredOrders.length === 0 ? (
           <EmptyNotice
             title="No orders match this view"
@@ -167,9 +194,53 @@ export default function StoreDashboardScreen() {
           </View>
         )}
 
-        <SavingsTracker orders={merchantOrders} activeParticipantId={activeParticipantId} />
+        <SavingsTracker orders={visibleStoreOrders} activeParticipantId={activeParticipantId} />
       </DemoPage>
     </ScrollView>
+  );
+}
+
+function StoreFilterCard({
+  brand,
+  orders,
+  active,
+  onPress,
+}: {
+  brand: StoreFilter;
+  orders: DemoOrder[];
+  active: boolean;
+  onPress: () => void;
+}) {
+  const label = brand === 'all' ? 'All stores' : demoStores[brand].name;
+  const accent = brand === 'all' ? colors.acc : demoStores[brand].accent;
+  const openOrders = orders.filter((order) => order.status !== 'shipped');
+  const totalItems = orders.reduce((total, order) => total + getOrderItemCount(order), 0);
+  const totalValue = orders.reduce((total, order) => total + getOrderTotal(order), 0);
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.storeFilterCard,
+        active && styles.storeFilterCardActive,
+        { borderColor: active ? accent : colors.br },
+        pressed && demoStyles.pressed,
+      ]}
+    >
+      <View style={styles.storeFilterTop}>
+        {brand === 'all' ? <Text style={styles.storeFilterLogo}>ALL</Text> : <BrandPill brand={brand} />}
+        <Text style={[styles.storeFilterStatus, active && { color: accent }]}>
+          {active ? 'Selected' : 'Open'}
+        </Text>
+      </View>
+      <Text style={styles.storeFilterTitle}>{label}</Text>
+      <Text style={styles.muted}>{openOrders.length} open orders</Text>
+      <View style={styles.storeFilterStats}>
+        <Stat label="Items" value={String(totalItems)} />
+        <Stat label="Value" value={`ג‚×${totalValue}`} />
+      </View>
+    </Pressable>
   );
 }
 
@@ -313,6 +384,53 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.display,
     fontSize: 32,
     lineHeight: 36,
+  },
+  storeSwitcher: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  storeFilterCard: {
+    flexGrow: 1,
+    flexBasis: 210,
+    gap: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    backgroundColor: colors.white,
+    padding: 14,
+  },
+  storeFilterCardActive: {
+    backgroundColor: colors.s2,
+  },
+  storeFilterTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  storeFilterLogo: {
+    overflow: 'hidden',
+    borderRadius: 6,
+    backgroundColor: colors.tx,
+    color: '#FFFFFF',
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  storeFilterStatus: {
+    color: colors.mu,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+  },
+  storeFilterTitle: {
+    color: colors.tx,
+    fontFamily: fontFamily.display,
+    fontSize: 24,
+  },
+  storeFilterStats: {
+    flexDirection: 'row',
+    gap: 8,
   },
   metricsGrid: {
     flexDirection: 'row',
