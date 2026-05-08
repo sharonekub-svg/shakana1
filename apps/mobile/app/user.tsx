@@ -122,6 +122,7 @@ export default function DemoUserScreen() {
   const [setupDeliveryAddress, setSetupDeliveryAddress] = useState('');
   const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
   const [addressLoading, setAddressLoading] = useState(false);
+  const consumedNewParamRef = useRef(false);
 
   useEffect(() => {
     initDemoCommerceSync();
@@ -176,12 +177,14 @@ export default function DemoUserScreen() {
   }, [joinedOrder, params.join, restoreSharedOrder]);
 
   useEffect(() => {
-    if (params.new !== '1') return;
+    if (params.new !== '1' || consumedNewParamRef.current) return;
+    consumedNewParamRef.current = true;
     setNewOrderMode(true);
     selectBrand(null);
     setSetupBrand(null);
     setCategory('Best Sellers');
-  }, [params.new, selectBrand]);
+    router.replace('/user');
+  }, [params.new, router, selectBrand]);
 
   useEffect(() => {
     if (!session?.user) return;
@@ -331,6 +334,7 @@ export default function DemoUserScreen() {
   };
 
   const goToOrderHome = () => {
+    consumedNewParamRef.current = true;
     setNewOrderMode(false);
     setSetupBrand(null);
     setSetupDeliveryAddress('');

@@ -204,7 +204,7 @@ function mergeRemoteOrders(state: DemoState, remoteOrders: DemoOrder[]): Persist
   const remoteCodes = new Set(mergedRemote.map((order) => order.inviteCode));
   return {
     ...persistedFromState(state),
-    selectedBrand: state.selectedBrand ?? mergedRemote[0]?.brand ?? null,
+    selectedBrand: state.selectedBrand,
     orders: [
       ...mergedRemote,
       ...state.orders.filter((order) => !remoteCodes.has(order.inviteCode)),
