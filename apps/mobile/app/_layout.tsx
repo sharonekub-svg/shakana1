@@ -223,7 +223,7 @@ function RootLayoutInner() {
     const inShare = topSegment === 'share';
     const inJoin = topSegment === 'join';
     const isPublicRoute = topSegment === 'welcome' || topSegment === 'login' || String(topSegment) === 'how-it-works';
-    const isDemoRoute = topSegment === 'user' || topSegment === 'store';
+    const isDemoRoute = topSegment === 'user' || topSegment === 'store' || String(topSegment) === 'new-order';
     if (inCallback) return;
     if (inShare) return;
     if (inJoin && Platform.OS === 'web') return;

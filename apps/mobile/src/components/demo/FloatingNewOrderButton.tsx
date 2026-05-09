@@ -5,7 +5,7 @@ import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { env } from '@/lib/env';
 
-const HIDDEN_PREFIXES = ['/auth-callback', '/login', '/welcome', '/profile/delete'];
+const HIDDEN_PREFIXES = ['/auth-callback', '/login', '/welcome', '/profile/delete', '/new-order'];
 
 export function FloatingNewOrderButton() {
   const router = useRouter();
@@ -57,7 +57,7 @@ export function FloatingNewOrderButton() {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel="New Order"
-      onPress={() => router.push('/user?new=1')}
+      onPress={() => router.push('/new-order')}
       style={({ pressed }) => [styles.button, pressed && styles.pressed]}
     >
       <Text style={styles.kicker}>Start cart</Text>

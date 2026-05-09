@@ -165,7 +165,7 @@ export default function ProfileScreen() {
         ) : null}
 
         <View style={styles.quickGrid}>
-          <QuickAction title="New Order" body="Choose Amazon, H&M, or Zara and open a new cart." badge="+" primary onPress={() => router.push('/user?new=1' as Href)} />
+          <QuickAction title="New Order" body="Choose Amazon, H&M, or Zara and open a new cart." badge="+" primary onPress={() => router.push('/new-order' as Href)} />
           <QuickAction title="Open orders" body="Live carts you are tracking now." badge={String(openOrders)} onPress={() => router.push('/user')} />
           <QuickAction title="Store mode" body="Merchant dashboard for active orders." badge="M" onPress={() => router.push('/store')} />
           <QuickAction title="Copy invite" body="Copy the latest short WhatsApp link." badge="Go" onPress={copyLatestInvite} />

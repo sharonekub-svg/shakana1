@@ -214,11 +214,7 @@ export default function DemoUserScreen() {
   useEffect(() => {
     if (params.new !== '1' || consumedNewParamRef.current) return;
     consumedNewParamRef.current = true;
-    setNewOrderMode(true);
-    selectBrand(null);
-    setSetupBrand(null);
-    setCategory('Best Sellers');
-    router.replace('/user');
+    router.replace('/new-order');
   }, [params.new, router, selectBrand]);
 
   useEffect(() => {
@@ -322,11 +318,8 @@ export default function DemoUserScreen() {
   };
 
   const openNewOrderSetup = (nextBrand?: DemoBrandId) => {
-    setNewOrderMode(true);
-    setSetupBrand(nextBrand ?? brand ?? null);
-    setSetupDeliveryAddress(order?.deliveryAddress ?? setupDeliveryAddress);
-    selectBrand(null);
-    setCategory('Best Sellers');
+    const targetBrand = nextBrand ?? brand ?? null;
+    router.push(targetBrand ? (`/new-order?brand=${targetBrand}` as never) : ('/new-order' as never));
   };
 
   const createSetupOrder = () => {
