@@ -17,8 +17,9 @@ import {
   StatusRail,
   demoStyles,
 } from '@/components/demo/DemoPrimitives';
-import { buildInviteMessage, demoCategories, demoStores, productsForBrand, type DemoBrandId, type DemoProduct } from '@/demo/catalog';
+import { buildInviteMessage, demoCategories, demoStores, findProduct, productsForBrand, type DemoBrandId, type DemoProduct } from '@/demo/catalog';
 import {
+  type DemoOrder,
   type DemoParticipant,
   getOrderItemCount,
   getOrderTotal,
@@ -129,6 +130,7 @@ export default function DemoUserScreen() {
   const resetDemo = useDemoCommerceStore((state) => state.resetDemo);
   const updateTimer = useDemoCommerceStore((state) => state.updateTimer);
   const updateDeliveryAddress = useDemoCommerceStore((state) => state.updateDeliveryAddress);
+  const simulatePayment = useDemoCommerceStore((state) => state.simulatePayment);
 
   const [category, setCategory] = useState<(typeof demoCategories)[number]>('Best Sellers');
   const [copied, setCopied] = useState(false);
@@ -143,6 +145,8 @@ export default function DemoUserScreen() {
   const [joinLoading, setJoinLoading] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [joinRetry, setJoinRetry] = useState(0);
+  const [payModalOpen, setPayModalOpen] = useState(false);
+  const [payStep, setPayStep] = useState<'form' | 'processing' | 'success'>('form');
   const consumedNewParamRef = useRef(false);
 
   useEffect(() => {
@@ -914,12 +918,36 @@ export default function DemoUserScreen() {
                       })}
                     </View>
                   )}
+                  <PayButton
+                    order={order}
+                    activeParticipantId={activeParticipantId}
+                    onPay={() => {
+                      setPayStep('form');
+                      setPayModalOpen(true);
+                    }}
+                  />
                 </Card>
               </>
             )}
           </View>
         </View>
       </DemoPage>
+      {payModalOpen && order ? (
+        <MockPaymentModal
+          order={order}
+          activeParticipantId={activeParticipantId}
+          activeParticipantName={activeParticipant.name}
+          step={payStep}
+          onConfirm={() => {
+            setPayStep('processing');
+            globalThis.setTimeout(() => {
+              simulatePayment(order.id, activeParticipantId);
+              setPayStep('success');
+            }, 2200);
+          }}
+          onClose={() => setPayModalOpen(false)}
+        />
+      ) : null}
     </ScrollView>
   );
 }
@@ -1035,6 +1063,433 @@ function ProductCard({
     </Card>
   );
 }
+
+function PayButton({
+  order,
+  activeParticipantId,
+  onPay,
+}: {
+  order: DemoOrder;
+  activeParticipantId: string;
+  onPay: () => void;
+}) {
+  const myItems = order.items.filter((item) => item.participantId === activeParticipantId);
+  if (myItems.length === 0) return null;
+  const alreadyPaid = order.paidParticipants.includes(activeParticipantId);
+  const myTotal = myItems.reduce((sum, item) => {
+    const product = findProduct(item.productId);
+    return sum + (product?.price ?? 0) * item.quantity;
+  }, 0);
+  return (
+    <View style={payStyles.paySection}>
+      <View style={payStyles.payRow}>
+        <View>
+          <Text style={payStyles.payLabel}>Your items total</Text>
+          <Text style={payStyles.payAmount}>₪{myTotal}</Text>
+        </View>
+        {alreadyPaid ? (
+          <View style={payStyles.paidBadge}>
+            <Text style={payStyles.paidBadgeText}>Payment confirmed ✓</Text>
+          </View>
+        ) : (
+          <DemoButton label={`Pay ₪${myTotal} securely`} onPress={onPay} tone="accent" style={payStyles.payBtn} />
+        )}
+      </View>
+      {!alreadyPaid ? (
+        <Text style={payStyles.payMuted}>Held in escrow until the merchant ships your order.</Text>
+      ) : null}
+    </View>
+  );
+}
+
+function MockPaymentModal({
+  order,
+  activeParticipantId,
+  activeParticipantName,
+  step,
+  onConfirm,
+  onClose,
+}: {
+  order: DemoOrder;
+  activeParticipantId: string;
+  activeParticipantName: string;
+  step: 'form' | 'processing' | 'success';
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  const myItems = order.items.filter((item) => item.participantId === activeParticipantId);
+  const myTotal = myItems.reduce((sum, item) => {
+    const product = findProduct(item.productId);
+    return sum + (product?.price ?? 0) * item.quantity;
+  }, 0);
+  const storeName = demoStores[order.brand].name;
+
+  return (
+    <View style={payStyles.overlay} pointerEvents="box-none">
+      <View style={payStyles.backdrop} />
+      <ScrollView contentContainerStyle={payStyles.modalScroll} style={payStyles.modalScrollOuter}>
+        <View style={payStyles.modal}>
+          <View style={payStyles.modalHeader}>
+            <View style={payStyles.stripeLockRow}>
+              <Text style={payStyles.stripeLock}>🔒</Text>
+              <Text style={payStyles.stripeLabel}>Secure checkout</Text>
+            </View>
+            {step !== 'processing' ? (
+              <Pressable onPress={onClose} accessibilityRole="button" style={payStyles.closeBtn}>
+                <Text style={payStyles.closeBtnText}>✕</Text>
+              </Pressable>
+            ) : null}
+          </View>
+
+          {step === 'form' ? (
+            <>
+              <Text style={payStyles.modalTitle}>Pay ₪{myTotal}</Text>
+              <Text style={payStyles.modalMuted}>
+                {activeParticipantName} · {myItems.length} item{myItems.length !== 1 ? 's' : ''} from {storeName}
+              </Text>
+
+              <View style={payStyles.demoNotice}>
+                <Text style={payStyles.demoNoticeText}>Demo card — no real charge</Text>
+              </View>
+
+              <Text style={payStyles.fieldLabel}>Card number</Text>
+              <View style={payStyles.cardField}>
+                <Text style={payStyles.cardFieldText}>4242  4242  4242  4242</Text>
+                <Text style={payStyles.cardBrand}>VISA</Text>
+              </View>
+
+              <View style={payStyles.cardRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={payStyles.fieldLabel}>Expiry</Text>
+                  <View style={payStyles.cardField}>
+                    <Text style={payStyles.cardFieldText}>12 / 27</Text>
+                  </View>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={payStyles.fieldLabel}>CVC</Text>
+                  <View style={payStyles.cardField}>
+                    <Text style={payStyles.cardFieldText}>123</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={payStyles.orderSummary}>
+                {myItems.map((item) => {
+                  const product = findProduct(item.productId);
+                  const lineTotal = (product?.price ?? 0) * item.quantity;
+                  return (
+                    <View key={item.id} style={payStyles.orderLine}>
+                      <Text style={payStyles.orderLineName} numberOfLines={1}>
+                        {item.private ? 'Private item' : (product?.name ?? 'Item')} ×{item.quantity}
+                      </Text>
+                      <Text style={payStyles.orderLinePrice}>₪{lineTotal}</Text>
+                    </View>
+                  );
+                })}
+                <View style={payStyles.orderDivider} />
+                <View style={payStyles.orderLine}>
+                  <Text style={payStyles.orderLineTotal}>Total</Text>
+                  <Text style={payStyles.orderLineTotal}>₪{myTotal}</Text>
+                </View>
+              </View>
+
+              <DemoButton label={`Pay ₪${myTotal}`} onPress={onConfirm} tone="accent" style={payStyles.confirmBtn} />
+              <Text style={payStyles.escrowNote}>
+                Payment held in escrow until {storeName} ships your order
+              </Text>
+            </>
+          ) : step === 'processing' ? (
+            <View style={payStyles.processingState}>
+              <ActivityIndicator size="large" color={colors.acc} />
+              <Text style={payStyles.processingText}>Processing payment…</Text>
+              <Text style={payStyles.processingMuted}>Securing ₪{myTotal} in escrow</Text>
+            </View>
+          ) : (
+            <View style={payStyles.successState}>
+              <View style={payStyles.successIcon}>
+                <Text style={payStyles.successIconText}>✓</Text>
+              </View>
+              <Text style={payStyles.successTitle}>Payment confirmed!</Text>
+              <Text style={payStyles.successMuted}>
+                ₪{myTotal} is secured in escrow. {storeName} will ship your items once all neighbors have paid.
+              </Text>
+              <DemoButton label="Back to cart" onPress={onClose} tone="accent" style={payStyles.confirmBtn} />
+            </View>
+          )}
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+const payStyles = StyleSheet.create({
+  paySection: {
+    borderTopWidth: 1,
+    borderTopColor: colors.br,
+    paddingTop: 12,
+    gap: 6,
+  },
+  payRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  payLabel: {
+    color: colors.mu,
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 12,
+    textTransform: 'uppercase',
+  },
+  payAmount: {
+    color: colors.tx,
+    fontFamily: fontFamily.display,
+    fontSize: 26,
+  },
+  payBtn: { flexGrow: 1, flexBasis: 160 },
+  payMuted: {
+    color: colors.mu,
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  paidBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    backgroundColor: '#E6F4EA',
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
+  paidBadgeText: {
+    color: '#2E7D32',
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.52)',
+  },
+  modalScrollOuter: {
+    width: '100%',
+  },
+  modalScroll: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    minHeight: '100%',
+  },
+  modal: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    padding: 24,
+    gap: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  stripeLockRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  stripeLock: { fontSize: 16 },
+  stripeLabel: {
+    color: colors.mu,
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.s2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeBtnText: {
+    color: colors.mu,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+  },
+  modalTitle: {
+    color: colors.tx,
+    fontFamily: fontFamily.display,
+    fontSize: 32,
+  },
+  modalMuted: {
+    color: colors.mu,
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 14,
+    marginTop: -8,
+  },
+  demoNotice: {
+    borderRadius: 8,
+    backgroundColor: '#E8F5E9',
+    borderWidth: 1,
+    borderColor: '#A5D6A7',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  demoNoticeText: {
+    color: '#2E7D32',
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  fieldLabel: {
+    color: colors.mu,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: 4,
+  },
+  cardField: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.brBr,
+    backgroundColor: colors.s2,
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  cardFieldText: {
+    color: colors.tx,
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 15,
+    letterSpacing: 1,
+  },
+  cardBrand: {
+    color: colors.mu,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 11,
+    textTransform: 'uppercase',
+  },
+  cardRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  orderSummary: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.br,
+    backgroundColor: colors.s2,
+    padding: 12,
+    gap: 6,
+  },
+  orderLine: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
+  },
+  orderLineName: {
+    color: colors.tx,
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 13,
+    flex: 1,
+  },
+  orderLinePrice: {
+    color: colors.tx,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
+  },
+  orderDivider: {
+    height: 1,
+    backgroundColor: colors.br,
+    marginVertical: 2,
+  },
+  orderLineTotal: {
+    color: colors.tx,
+    fontFamily: fontFamily.display,
+    fontSize: 17,
+  },
+  confirmBtn: {
+    minHeight: 52,
+  },
+  escrowNote: {
+    color: colors.mu,
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 17,
+  },
+  processingState: {
+    alignItems: 'center',
+    gap: 16,
+    paddingVertical: 32,
+  },
+  processingText: {
+    color: colors.tx,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 18,
+  },
+  processingMuted: {
+    color: colors.mu,
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 14,
+  },
+  successState: {
+    alignItems: 'center',
+    gap: 16,
+    paddingVertical: 16,
+  },
+  successIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#E6F4EA',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  successIconText: {
+    color: '#2E7D32',
+    fontSize: 28,
+    fontFamily: fontFamily.bodyBold,
+  },
+  successTitle: {
+    color: colors.tx,
+    fontFamily: fontFamily.display,
+    fontSize: 26,
+  },
+  successMuted: {
+    color: colors.mu,
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: 'center',
+  },
+});
 
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: colors.bg },
