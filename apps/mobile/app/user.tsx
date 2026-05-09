@@ -18,6 +18,7 @@ import {
   demoStyles,
 } from '@/components/demo/DemoPrimitives';
 import { buildInviteMessage, demoCategories, demoStores, findProduct, getProductImage, productsForBrand, type DemoBrandId, type DemoProduct } from '@/demo/catalog';
+import { calcCommission } from '@/config/shippingPolicies';
 import {
   type DemoOrder,
   type DemoParticipant,
@@ -1077,23 +1078,41 @@ function PayButton({
   const myItems = order.items.filter((item) => item.participantId === activeParticipantId);
   if (myItems.length === 0) return null;
   const alreadyPaid = order.paidParticipants.includes(activeParticipantId);
-  const myTotal = myItems.reduce((sum, item) => {
+
+  const myItemsTotal = myItems.reduce((sum, item) => {
     const product = findProduct(item.productId);
     return sum + (product?.price ?? 0) * item.quantity;
   }, 0);
+  const groupTotal = order.items.reduce((sum, item) => {
+    const product = findProduct(item.productId);
+    return sum + (product?.price ?? 0) * item.quantity;
+  }, 0);
+  const { commissionILS, totalILS, savingsILS } = calcCommission(myItemsTotal, groupTotal, order.brand);
+  const total = Math.round(totalILS * 100) / 100;
+
   return (
     <View style={payStyles.paySection}>
+      {savingsILS > 0 && (
+        <View style={payStyles.savingsRow}>
+          <Text style={payStyles.savingsText}>
+            🎉 You save ₪{savingsILS} on shipping — Shakana fee ₪{commissionILS}
+          </Text>
+        </View>
+      )}
       <View style={payStyles.payRow}>
         <View>
-          <Text style={payStyles.payLabel}>Your items total</Text>
-          <Text style={payStyles.payAmount}>₪{myTotal}</Text>
+          <Text style={payStyles.payLabel}>Total to pay</Text>
+          <Text style={payStyles.payAmount}>₪{total}</Text>
+          {commissionILS > 0 && (
+            <Text style={payStyles.payAmountSub}>items ₪{myItemsTotal} + fee ₪{commissionILS}</Text>
+          )}
         </View>
         {alreadyPaid ? (
           <View style={payStyles.paidBadge}>
             <Text style={payStyles.paidBadgeText}>Payment confirmed ✓</Text>
           </View>
         ) : (
-          <DemoButton label={`Pay ₪${myTotal} securely`} onPress={onPay} tone="accent" style={payStyles.payBtn} />
+          <DemoButton label={`Pay ₪${total} securely`} onPress={onPay} tone="accent" style={payStyles.payBtn} />
         )}
       </View>
       {!alreadyPaid ? (
@@ -1119,10 +1138,16 @@ function MockPaymentModal({
   onClose: () => void;
 }) {
   const myItems = order.items.filter((item) => item.participantId === activeParticipantId);
-  const myTotal = myItems.reduce((sum, item) => {
+  const myItemsTotal = myItems.reduce((sum, item) => {
     const product = findProduct(item.productId);
     return sum + (product?.price ?? 0) * item.quantity;
   }, 0);
+  const groupTotal = order.items.reduce((sum, item) => {
+    const product = findProduct(item.productId);
+    return sum + (product?.price ?? 0) * item.quantity;
+  }, 0);
+  const { commissionILS, totalILS, savingsILS, soloShippingILS } = calcCommission(myItemsTotal, groupTotal, order.brand);
+  const myTotal = Math.round(totalILS * 100) / 100;
   const storeName = demoStores[order.brand].name;
 
   return (
@@ -1189,9 +1214,41 @@ function MockPaymentModal({
                 })}
                 <View style={payStyles.orderDivider} />
                 <View style={payStyles.orderLine}>
+                  <Text style={payStyles.orderLineMuted}>Subtotal</Text>
+                  <Text style={payStyles.orderLineMuted}>₪{myItemsTotal}</Text>
+                </View>
+                {savingsILS > 0 ? (
+                  <>
+                    <View style={payStyles.orderLine}>
+                      <Text style={payStyles.orderLineMuted}>
+                        Shipping (without Shakana)
+                      </Text>
+                      <Text style={[payStyles.orderLineMuted, payStyles.strikethrough]}>
+                        ₪{soloShippingILS}
+                      </Text>
+                    </View>
+                    <View style={payStyles.orderLine}>
+                      <Text style={payStyles.orderLineSavings}>Group shipping</Text>
+                      <Text style={payStyles.orderLineSavings}>FREE ✓</Text>
+                    </View>
+                    <View style={payStyles.orderLine}>
+                      <Text style={payStyles.orderLineMuted}>Shakana fee (50% of savings)</Text>
+                      <Text style={payStyles.orderLineMuted}>₪{commissionILS}</Text>
+                    </View>
+                  </>
+                ) : null}
+                <View style={payStyles.orderDivider} />
+                <View style={payStyles.orderLine}>
                   <Text style={payStyles.orderLineTotal}>Total</Text>
                   <Text style={payStyles.orderLineTotal}>₪{myTotal}</Text>
                 </View>
+                {savingsILS > 0 && (
+                  <View style={payStyles.savingsBadge}>
+                    <Text style={payStyles.savingsBadgeText}>
+                      You save ₪{savingsILS} by joining this group order 🎉
+                    </Text>
+                  </View>
+                )}
               </View>
 
               <DemoButton label={`Pay ₪${myTotal}`} onPress={onConfirm} tone="accent" style={payStyles.confirmBtn} />
@@ -1247,6 +1304,23 @@ const payStyles = StyleSheet.create({
     color: colors.tx,
     fontFamily: fontFamily.display,
     fontSize: 26,
+  },
+  payAmountSub: {
+    color: colors.mu,
+    fontFamily: fontFamily.body,
+    fontSize: 11,
+    marginTop: 1,
+  },
+  savingsRow: {
+    backgroundColor: '#E6F4EA',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  savingsText: {
+    color: '#2E7D32',
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 12,
   },
   payBtn: { flexGrow: 1, flexBasis: 160 },
   payMuted: {
@@ -1434,6 +1508,35 @@ const payStyles = StyleSheet.create({
     color: colors.tx,
     fontFamily: fontFamily.display,
     fontSize: 17,
+  },
+  orderLineMuted: {
+    color: colors.mu,
+    fontFamily: fontFamily.body,
+    fontSize: 12,
+    flex: 1,
+  },
+  strikethrough: {
+    textDecorationLine: 'line-through',
+    flex: 0,
+  },
+  orderLineSavings: {
+    color: '#2E7D32',
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 12,
+    flex: 1,
+  },
+  savingsBadge: {
+    backgroundColor: '#E6F4EA',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginTop: 4,
+  },
+  savingsBadgeText: {
+    color: '#2E7D32',
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 12,
+    textAlign: 'center',
   },
   confirmBtn: {
     minHeight: 52,

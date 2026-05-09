@@ -8,6 +8,7 @@ import {
   findProduct,
   productsForBrand,
 } from '@/demo/catalog';
+import { calcCommission } from '@/config/shippingPolicies';
 
 export type DemoRole = 'user' | 'store' | null;
 export type OrderStatus = 'collecting' | 'accepted' | 'packing' | 'ready' | 'shipped';
@@ -726,16 +727,25 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
           .every((p) => paidParticipants.includes(p.id));
         const name = order.participants.find((p) => p.id === participantId)?.name ?? 'Member';
         const myItems = order.items.filter((item) => item.participantId === participantId);
-        const myTotal = myItems.reduce((sum, item) => {
+        const myItemsTotal = myItems.reduce((sum, item) => {
           const product = findProduct(item.productId);
           return sum + (product?.price ?? 0) * item.quantity;
         }, 0);
+        const groupTotal = order.items.reduce((sum, item) => {
+          const product = findProduct(item.productId);
+          return sum + (product?.price ?? 0) * item.quantity;
+        }, 0);
+        const { commissionILS, totalILS, savingsILS } = calcCommission(myItemsTotal, groupTotal, order.brand);
+        const totalCharged = Math.round(totalILS * 100) / 100;
+        const eventMsg = allPaid
+          ? `All payments received — order ready for ${demoStores[order.brand].name} 🎉`
+          : savingsILS > 0
+            ? `${name} paid ₪${totalCharged} (items ₪${myItemsTotal} + Shakana fee ₪${commissionILS}) — saved ₪${savingsILS}`
+            : `${name} paid ₪${totalCharged} — payment secured in escrow`;
         return {
           ...order,
           paidParticipants,
-          lastEvent: allPaid
-            ? `All payments received — order ready for ${demoStores[order.brand].name} 🎉`
-            : `${name} paid ₪${myTotal} — payment secured in escrow`,
+          lastEvent: eventMsg,
         };
       });
       const changedOrder = orders.find((order) => order.id === orderId);

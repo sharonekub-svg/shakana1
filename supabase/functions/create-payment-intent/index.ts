@@ -3,13 +3,9 @@ import { errorJson, json, readJson } from '../_shared/json.ts';
 import { admin, authedUserId, httpError } from '../_shared/supabaseAdmin.ts';
 import { CONNECTED_ACCOUNT_ID, stripe } from '../_shared/stripe.ts';
 import { idempotencyKeyFrom } from '../_shared/idempotency.ts';
+import { calcCommission } from '../_shared/shippingPolicies.ts';
 
 type Body = { orderId: string; idempotency_key?: string };
-
-function sumOrderItems(items: Array<{ price_agorot: number | null }> | null, fallbackAgorot: number): number {
-  const total = (items ?? []).reduce((sum, item) => sum + Math.max(0, item.price_agorot ?? 0), 0);
-  return total > 0 ? total : fallbackAgorot;
-}
 
 Deno.serve(async (req) => {
   const pre = handleOptions(req);
@@ -46,33 +42,58 @@ Deno.serve(async (req) => {
     if (!participant) throw httpError(403, 'not_a_participant');
     if (participant.status === 'paid') throw httpError(409, 'already_paid');
 
-    const [{ data: participants, error: participantsErr }, { data: items, error: itemsErr }] = await Promise.all([
+    // Fetch this participant's items and all order items in parallel.
+    const [
+      { data: myItems, error: myItemsErr },
+      { data: allItems, error: allItemsErr },
+    ] = await Promise.all([
       admin
-        .from('participants')
-        .select('id, status')
+        .from('order_items')
+        .select('price_agorot')
         .eq('order_id', order.id)
-        .in('status', ['joined', 'paid']),
+        .eq('participant_id', participant.id),
       admin
         .from('order_items')
         .select('price_agorot')
         .eq('order_id', order.id),
     ]);
-    if (participantsErr) throw participantsErr;
-    if (itemsErr) throw itemsErr;
+    if (myItemsErr) throw myItemsErr;
+    if (allItemsErr) throw allItemsErr;
 
-    const participantCount = Math.max(1, participants?.length ?? 1);
-    const itemsTotalAgorot = sumOrderItems(items, order.product_price_agorot);
-    const serverAmountAgorot = Math.ceil((itemsTotalAgorot + (order.estimated_shipping_agorot ?? 0)) / participantCount);
+    const myItemsAgorot = (myItems ?? []).reduce(
+      (sum, item) => sum + Math.max(0, item.price_agorot ?? 0),
+      0,
+    );
+    const groupTotalAgorot = (allItems ?? []).reduce(
+      (sum, item) => sum + Math.max(0, item.price_agorot ?? 0),
+      0,
+    );
+
+    if (myItemsAgorot === 0) throw httpError(409, 'no_items_to_pay');
+
+    const commission = calcCommission(
+      myItemsAgorot,
+      groupTotalAgorot,
+      order.store_key ?? 'manual',
+    );
+
+    const serverAmountAgorot = commission.totalAgorot;
     if (!Number.isInteger(serverAmountAgorot) || serverAmountAgorot <= 0) {
       throw httpError(409, 'invalid_server_amount');
     }
 
-    if (participant.amount_agorot !== serverAmountAgorot) {
+    // Persist amount + commission so the webhook and UI can reconcile.
+    if (
+      participant.amount_agorot !== serverAmountAgorot ||
+      participant.commission_agorot !== commission.commissionAgorot
+    ) {
       const { error: rebalanceErr } = await admin
         .from('participants')
-        .update({ amount_agorot: serverAmountAgorot })
-        .eq('order_id', order.id)
-        .eq('status', 'joined');
+        .update({
+          amount_agorot: serverAmountAgorot,
+          commission_agorot: commission.commissionAgorot,
+        })
+        .eq('id', participant.id);
       if (rebalanceErr) throw rebalanceErr;
     }
 
@@ -118,6 +139,7 @@ Deno.serve(async (req) => {
             ephemeralKey: ephemeralKey.secret,
             customer: customerId,
             publishableKey: Deno.env.get('STRIPE_PUBLISHABLE_KEY') ?? '',
+            breakdown: commission,
           });
         }
       } catch {
@@ -136,6 +158,9 @@ Deno.serve(async (req) => {
           order_id: order.id,
           participant_id: participant.id,
           user_id: userId,
+          items_agorot: String(myItemsAgorot),
+          commission_agorot: String(commission.commissionAgorot),
+          savings_agorot: String(commission.savingsAgorot),
         },
         automatic_payment_methods: { enabled: true },
         ...(CONNECTED_ACCOUNT_ID
@@ -155,6 +180,7 @@ Deno.serve(async (req) => {
       ephemeralKey: ephemeralKey.secret,
       customer: customerId,
       publishableKey: Deno.env.get('STRIPE_PUBLISHABLE_KEY') ?? '',
+      breakdown: commission,
     });
   } catch (e) {
     return errorJson(e);
