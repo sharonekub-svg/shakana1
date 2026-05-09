@@ -1087,24 +1087,25 @@ function PayButton({
     const product = findProduct(item.productId);
     return sum + (product?.price ?? 0) * item.quantity;
   }, 0);
-  const { commissionILS, totalILS, savingsILS } = calcCommission(myItemsTotal, groupTotal, order.brand);
+  const { commissionILS, totalILS, savingsILS, soloShippingILS } = calcCommission(myItemsTotal, groupTotal, order.brand);
   const total = Math.round(totalILS * 100) / 100;
+  const withoutShakana = Math.round((myItemsTotal + soloShippingILS) * 100) / 100;
 
   return (
     <View style={payStyles.paySection}>
       {savingsILS > 0 && (
         <View style={payStyles.savingsRow}>
           <Text style={payStyles.savingsText}>
-            🎉 You save ₪{savingsILS} on shipping — Shakana fee ₪{commissionILS}
+            🎉 Saving ₪{savingsILS} vs buying alone
           </Text>
         </View>
       )}
       <View style={payStyles.payRow}>
         <View>
-          <Text style={payStyles.payLabel}>Total to pay</Text>
+          <Text style={payStyles.payLabel}>You pay today</Text>
           <Text style={payStyles.payAmount}>₪{total}</Text>
-          {commissionILS > 0 && (
-            <Text style={payStyles.payAmountSub}>items ₪{myItemsTotal} + fee ₪{commissionILS}</Text>
+          {savingsILS > 0 && (
+            <Text style={payStyles.payAmountSub}>instead of ₪{withoutShakana}</Text>
           )}
         </View>
         {alreadyPaid ? (
@@ -1169,6 +1170,13 @@ function MockPaymentModal({
 
           {step === 'form' ? (
             <>
+              {savingsILS > 0 ? (
+                <View style={payStyles.modalSavingsBanner}>
+                  <Text style={payStyles.modalSavingsBannerText}>
+                    🎉  You're saving ₪{savingsILS}
+                  </Text>
+                </View>
+              ) : null}
               <Text style={payStyles.modalTitle}>Pay ₪{myTotal}</Text>
               <Text style={payStyles.modalMuted}>
                 {activeParticipantName} · {myItems.length} item{myItems.length !== 1 ? 's' : ''} from {storeName}
@@ -1220,35 +1228,22 @@ function MockPaymentModal({
                 {savingsILS > 0 ? (
                   <>
                     <View style={payStyles.orderLine}>
-                      <Text style={payStyles.orderLineMuted}>
-                        Shipping (without Shakana)
-                      </Text>
+                      <Text style={payStyles.orderLineMuted}>Shipping if buying alone</Text>
                       <Text style={[payStyles.orderLineMuted, payStyles.strikethrough]}>
                         ₪{soloShippingILS}
                       </Text>
                     </View>
                     <View style={payStyles.orderLine}>
-                      <Text style={payStyles.orderLineSavings}>Group shipping</Text>
-                      <Text style={payStyles.orderLineSavings}>FREE ✓</Text>
-                    </View>
-                    <View style={payStyles.orderLine}>
-                      <Text style={payStyles.orderLineMuted}>Shakana fee (50% of savings)</Text>
-                      <Text style={payStyles.orderLineMuted}>₪{commissionILS}</Text>
+                      <Text style={payStyles.orderLineSavings}>Your saving</Text>
+                      <Text style={payStyles.orderLineSavings}>-₪{savingsILS}</Text>
                     </View>
                   </>
                 ) : null}
                 <View style={payStyles.orderDivider} />
                 <View style={payStyles.orderLine}>
-                  <Text style={payStyles.orderLineTotal}>Total</Text>
+                  <Text style={payStyles.orderLineTotal}>You pay today</Text>
                   <Text style={payStyles.orderLineTotal}>₪{myTotal}</Text>
                 </View>
-                {savingsILS > 0 && (
-                  <View style={payStyles.savingsBadge}>
-                    <Text style={payStyles.savingsBadgeText}>
-                      You save ₪{savingsILS} by joining this group order 🎉
-                    </Text>
-                  </View>
-                )}
               </View>
 
               <DemoButton label={`Pay ₪${myTotal}`} onPress={onConfirm} tone="accent" style={payStyles.confirmBtn} />
@@ -1267,9 +1262,13 @@ function MockPaymentModal({
               <View style={payStyles.successIcon}>
                 <Text style={payStyles.successIconText}>✓</Text>
               </View>
-              <Text style={payStyles.successTitle}>Payment confirmed!</Text>
+              <Text style={payStyles.successTitle}>
+                {savingsILS > 0 ? `You saved ₪${savingsILS}! 🎉` : 'Payment confirmed!'}
+              </Text>
               <Text style={payStyles.successMuted}>
-                ₪{myTotal} is secured in escrow. {storeName} will ship your items once all neighbors have paid.
+                {savingsILS > 0
+                  ? `You paid ₪${myTotal} instead of ₪${Math.round((myItemsTotal + soloShippingILS) * 100) / 100}. Payment secured until ${storeName} ships.`
+                  : `₪${myTotal} is secured until ${storeName} ships your order.`}
               </Text>
               <DemoButton label="Back to cart" onPress={onClose} tone="accent" style={payStyles.confirmBtn} />
             </View>
@@ -1413,6 +1412,19 @@ const payStyles = StyleSheet.create({
     color: colors.mu,
     fontFamily: fontFamily.bodyBold,
     fontSize: 14,
+  },
+  modalSavingsBanner: {
+    backgroundColor: '#E6F4EA',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    marginBottom: 8,
+    alignItems: 'center',
+  },
+  modalSavingsBannerText: {
+    color: '#2E7D32',
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 15,
   },
   modalTitle: {
     color: colors.tx,
