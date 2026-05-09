@@ -1088,15 +1088,16 @@ function PayButton({
     return sum + (product?.price ?? 0) * item.quantity;
   }, 0);
   const { commissionILS, totalILS, savingsILS, soloShippingILS } = calcCommission(myItemsTotal, groupTotal, order.brand);
-  const total = Math.round(totalILS * 100) / 100;
-  const withoutShakana = Math.round((myItemsTotal + soloShippingILS) * 100) / 100;
+  const fmtILS = (v: number) => Number.isInteger(v) ? String(v) : v.toFixed(2);
+  const total = fmtILS(Math.round(totalILS * 100) / 100);
+  const withoutShakana = fmtILS(Math.round((myItemsTotal + soloShippingILS) * 100) / 100);
 
   return (
     <View style={payStyles.paySection}>
       {savingsILS > 0 && (
         <View style={payStyles.savingsRow}>
           <Text style={payStyles.savingsText}>
-            🎉 Saving ₪{savingsILS} vs buying alone
+            🎉 Saving ₪{fmtILS(savingsILS)} vs buying alone
           </Text>
         </View>
       )}
@@ -1148,7 +1149,8 @@ function MockPaymentModal({
     return sum + (product?.price ?? 0) * item.quantity;
   }, 0);
   const { commissionILS, totalILS, savingsILS, soloShippingILS } = calcCommission(myItemsTotal, groupTotal, order.brand);
-  const myTotal = Math.round(totalILS * 100) / 100;
+  const fmtILS = (v: number) => Number.isInteger(v) ? String(v) : v.toFixed(2);
+  const myTotal = fmtILS(Math.round(totalILS * 100) / 100);
   const storeName = demoStores[order.brand].name;
 
   return (
@@ -1173,7 +1175,7 @@ function MockPaymentModal({
               {savingsILS > 0 ? (
                 <View style={payStyles.modalSavingsBanner}>
                   <Text style={payStyles.modalSavingsBannerText}>
-                    🎉  You're saving ₪{savingsILS}
+                    🎉  You're saving ₪{fmtILS(savingsILS)}
                   </Text>
                 </View>
               ) : null}
@@ -1230,12 +1232,12 @@ function MockPaymentModal({
                     <View style={payStyles.orderLine}>
                       <Text style={payStyles.orderLineMuted}>Shipping if buying alone</Text>
                       <Text style={[payStyles.orderLineMuted, payStyles.strikethrough]}>
-                        ₪{soloShippingILS}
+                        ₪{fmtILS(soloShippingILS)}
                       </Text>
                     </View>
                     <View style={payStyles.orderLine}>
                       <Text style={payStyles.orderLineSavings}>Your saving</Text>
-                      <Text style={payStyles.orderLineSavings}>-₪{savingsILS}</Text>
+                      <Text style={payStyles.orderLineSavings}>-₪{fmtILS(savingsILS)}</Text>
                     </View>
                   </>
                 ) : null}
@@ -1263,11 +1265,11 @@ function MockPaymentModal({
                 <Text style={payStyles.successIconText}>✓</Text>
               </View>
               <Text style={payStyles.successTitle}>
-                {savingsILS > 0 ? `You saved ₪${savingsILS}! 🎉` : 'Payment confirmed!'}
+                {savingsILS > 0 ? `You saved ₪${fmtILS(savingsILS)}! 🎉` : 'Payment confirmed!'}
               </Text>
               <Text style={payStyles.successMuted}>
                 {savingsILS > 0
-                  ? `You paid ₪${myTotal} instead of ₪${Math.round((myItemsTotal + soloShippingILS) * 100) / 100}. Payment secured until ${storeName} ships.`
+                  ? `You paid ₪${myTotal} instead of ₪${fmtILS(Math.round((myItemsTotal + soloShippingILS) * 100) / 100)}. Payment secured until ${storeName} ships.`
                   : `₪${myTotal} is secured until ${storeName} ships your order.`}
               </Text>
               <DemoButton label="Back to cart" onPress={onClose} tone="accent" style={payStyles.confirmBtn} />

@@ -152,9 +152,10 @@ export default function ProfileScreen() {
           <Pressable
             accessibilityRole="button"
             onPress={session ? onSignOut : () => router.push('/login')}
-            style={styles.authPill}
+            disabled={signOut.isPending}
+            style={[styles.authPill, signOut.isPending && { opacity: 0.55 }]}
           >
-            <Text style={styles.authPillText}>{session ? 'Sign out' : 'Sign in'}</Text>
+            <Text style={styles.authPillText}>{signOut.isPending ? 'Signing out...' : session ? 'Sign out' : 'Sign in'}</Text>
           </Pressable>
         </View>
 

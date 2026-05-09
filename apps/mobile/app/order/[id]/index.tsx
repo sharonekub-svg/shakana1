@@ -368,7 +368,6 @@ export default function OrderShell() {
   const sharedOrderTotal = order.product_price_agorot * participantCount;
   const freeShippingGap = Math.max(0, freeShippingThreshold - sharedOrderTotal);
   const shippingSaved = Math.max(0, estimatedShipping * Math.max(0, participantCount - 1));
-  const perPerson = Math.ceil(order.product_price_agorot + estimatedShipping / Math.max(1, participantCount));
   const closesAtMs = order.closes_at ? new Date(order.closes_at).getTime() : null;
   const editLocksAtMs = order.edit_locks_at ? new Date(order.edit_locks_at).getTime() : null;
   const remainingMs = closesAtMs ? Math.max(0, closesAtMs - now) : null;
