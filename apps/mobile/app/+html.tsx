@@ -3,13 +3,21 @@ import type { PropsWithChildren } from 'react';
 
 export default function Html({ children }: PropsWithChildren) {
   return (
-    <html lang="en" dir="ltr">
+    <html lang="he" dir="rtl">
       <head>
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
         <meta name="theme-color" content="#F7F1E8" />
-        <title>Shakana</title>
+        <title>Shakana – הזמנות שכנים</title>
+        <meta name="description" content="Shakana – הזמנות קבוצתיות לשכנים. מדביקים קישור למוצר, שכנים מצטרפים ומשלמים, המייסד קונה מהחנות." />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="Shakana – הזמנות שכנים" />
+        <meta property="og:description" content="הזמנות קבוצתיות פשוטות לשכנים. מדביקים קישור, קובעים טיימר, שכנים מצטרפים ומשלמים." />
+        <meta property="og:url" content="https://shakana1.vercel.app" />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content="Shakana – הזמנות שכנים" />
+        <meta name="twitter:description" content="הזמנות קבוצתיות פשוטות לשכנים. מדביקים קישור, קובעים טיימר, שכנים מצטרפים." />
         <ScrollViewStyleReset />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;900&display=swap" rel="stylesheet" />

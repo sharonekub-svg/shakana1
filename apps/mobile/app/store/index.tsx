@@ -75,6 +75,11 @@ export default function StoreDashboardScreen() {
     if (demoMode) setDemoRole('store');
   }, [demoMode, setDemoRole]);
 
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
   const merchantOrders = useMemo(() => orders.filter(isDisplayableMerchantOrder), [orders]);
   const visibleStoreOrders = useMemo(
     () => merchantOrders.filter((order) => storeFilter === 'all' || order.brand === storeFilter),
