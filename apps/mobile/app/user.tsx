@@ -17,7 +17,7 @@ import {
   StatusRail,
   demoStyles,
 } from '@/components/demo/DemoPrimitives';
-import { buildInviteMessage, demoCategories, demoStores, findProduct, productsForBrand, type DemoBrandId, type DemoProduct } from '@/demo/catalog';
+import { buildInviteMessage, demoCategories, demoStores, findProduct, getProductImage, productsForBrand, type DemoBrandId, type DemoProduct } from '@/demo/catalog';
 import {
   type DemoOrder,
   type DemoParticipant,
@@ -897,8 +897,8 @@ export default function DemoUserScreen() {
                               <View style={styles.cartItemImagePlaceholder}>
                                 <Text style={styles.cartItemImageText}>Private</Text>
                               </View>
-                            ) : line.product?.image ? (
-                              <Image source={{ uri: line.product.image }} style={styles.cartItemImage} resizeMode="cover" />
+                            ) : line.product ? (
+                              <Image source={{ uri: getProductImage(line.product, item.color) }} style={styles.cartItemImage} resizeMode="cover" />
                             ) : (
                               <View style={styles.cartItemImagePlaceholder}>
                                 <Text style={styles.cartItemImageText}>Item</Text>
@@ -979,10 +979,11 @@ function ProductCard({
   const [isAdded, setIsAdded] = useState(false);
   const ready = !!orderId && isAuthenticated && !orderLocked && !!size && !!color && quantity > 0;
   const productSaving = Math.max(0, product.compareAtPrice - product.price);
+  const currentImageUri = getProductImage(product, color || undefined);
 
   return (
     <Card style={styles.productCard}>
-      <ProductImage product={product} />
+      <ProductImage product={product} imageUri={currentImageUri} />
       <View style={styles.productInfo}>
         <View style={styles.rowBetween}>
           <Text style={styles.productName}>{product.name}</Text>

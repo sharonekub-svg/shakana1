@@ -9,6 +9,7 @@ export type DemoProduct = {
   sku: string;
   description: string;
   image: string;
+  colorImages?: Record<string, string>;
   category: 'Best Sellers' | 'New Arrivals' | 'Shirts' | 'Pants' | 'Dresses' | 'Jackets' | 'Accessories';
   sizes: string[];
   colors: string[];
@@ -63,6 +64,11 @@ export const demoStores: Record<DemoBrandId, DemoStore> = {
 
 const img = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=900&q=80`;
 
+export function getProductImage(product: DemoProduct, color?: string): string {
+  if (color && product.colorImages?.[color]) return product.colorImages[color];
+  return product.image;
+}
+
 export const demoProducts: DemoProduct[] = [
   // ── H&M ─────────────────────────────────────────────────────────────────────
   {
@@ -74,6 +80,11 @@ export const demoProducts: DemoProduct[] = [
     sku: 'HM-SH-1048',
     description: 'Lightweight linen-blend button-up with a relaxed resort fit.',
     image: img('photo-1603252109303-2751441dd157'),
+    colorImages: {
+      White: img('photo-1603252109303-2751441dd157'),
+      Sage: img('photo-1598300042247-d088f8ab3a91'),
+      'Sky Blue': img('photo-1620799140408-edc6dcb6d633'),
+    },
     category: 'Best Sellers',
     sizes: ['XS', 'S', 'M', 'L', 'XL'],
     colors: ['White', 'Sage', 'Sky Blue'],
@@ -88,6 +99,10 @@ export const demoProducts: DemoProduct[] = [
     sku: 'HM-DN-8821',
     description: 'Wide-leg denim with a high waist and soft washed finish.',
     image: img('photo-1541099649105-f69ad21f3246'),
+    colorImages: {
+      Blue: img('photo-1541099649105-f69ad21f3246'),
+      'Washed Black': img('photo-1525507119028-ed4c629a60a3'),
+    },
     category: 'Pants',
     sizes: ['30', '32', '34', '36', '38', '40'],
     colors: ['Blue', 'Washed Black'],
@@ -102,6 +117,11 @@ export const demoProducts: DemoProduct[] = [
     sku: 'HM-DR-3320',
     description: 'Soft ribbed dress with clean neckline and weekend-ready stretch.',
     image: img('photo-1515372039744-b8f02a3ae446'),
+    colorImages: {
+      Black: img('photo-1517438476312-10d79c077509'),
+      Cream: img('photo-1554568218-0f1715e72254'),
+      Brown: img('photo-1509631179647-0177331693ae'),
+    },
     category: 'Dresses',
     sizes: ['XS', 'S', 'M', 'L'],
     colors: ['Black', 'Cream', 'Brown'],
@@ -130,6 +150,12 @@ export const demoProducts: DemoProduct[] = [
     sku: 'HM-TS-2105',
     description: 'Dense cotton jersey tee with a straight fit and soft neckline.',
     image: img('photo-1521572163474-6864f9cf17ab'),
+    colorImages: {
+      White: img('photo-1521572163474-6864f9cf17ab'),
+      Black: img('photo-1516575334481-f85287c2c82d'),
+      Red: img('photo-1572804013309-59a88b7e92f1'),
+      Navy: img('photo-1506792006437-256b665541e2'),
+    },
     category: 'Shirts',
     sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
     colors: ['White', 'Black', 'Red', 'Navy'],
@@ -158,6 +184,11 @@ export const demoProducts: DemoProduct[] = [
     sku: 'HM-HD-3301',
     description: 'Drop-shoulder hoodie in brushed fleece with a kangaroo pocket.',
     image: img('photo-1556821840-3a63f95609a7'),
+    colorImages: {
+      Oatmeal: img('photo-1556821840-3a63f95609a7'),
+      Charcoal: img('photo-1505022610485-0249ba5b3675'),
+      'Dusty Pink': img('photo-1551163943-3f6a855d1153'),
+    },
     category: 'Best Sellers',
     sizes: ['XS', 'S', 'M', 'L', 'XL'],
     colors: ['Oatmeal', 'Charcoal', 'Dusty Pink'],
@@ -172,6 +203,12 @@ export const demoProducts: DemoProduct[] = [
     sku: 'HM-PL-4410',
     description: 'Classic piqué polo with a slim collar and button placket.',
     image: img('photo-1490481651871-ab68de25d43d'),
+    colorImages: {
+      Navy: img('photo-1506792006437-256b665541e2'),
+      White: img('photo-1583744946564-b52ac1c389c8'),
+      'Forest Green': img('photo-1614676471928-2ed0ad1061a4'),
+      Burgundy: img('photo-1544441892-794166f1e3be'),
+    },
     category: 'Shirts',
     sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
     colors: ['Navy', 'White', 'Forest Green', 'Burgundy'],
@@ -270,6 +307,12 @@ export const demoProducts: DemoProduct[] = [
     sku: 'HM-TS-3390',
     description: 'Fitted ribbed crop top with a square neckline and short sleeves.',
     image: img('photo-1576566588028-4147f3842f27'),
+    colorImages: {
+      White: img('photo-1583744946564-b52ac1c389c8'),
+      Black: img('photo-1516575334481-f85287c2c82d'),
+      Terracotta: img('photo-1617127365659-c47fa864d8bc'),
+      Lilac: img('photo-1551163943-3f6a855d1153'),
+    },
     category: 'Shirts',
     sizes: ['XS', 'S', 'M', 'L'],
     colors: ['White', 'Black', 'Terracotta', 'Lilac'],
@@ -300,6 +343,11 @@ export const demoProducts: DemoProduct[] = [
     sku: 'ZA-TS-4102',
     description: 'Heavy cotton T-shirt with a boxy silhouette and premium hand feel.',
     image: img('photo-1503342217505-b0a15ec3261c'),
+    colorImages: {
+      Black: img('photo-1503342217505-b0a15ec3261c'),
+      White: img('photo-1583744946564-b52ac1c389c8'),
+      Taupe: img('photo-1554568218-0f1715e72254'),
+    },
     category: 'Best Sellers',
     sizes: ['XS', 'S', 'M', 'L', 'XL'],
     colors: ['Black', 'White', 'Taupe'],
@@ -328,6 +376,11 @@ export const demoProducts: DemoProduct[] = [
     sku: 'ZA-SH-5539',
     description: 'Crisp poplin shirt with dropped shoulders and long cuffs.',
     image: img('photo-1602810318383-e386cc2a3ccf'),
+    colorImages: {
+      White: img('photo-1602810318383-e386cc2a3ccf'),
+      'Blue Stripe': img('photo-1620799140408-edc6dcb6d633'),
+      Black: img('photo-1516575334481-f85287c2c82d'),
+    },
     category: 'Shirts',
     sizes: ['XS', 'S', 'M', 'L'],
     colors: ['White', 'Blue Stripe', 'Black'],
@@ -342,6 +395,11 @@ export const demoProducts: DemoProduct[] = [
     sku: 'ZA-DR-1180',
     description: 'Fluid satin midi dress with adjustable straps and clean drape.',
     image: img('photo-1539008835657-9e8e9680c956'),
+    colorImages: {
+      Ivory: img('photo-1539008835657-9e8e9680c956'),
+      Black: img('photo-1517438476312-10d79c077509'),
+      'Deep Green': img('photo-1598300042247-d088f8ab3a91'),
+    },
     category: 'Dresses',
     sizes: ['XS', 'S', 'M', 'L'],
     colors: ['Ivory', 'Black', 'Deep Green'],
@@ -384,6 +442,11 @@ export const demoProducts: DemoProduct[] = [
     sku: 'ZA-KN-2201',
     description: 'Oversized chunky-knit sweater with a wide crew neck and drop shoulders.',
     image: img('photo-1598033129183-c4f50c736f10'),
+    colorImages: {
+      Ecru: img('photo-1598033129183-c4f50c736f10'),
+      Camel: img('photo-1509631179647-0177331693ae'),
+      Black: img('photo-1516575334481-f85287c2c82d'),
+    },
     category: 'Best Sellers',
     sizes: ['XS', 'S', 'M', 'L', 'XL'],
     colors: ['Ecru', 'Camel', 'Black'],
@@ -526,6 +589,11 @@ export const demoProducts: DemoProduct[] = [
     sku: 'AM-TS-1001',
     description: 'Soft everyday tee with simple fit and fast replenishment.',
     image: img('photo-1521572267360-ee0c2909d518'),
+    colorImages: {
+      Black: img('photo-1516575334481-f85287c2c82d'),
+      White: img('photo-1583744946564-b52ac1c389c8'),
+      Grey: img('photo-1505022610485-0249ba5b3675'),
+    },
     category: 'Best Sellers',
     sizes: ['S', 'M', 'L', 'XL'],
     colors: ['Black', 'White', 'Grey'],
@@ -582,6 +650,11 @@ export const demoProducts: DemoProduct[] = [
     sku: 'AM-HD-3310',
     description: 'Full-zip hoodie in heavyweight fleece with media-friendly pockets.',
     image: img('photo-1607522370275-f14206abe5d3'),
+    colorImages: {
+      Grey: img('photo-1607522370275-f14206abe5d3'),
+      Black: img('photo-1505022610485-0249ba5b3675'),
+      'Dark Green': img('photo-1614676471928-2ed0ad1061a4'),
+    },
     category: 'Best Sellers',
     sizes: ['S', 'M', 'L', 'XL', 'XXL'],
     colors: ['Grey', 'Black', 'Dark Green'],
@@ -624,6 +697,11 @@ export const demoProducts: DemoProduct[] = [
     sku: 'AM-JK-6601',
     description: 'Satin bomber with ribbed collar, cuffs, and hem in a relaxed fit.',
     image: img('photo-1591047139829-d91aecb6caea'),
+    colorImages: {
+      Black: img('photo-1551488831-00ddcb6c6bd3'),
+      Navy: img('photo-1591047139829-d91aecb6caea'),
+      Olive: img('photo-1614676471928-2ed0ad1061a4'),
+    },
     category: 'Jackets',
     sizes: ['S', 'M', 'L', 'XL'],
     colors: ['Black', 'Navy', 'Olive'],
