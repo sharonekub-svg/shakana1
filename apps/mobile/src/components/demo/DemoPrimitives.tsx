@@ -120,10 +120,10 @@ export function BrandPill({ brand }: { brand: DemoBrandId }) {
   );
 }
 
-export function ProductImage({ product }: { product: DemoProduct }) {
+export function ProductImage({ product, imageUri }: { product: DemoProduct; imageUri?: string }) {
   return (
     <Image
-      source={{ uri: product.image }}
+      source={{ uri: imageUri ?? product.image }}
       style={styles.productImage}
       resizeMode="cover"
       accessibilityLabel={product.name}
