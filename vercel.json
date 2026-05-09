@@ -55,6 +55,7 @@
   ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/investor-deck.html", "destination": "/investor-deck.html" },
     {
       "source": "/join/:code",
       "has": [
