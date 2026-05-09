@@ -18,6 +18,9 @@ Deno.serve(async (req) => {
 
   try {
     const userId = await authedUserId(req);
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+      throw httpError(401, 'invalid_user_id_format');
+    }
     const body = await readJson<Body>(req);
     if (!body.orderId) throw httpError(400, 'missing_orderId');
     const idemp = idempotencyKeyFrom(body, req);
