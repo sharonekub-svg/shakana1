@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Shakana — Investor Deck 2025</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #F7F1E8;
+      --card:     #FFFCF7;
+      --border:   #E3D5C6;
+      --primary:  #C96442;
+      --primary2: #B35C37;
+      --dark:     #2B2118;
+      --muted:    #6F6257;
+      --light:    #9E8878;
+      --green:    #3D8A5E;
+      --slide-w:  1200px;
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      font-family: 'Rubik', Arial, sans-serif;
+      background: #1A1410;
+      color: var(--dark);
+      overflow: hidden;
+    }
+
+    /* ── Deck shell ── */
+    #deck {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .slide {
+      display: none;
+      width: 100vw; height: 100vh;
+      background: var(--bg);
+      position: relative;
+      overflow: hidden;
+      animation: slideIn 0.4s cubic-bezier(.22,1,.36,1);
+    }
+    .slide.active { display: flex; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Progress bar ── */
+    #progress {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      height: 3px; background: var(--border); z-index: 100;
+    }
+    #progress-fill {
+      height: 100%; background: var(--primary);
+      transition: width 0.4s ease;
+    }
+
+    /* ── Nav dots ── */
+    #dots {
+      position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 8px; z-index: 100;
+    }
+    .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--border); cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .dot.active { background: var(--primary); transform: scale(1.4); }
+
+    /* ── Arrows ── */
+    .arrow {
+      position: fixed; top: 50%; transform: translateY(-50%);
+      width: 44px; height: 44px; border-radius: 50%;
+      background: rgba(255,252,247,0.85); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; z-index: 100; font-size: 18px; color: var(--muted);
+      transition: all 0.2s; backdrop-filter: blur(4px);
+      box-shadow: 0 2px 12px rgba(43,33,24,0.1);
+    }
+    .arrow:hover { background: var(--card); color: var(--primary); }
+    #prev { left: 16px; }
+    #next { right: 16px; }
+
+    /* ── Slide counter ── */
+    #counter {
+      position: fixed; top: 20px; right: 24px;
+      font-size: 11px; font-weight: 500; color: var(--light);
+      letter-spacing: 0.12em; z-index: 100;
+    }
+
+    /* ── Shakana logo mark ── */
+    .logo-mark {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.22em;
+      text-transform: uppercase; color: var(--primary2);
+    }
+    .dot-mark {
+      display: inline-block; width: 6px; height: 6px;
+      border-radius: 50%; background: var(--primary);
+      margin-left: 6px; vertical-align: middle;
+    }
+
+    /* ═══════════════════════════════════
+       SLIDE 1 — COVER
+    ═══════════════════════════════════ */
+    #s1 {
+      flex-direction: column;
+      align-items: center; justify-content: center;
+      background: var(--dark);
+    }
+    #s1 .tagline {
+      font-size: clamp(36px, 5vw, 68px);
+      font-weight: 900; color: #FFFCF7;
+      text-align: center; line-height: 1.1;
+      max-width: 780px;
+    }
+    #s1 .tagline span { color: var(--primary); }
+    #s1 .sub {
+      margin-top: 24px; font-size: clamp(16px, 2vw, 22px);
+      font-weight: 400; color: #B09A8A; text-align: center;
+    }
+    #s1 .logo-wrap {
+      position: absolute; top: 32px; left: 36px;
+      color: #FFFCF7; display: flex; align-items: center; gap: 8px;
+    }
+    #s1 .logo-wrap .logo-mark { color: #FFFCF7; font-size: 13px; }
+    #s1 .badge {
+      margin-top: 48px; padding: 10px 24px;
+      border: 1px solid rgba(255,252,247,0.15); border-radius: 100px;
+      font-size: 13px; font-weight: 500; color: #9E8878; letter-spacing: 0.05em;
+    }
+    #s1::before {
+      content: '';
+      position: absolute; top: -200px; left: -200px;
+      width: 600px; height: 600px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(201,100,66,0.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    #s1::after {
+      content: '';
+      position: absolute; bottom: -150px; right: -150px;
+      width: 500px; height: 500px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(201,100,66,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* ═══════════════════════════════════
+       SHARED LAYOUT
+    ═══════════════════════════════════ */
+    .slide-inner {
+      width: 100%; max-width: var(--slide-w);
+      margin: 0 auto; padding: 60px 80px;
+      display: flex; flex-direction: column; justify-content: center;
+      height: 100%;
+    }
+    .slide-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.2em;
+      text-transform: uppercase; color: var(--primary); margin-bottom: 16px;
+    }
+    .slide-title {
+      font-size: clamp(28px, 4vw, 52px);
+      font-weight: 900; color: var(--dark); line-height: 1.1;
+      margin-bottom: 32px;
+    }
+    .slide-title span { color: var(--primary); }
+    .slide-body { font-size: clamp(15px, 1.5vw, 19px); color: var(--muted); line-height: 1.8; }
+
+    /* Cards */
+    .cards { display: grid; gap: 20px; }
+    .cards.col2 { grid-template-columns: 1fr 1fr; }
+    .cards.col3 { grid-template-columns: 1fr 1fr 1fr; }
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 20px; padding: 28px 28px 24px;
+    }
+    .card-icon { font-size: 28px; margin-bottom: 14px; }
+    .card-title { font-size: 16px; font-weight: 700; color: var(--dark); margin-bottom: 8px; }
+    .card-body { font-size: 14px; color: var(--muted); line-height: 1.7; }
+
+    /* Big stat */
+    .stat-block { text-align: center; padding: 20px 16px; }
+    .stat-num {
+      font-size: clamp(36px, 5vw, 64px);
+      font-weight: 900; color: var(--primary); line-height: 1;
+    }
+    .stat-label { font-size: 13px; font-weight: 500; color: var(--muted); margin-top: 6px; }
+
+    /* Tag / pill */
+    .tag {
+      display: inline-block; padding: 4px 14px;
+      background: rgba(201,100,66,0.1); border-radius: 100px;
+      font-size: 13px; font-weight: 600; color: var(--primary);
+    }
+
+    /* List */
+    .list { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+    .list li {
+      display: flex; gap: 14px; align-items: flex-start;
+      font-size: clamp(14px, 1.4vw, 17px); color: var(--muted); line-height: 1.6;
+    }
+    .list li .bullet {
+      flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%;
+      background: rgba(201,100,66,0.12); color: var(--primary);
+      font-size: 13px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      margin-top: 2px;
+    }
+
+    /* Step flow */
+    .flow { display: flex; align-items: center; gap: 0; }
+    .flow-step {
+      flex: 1; text-align: center; padding: 24px 12px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 20px; position: relative;
+    }
+    .flow-step .step-num {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--primary); color: #FFFCF7;
+      font-size: 16px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 12px;
+    }
+    .flow-step .step-title { font-size: 15px; font-weight: 700; color: var(--dark); margin-bottom: 8px; }
+    .flow-step .step-body { font-size: 13px; color: var(--muted); line-height: 1.6; }
+    .flow-arrow {
+      font-size: 20px; color: var(--border); padding: 0 8px;
+      flex-shrink: 0;
+    }
+
+    /* Table */
+    .table-wrap { border-radius: 16px; overflow: hidden; border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      background: var(--dark); color: #FFFCF7;
+      font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 14px 20px; text-align: right;
+    }
+    td { padding: 14px 20px; font-size: 15px; color: var(--dark); border-top: 1px solid var(--border); }
+    tr:nth-child(even) td { background: rgba(247,241,232,0.5); }
+    td.highlight { font-weight: 700; color: var(--primary); }
+
+    /* Highlight box */
+    .highlight-box {
+      background: linear-gradient(135deg, rgba(201,100,66,0.08), rgba(201,100,66,0.03));
+      border: 1.5px solid rgba(201,100,66,0.25);
+      border-radius: 20px; padding: 28px 32px;
+    }
+    .highlight-box .hb-label {
+      font-size: 11px; font-weight: 700; color: var(--primary);
+      letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 10px;
+    }
+    .highlight-box .hb-num {
+      font-size: 42px; font-weight: 900; color: var(--dark); line-height: 1.1;
+    }
+    .highlight-box .hb-num span { color: var(--primary); }
+    .highlight-box .hb-sub { font-size: 14px; color: var(--muted); margin-top: 8px; line-height: 1.6; }
+
+    /* Two-col layout */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; }
+    .two-col.wide-left { grid-template-columns: 3fr 2fr; }
+
+    /* Timeline / phase */
+    .phases { display: flex; flex-direction: column; gap: 12px; }
+    .phase {
+      display: flex; gap: 20px; align-items: flex-start;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 20px 24px;
+    }
+    .phase-badge {
+      flex-shrink: 0; padding: 4px 12px; border-radius: 100px;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    }
+    .phase-badge.p1 { background: rgba(201,100,66,0.15); color: var(--primary); }
+    .phase-badge.p2 { background: rgba(61,138,94,0.15); color: var(--green); }
+    .phase-badge.p3 { background: rgba(43,33,24,0.1); color: var(--dark); }
+    .phase-content .phase-title { font-size: 15px; font-weight: 700; color: var(--dark); margin-bottom: 4px; }
+    .phase-content .phase-body { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+    /* ═══════════════════════════════════
+       SLIDE 9 — dark background
+    ═══════════════════════════════════ */
+    #s9 { background: var(--dark); }
+    #s9 .slide-label { color: rgba(201,100,66,0.9); }
+    #s9 .slide-title { color: #FFFCF7; }
+    #s9 .slide-body { color: #9E8878; }
+    #s9 .card { background: rgba(255,252,247,0.05); border-color: rgba(255,252,247,0.1); }
+    #s9 .card-title { color: #FFFCF7; }
+    #s9 .card-body { color: #9E8878; }
+
+    /* ═══════════════════════════════════
+       SLIDE 10 — ASK
+    ═══════════════════════════════════ */
+    #s10 { background: var(--dark); }
+    #s10 .slide-label { color: rgba(201,100,66,0.9); }
+    #s10 .slide-title { color: #FFFCF7; }
+    #s10 .milestone {
+      display: flex; gap: 16px; align-items: flex-start;
+      padding: 18px 24px; border-radius: 16px;
+      background: rgba(255,252,247,0.05); border: 1px solid rgba(255,252,247,0.1);
+    }
+    #s10 .milestone-icon {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--primary); color: #FFFCF7;
+      font-size: 16px; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    #s10 .milestone-title { font-size: 15px; font-weight: 700; color: #FFFCF7; margin-bottom: 4px; }
+    #s10 .milestone-body { font-size: 13px; color: #9E8878; line-height: 1.6; }
+    #s10 .big-ask {
+      font-size: clamp(42px, 6vw, 80px); font-weight: 900; color: var(--primary);
+      line-height: 1; text-align: center;
+    }
+    #s10 .big-ask-sub {
+      font-size: 16px; font-weight: 500; color: #9E8878; text-align: center; margin-top: 10px;
+    }
+    #s10 .ask-divider {
+      width: 1px; background: rgba(255,252,247,0.1); align-self: stretch;
+    }
+
+    /* ── Keyboard hint ── */
+    #hint {
+      position: fixed; bottom: 42px; right: 24px;
+      font-size: 11px; color: var(--light); letter-spacing: 0.05em;
+      z-index: 100; opacity: 0.6;
+    }
+
+    @media (max-width: 700px) {
+      .slide-inner { padding: 40px 28px; }
+      .cards.col2, .cards.col3, .two-col, .two-col.wide-left { grid-template-columns: 1fr; }
+      .flow { flex-direction: column; }
+      .flow-arrow { transform: rotate(90deg); }
+    }
+  </style>
+</head>
+<body>
+
+<div id="deck">
+
+  <!-- ═══ SLIDE 1 — COVER ═══ -->
+  <div class="slide active" id="s1">
+    <div class="logo-wrap">
+      <span class="dot-mark"></span>
+      <span class="logo-mark">Shakana</span>
+    </div>
+    <h1 class="tagline">
+      Group orders for<br/>
+      <span>your neighbors.</span><br/>
+      Finally.
+    </h1>
+    <p class="sub">הזמנות קבוצתיות לשכנים — פשוט, בטוח, וחוסך כסף</p>
+    <div class="badge">Seed Round · May 2025</div>
+  </div>
+
+  <!-- ═══ SLIDE 2 — PROBLEM ═══ -->
+  <div class="slide" id="s2">
+    <div class="slide-inner">
+      <div class="slide-label">01 · הבעיה</div>
+      <h2 class="slide-title">כל שבוע שותפים קישורים.<br/><span>אף אחד לא מחלק את ההזמנה.</span></h2>
+      <div class="cards col3" style="margin-top:8px;">
+        <div class="card">
+          <div class="card-icon">📦</div>
+          <div class="card-title">מינימום הזמנה</div>
+          <div class="card-body">H&M משלוח חינם מ-₪299. אחד לבד לא מגיע לסכום. כולם משלמים משלוח מלא.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">💸</div>
+          <div class="card-title">כאב הכסף</div>
+          <div class="card-body">מישהו מקדים ₪1,200. חלק מעבירים, חלק "שוכחים". ה-WhatsApp הופך ל-chaos.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">🏠</div>
+          <div class="card-title">שכנים כבר שם</div>
+          <div class="card-body">200,000 קבוצות ווטסאפ של בניינים בישראל. הקואורדינציה קיימת — כלי התשלום לא.</div>
+        </div>
+      </div>
+      <div class="highlight-box" style="margin-top:28px;">
+        <div class="hb-label">הבעיה בשורה אחת</div>
+        <div class="hb-num">ה-WhatsApp + העברה בנקאית <span>הם הפתרון הנוכחי.</span></div>
+        <div class="hb-sub">אין כלי מסחרי שנבנה ספציפית לרמת הבניין.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 3 — SOLUTION ═══ -->
+  <div class="slide" id="s3">
+    <div class="slide-inner">
+      <div class="slide-label">02 · הפתרון</div>
+      <h2 class="slide-title">שכנה — שכבת ה-Checkout<br/><span>לשכנים.</span></h2>
+      <div class="two-col wide-left" style="margin-top:24px; gap:32px;">
+        <ul class="list">
+          <li>
+            <span class="bullet">1</span>
+            <span><strong style="color:var(--dark);">מדביקים קישור למוצר</strong> — ממגנט Zara, H&M, Amazon, או כל חנות אחרת. שכנה מושכת את המידע אוטומטית.</span>
+          </li>
+          <li>
+            <span class="bullet">2</span>
+            <span><strong style="color:var(--dark);">משתפים קוד בקבוצת הבניין</strong> — שכנים נכנסים, בוחרים פריטים ומגדירים כמויות.</span>
+          </li>
+          <li>
+            <span class="bullet">3</span>
+            <span><strong style="color:var(--dark);">כולם משלמים את חלקם</strong> — Stripe מחזיק בכסף ב-escrow. לא ניתן לבטל חד-צדדי.</span>
+          </li>
+          <li>
+            <span class="bullet">4</span>
+            <span><strong style="color:var(--dark);">המייסד קונה מהחנות</strong> — הכסף משוחרר. כולם מקבלים את ההזמנה. אין חשבונות פתוחים.</span>
+          </li>
+        </ul>
+        <div style="display:flex; flex-direction:column; gap:16px;">
+          <div class="card" style="text-align:center;">
+            <div class="card-icon">🔒</div>
+            <div class="card-title">Escrow Payment</div>
+            <div class="card-body">הכסף מוגן עד שהמייסד קונה. אף אחד לא מסתכן.</div>
+          </div>
+          <div class="card" style="text-align:center;">
+            <div class="card-icon">⏱️</div>
+            <div class="card-title">Timer מובנה</div>
+            <div class="card-body">ההזמנה נסגרת בזמן. ללא המתנות אינסופיות.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 4 — HOW IT WORKS ═══ -->
+  <div class="slide" id="s4">
+    <div class="slide-inner">
+      <div class="slide-label">03 · כך זה עובד</div>
+      <h2 class="slide-title">60 שניות מקישור<br/><span>לתשלום.</span></h2>
+      <div class="flow" style="margin-top:32px; gap:8px;">
+        <div class="flow-step">
+          <div class="step-num">1</div>
+          <div class="step-title">הדבק קישור</div>
+          <div class="step-body">לינק מ-H&M, Zara, Amazon — שכנה מושכת שם, תמונה ומחיר.</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="step-num">2</div>
+          <div class="step-title">שתף קוד</div>
+          <div class="step-body">4 ספרות. שכנים נכנסים מהקבוצה, בוחרים צבע וגודל.</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="step-num">3</div>
+          <div class="step-title">שלמו</div>
+          <div class="step-body">כל שכן משלם את חלקו. Stripe מחזיק ב-escrow.</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="step-num">4</div>
+          <div class="step-title">המייסד קונה</div>
+          <div class="step-body">קונה מהחנות, מסמן "נשלח" — הכסף משוחרר לחשבונו.</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="step-num">5</div>
+          <div class="step-title">כולם מרוצים</div>
+          <div class="step-body">חינם משלוח, מחיר מלא, אפס חשבונות.</div>
+        </div>
+      </div>
+      <div class="highlight-box" style="margin-top:28px; text-align:center;">
+        <div class="hb-sub" style="font-size:16px; color:var(--dark); font-weight:600;">
+          ממוצע חסכון למשפחה: <strong style="color:var(--primary);">₪47 לרכישה</strong> · ממוצע הזמנות לבניין: <strong style="color:var(--primary);">4–6 לחודש</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 5 — MARKET SIZE ═══ -->
+  <div class="slide" id="s5">
+    <div class="slide-inner">
+      <div class="slide-label">04 · שוק</div>
+      <h2 class="slide-title">שוק ממוקד,<br/><span>פוטנציאל ענק.</span></h2>
+      <div class="cards col3" style="margin-top:8px;">
+        <div class="card stat-block">
+          <div class="stat-num">$1.1T</div>
+          <div class="stat-label">TAM · Social Commerce עולמי 2028<br/><span class="tag" style="margin-top:8px;">Statista</span></div>
+        </div>
+        <div class="card stat-block">
+          <div class="stat-num">3M</div>
+          <div class="stat-label">SAM · משקי בית ישראלים בדירות<br/>~200K קבוצות ווטסאפ של בניינים</div>
+        </div>
+        <div class="card stat-block" style="background:linear-gradient(135deg,rgba(201,100,66,0.08),rgba(201,100,66,0.02)); border-color:rgba(201,100,66,0.25);">
+          <div class="stat-num" style="color:var(--primary);">₪36M</div>
+          <div class="stat-label">SOM שנה 1 — ARR<br/>5,000 בניינים × 4 הזמנות × ₪150 עמלה</div>
+        </div>
+      </div>
+      <div class="two-col" style="margin-top:28px; gap:20px;">
+        <div class="card">
+          <div class="card-title">🇮🇱 למה ישראל ראשון</div>
+          <div class="card-body">תרבות הקבוצה כבר קיימת. ישראלים חולקים הכל בווטסאפ. תשתית Stripe IL פעילה. ניסיון קל לשכפול לGermany, UK, ולאחר מכן US.</div>
+        </div>
+        <div class="card">
+          <div class="card-title">📈 מדוע עכשיו</div>
+          <div class="card-body">Stripe IL הפכה לזמינה ב-2023. עלויות משלוח גבוהות לאחר הקורונה דחפו שכנים לחלוק. אין מתחרה ממומן בישראל.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 6 — BUSINESS MODEL ═══ -->
+  <div class="slide" id="s6">
+    <div class="slide-inner">
+      <div class="slide-label">05 · מודל עסקי</div>
+      <h2 class="slide-title">3 זרמי הכנסה,<br/><span>Unit Economics ברורים.</span></h2>
+      <div class="two-col wide-left" style="margin-top:24px; gap:32px; align-items:start;">
+        <div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>זרם הכנסה</th><th>מנגנון</th><th>הכנסה לעסקה</th></tr></thead>
+              <tbody>
+                <tr><td><strong>עמלת עסקה</strong></td><td>4% מסכום ההזמנה</td><td class="highlight">₪40–120</td></tr>
+                <tr><td><strong>שותפויות חנויות</strong></td><td>Referral מ-H&M / Zara</td><td class="highlight">₪15–60</td></tr>
+                <tr><td><strong>Premium בניין</strong></td><td>₪29/חודש לפיצ'רים מתקדמים</td><td class="highlight">₪29/mo</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="margin-top:16px; padding:16px 20px; background:var(--card); border:1px solid var(--border); border-radius:12px; font-size:13px; color:var(--muted); line-height:1.8;">
+            <strong style="color:var(--dark);">דוגמה מספרית:</strong><br/>
+            10 שכנים · ₪250 כ"א · סכום כולל ₪2,500<br/>
+            עמלה 4% = <strong style="color:var(--primary);">₪100 להזמנה</strong><br/>
+            1,000 הזמנות/חודש = <strong style="color:var(--primary);">₪100K MRR</strong>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:16px;">
+          <div class="highlight-box">
+            <div class="hb-label">Gross Margin</div>
+            <div class="hb-num"><span>~82%</span></div>
+            <div class="hb-sub">עמלת Stripe ~1.8% + תשתית. שאר — מרווח.</div>
+          </div>
+          <div class="card">
+            <div class="card-title">🔄 Flywheel</div>
+            <div class="card-body">כל הזמנה מביאה שכנים חדשים לאפליקציה. כל שכן מייסד הזמנה משלו. ויראליות מובנית בתוך הבניין.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 7 — TRACTION ═══ -->
+  <div class="slide" id="s7">
+    <div class="slide-inner">
+      <div class="slide-label">06 · Traction</div>
+      <h2 class="slide-title">מוצר עובד.<br/><span>מוכן להשקה.</span></h2>
+      <div class="cards col3" style="margin-top:8px;">
+        <div class="card stat-block">
+          <div class="stat-num">✅</div>
+          <div class="stat-label">מוצר עובד מלא<br/>Expo + Supabase + Stripe</div>
+        </div>
+        <div class="card stat-block">
+          <div class="stat-num">3</div>
+          <div class="stat-label">חנויות מחוברות<br/>H&M · Zara · Amazon</div>
+        </div>
+        <div class="card stat-block">
+          <div class="stat-num">0</div>
+          <div class="stat-label">קוד פגיעות אבטחה<br/>Audit מלא עבר ✓</div>
+        </div>
+      </div>
+      <div style="margin-top:24px; display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+        <div class="highlight-box">
+          <div class="hb-label">מוכן לדמו חי</div>
+          <div class="hb-num" style="font-size:28px;">shakana1.vercel.app</div>
+          <div class="hb-sub">Demo מלא עם mock payment — מיד בפגישה.</div>
+        </div>
+        <div class="card">
+          <div class="card-title">🛡️ Defensibility</div>
+          <div class="card-body">
+            · Stripe Escrow — קשה לשכפל ללא רישיון<br/>
+            · Data moat — הזמנות בניין = cluster data<br/>
+            · Network effect — יותר שכנים = יותר הזמנות<br/>
+            · Store partnerships — exclusive referral deals
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 8 — GTM ═══ -->
+  <div class="slide" id="s8">
+    <div class="slide-inner">
+      <div class="slide-label">07 · Go-to-Market</div>
+      <h2 class="slide-title">גדילה ויראלית<br/><span>מבניין לבניין.</span></h2>
+      <div class="phases" style="margin-top:16px;">
+        <div class="phase">
+          <span class="phase-badge p1">שלב 1 — Q3 2025</span>
+          <div class="phase-content">
+            <div class="phase-title">ועדי בתים ומנהלי בניינים</div>
+            <div class="phase-body">מנהל אחד = 20–60 דיירים באופן מיידי. תמריץ: עמלה 1% על כל הזמנה בבניין שלו. יעד: 50 בניינים בתל אביב ·גוש דן.</div>
+          </div>
+        </div>
+        <div class="phase">
+          <span class="phase-badge p2">שלב 2 — Q4 2025</span>
+          <div class="phase-content">
+            <div class="phase-title">מנהלי קבוצות ווטסאפ</div>
+            <div class="phase-body">כל מנהל קבוצת בניין מקבל "שכנה Pro" — דוחות, סטטיסטיקות, ופיצ'רים מתקדמים. Referral program עם תגמול כספי.</div>
+          </div>
+        </div>
+        <div class="phase">
+          <span class="phase-badge p3">שלב 3 — Q1 2026</span>
+          <div class="phase-content">
+            <div class="phase-title">שותפויות ישירות עם חנויות</div>
+            <div class="phase-body">H&M ישראל, Zara IL — ערוץ גיוס לקוחות בעלות נמוכה. שכנה = traffic קבוצתי שהחנות אינה יכולה להשיג לבד.</div>
+          </div>
+        </div>
+      </div>
+      <div class="highlight-box" style="margin-top:20px; text-align:center;">
+        <div class="hb-sub" style="font-size:16px; color:var(--dark); font-weight:600;">
+          כל הזמנה היא המרקטינג — שכן שמשתמש מביא את 9 השכנים הבאים.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 9 — TEAM & WHY US ═══ -->
+  <div class="slide" id="s9">
+    <div class="slide-inner">
+      <div class="slide-label">08 · צוות</div>
+      <h2 class="slide-title">למה אנחנו,<br/>למה עכשיו.</h2>
+      <div class="cards col3" style="margin-top:24px;">
+        <div class="card">
+          <div class="card-icon">🧠</div>
+          <div class="card-title">Tech-First</div>
+          <div class="card-body">מוצר עובד מלא: React Native, Supabase, Stripe Escrow — בנוי ובדוק לפני גיוס ראשון. לא slide deck, מוצר אמיתי.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">🏘️</div>
+          <div class="card-title">Domain Insight</div>
+          <div class="card-body">הבנה עמוקה של תרבות הבניין הישראלית וה-pain הקונקרטי של הזמנות קבוצתיות.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">🚀</div>
+          <div class="card-title">Execution Speed</div>
+          <div class="card-body">מ-0 למוצר מלא עם Escrow Payments, live demo, אבטחה מלאה — ללא גיוס.</div>
+        </div>
+      </div>
+      <div style="margin-top:28px; display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+        <div class="card">
+          <div class="card-title" style="color:#FFFCF7;">⚡ Unfair Advantages</div>
+          <div class="card-body">
+            · Working product + live deploy<br/>
+            · Stripe Escrow architecture ready<br/>
+            · Zero Israeli competitor<br/>
+            · Building network effect moat
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="color:#FFFCF7;">📅 Milestones next 12mo</div>
+          <div class="card-body">
+            · Q3: 50 בניינים · 200 הזמנות/חודש<br/>
+            · Q4: ₪50K MRR · App Store launch<br/>
+            · Q1 '26: שותפות H&M / Zara IL<br/>
+            · Q2 '26: Series A / ₪500K MRR
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDE 10 — THE ASK ═══ -->
+  <div class="slide" id="s10">
+    <div class="slide-inner">
+      <div class="slide-label">09 · הגיוס</div>
+      <h2 class="slide-title">המספרים.</h2>
+      <div style="display:grid; grid-template-columns:1fr auto 1fr; gap:32px; margin-top:24px; align-items:center;">
+        <div style="text-align:center;">
+          <div class="big-ask">₪1.5M</div>
+          <div class="big-ask-sub">$400K · Pre-Seed</div>
+          <div style="margin-top:16px; font-size:13px; color:#6F6257; line-height:1.8;">
+            SAFE · Valuation Cap<br/>
+            <strong style="color:#9E8878;">₪6M ($1.6M)</strong><br/>
+            18 חודשי Runway
+          </div>
+        </div>
+        <div class="ask-divider"></div>
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <div class="milestone">
+            <div class="milestone-icon">👥</div>
+            <div>
+              <div class="milestone-title">צוות — ₪900K</div>
+              <div class="milestone-body">Full-stack developer (₪30K/mo) · Growth manager (₪20K/mo) · מייסד (₪15K/mo)</div>
+            </div>
+          </div>
+          <div class="milestone">
+            <div class="milestone-icon">📣</div>
+            <div>
+              <div class="milestone-title">GTM — ₪360K</div>
+              <div class="milestone-body">ועדי בתים · שיווק · 100 בניינים ראשונים · אירועים</div>
+            </div>
+          </div>
+          <div class="milestone">
+            <div class="milestone-icon">⚙️</div>
+            <div>
+              <div class="milestone-title">Product & Infra — ₪180K</div>
+              <div class="milestone-body">Supabase / Stripe / Sentry · App Store · Legal · שותפויות חנויות</div>
+            </div>
+          </div>
+          <div class="milestone">
+            <div class="milestone-icon">🛡️</div>
+            <div>
+              <div class="milestone-title">Buffer — ₪60K</div>
+              <div class="milestone-body">רזרבה להוצאות בלתי צפויות</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /deck -->
+
+<!-- ── Nav ── -->
+<div id="progress"><div id="progress-fill"></div></div>
+<div id="dots"></div>
+<div class="arrow" id="prev">←</div>
+<div class="arrow" id="next">→</div>
+<div id="counter"></div>
+<div id="hint">← → or click arrows to navigate</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+
+  const dotsEl = document.getElementById('dots');
+  const fill = document.getElementById('progress-fill');
+  const counter = document.getElementById('counter');
+
+  // Build dots
+  slides.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.addEventListener('click', () => go(i));
+    dotsEl.appendChild(d);
+  });
+
+  function go(n) {
+    slides[current].classList.remove('active');
+    dotsEl.children[current].classList.remove('active');
+    current = (n + total) % total;
+    slides[current].classList.add('active');
+    dotsEl.children[current].classList.add('active');
+    fill.style.width = ((current + 1) / total * 100) + '%';
+    counter.textContent = (current + 1) + ' / ' + total;
+  }
+
+  document.getElementById('prev').addEventListener('click', () => go(current - 1));
+  document.getElementById('next').addEventListener('click', () => go(current + 1));
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') go(current + 1);
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   go(current - 1);
+  });
+
+  // Touch/swipe
+  let startX = 0;
+  document.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; });
+  document.addEventListener('touchend', (e) => {
+    const dx = startX - e.changedTouches[0].clientX;
+    if (Math.abs(dx) > 40) dx > 0 ? go(current + 1) : go(current - 1);
+  });
+
+  go(0);
+</script>
+</body>
+</html>
