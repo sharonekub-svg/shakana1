@@ -42,6 +42,7 @@ export type DemoOrder = {
   participants: DemoParticipant[];
   items: DemoOrderItem[];
   lastEvent: string;
+  paidParticipants: string[];
 };
 
 export type DemoPulse = {
@@ -70,6 +71,7 @@ type DemoState = {
   updateTimer: (orderId: string, minutes: number) => void;
   updateDeliveryAddress: (orderId: string, deliveryAddress: string) => void;
   updateStatus: (orderId: string, status: OrderStatus) => void;
+  simulatePayment: (orderId: string, participantId: string) => void;
   restoreSharedOrder: (order: unknown) => void;
   resetDemo: () => void;
 };
@@ -148,6 +150,7 @@ function createOrder(brand: DemoBrandId, creator = primaryDemoParticipant, timer
     participants: [{ ...creator, joinedAt: createdAt }],
     items: [],
     lastEvent: `${demoStores[brand].name} group order created with a ${safeTimerMinutes} minute timer`,
+    paidParticipants: [],
   };
 }
 
@@ -185,11 +188,15 @@ function mergeOrder(localOrder: DemoOrder | undefined, remoteOrder: DemoOrder): 
     ...remoteOrder.items.filter((remoteItem) => !localOrder.items.some((localItem) => localItem.id === remoteItem.id)),
   ].sort((a, b) => b.addedAt - a.addedAt);
   const remoteIsNewer = orderVersion(remoteOrder) >= orderVersion(localOrder);
+  const paidParticipants = Array.from(
+    new Set([...localOrder.paidParticipants, ...remoteOrder.paidParticipants]),
+  );
   return {
     ...localOrder,
     ...remoteOrder,
     participants,
     items,
+    paidParticipants,
     status: remoteIsNewer ? remoteOrder.status : localOrder.status,
     deliveryAddress: remoteOrder.deliveryAddress || localOrder.deliveryAddress,
     lastEvent: remoteIsNewer ? remoteOrder.lastEvent : localOrder.lastEvent,
@@ -355,6 +362,9 @@ function sanitizeState(value: unknown): PersistedDemoState {
             typeof incomingOrder.lastEvent === 'string' && incomingOrder.lastEvent
               ? incomingOrder.lastEvent
               : `${demoStores[brand].name} group order`,
+          paidParticipants: Array.isArray(incomingOrder.paidParticipants)
+            ? incomingOrder.paidParticipants.filter((id): id is string => typeof id === 'string')
+            : [],
         }];
       })
     : [];
@@ -700,6 +710,46 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
           kind: addressBlocked ? 'status' : status === 'shipped' ? 'goal' : 'status',
           message: addressBlocked ? 'Delivery address is required before fulfillment.' : `Order status updated to ${status}`,
         } as DemoPulse,
+      };
+      persistAndBroadcast(next);
+      return next;
+    }),
+  simulatePayment: (orderId, participantId) =>
+    set((state) => {
+      const orders = state.orders.map((order) => {
+        if (order.id !== orderId) return order;
+        if (order.paidParticipants.includes(participantId)) return order;
+        const paidParticipants = [...order.paidParticipants, participantId];
+        const participantsWithItems = new Set(order.items.map((item) => item.participantId));
+        const allPaid = order.participants
+          .filter((p) => participantsWithItems.has(p.id))
+          .every((p) => paidParticipants.includes(p.id));
+        const name = order.participants.find((p) => p.id === participantId)?.name ?? 'Member';
+        const myItems = order.items.filter((item) => item.participantId === participantId);
+        const myTotal = myItems.reduce((sum, item) => {
+          const product = findProduct(item.productId);
+          return sum + (product?.price ?? 0) * item.quantity;
+        }, 0);
+        return {
+          ...order,
+          paidParticipants,
+          status: allPaid ? 'accepted' : order.status,
+          lastEvent: allPaid
+            ? `All payments received — order sent to ${demoStores[order.brand].name} 🎉`
+            : `${name} paid ₪${myTotal} — payment secured in escrow`,
+        };
+      });
+      const changedOrder = orders.find((order) => order.id === orderId);
+      const pulse: DemoPulse = {
+        id: now(),
+        kind: changedOrder?.status === 'accepted' ? 'goal' : 'item',
+        message: changedOrder?.lastEvent ?? 'Payment received',
+      };
+      const next = {
+        ...state,
+        orders,
+        lastNotice: changedOrder?.lastEvent ?? 'Payment received',
+        lastPulse: pulse,
       };
       persistAndBroadcast(next);
       return next;
