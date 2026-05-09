@@ -1,6 +1,17 @@
 import { handleOptions, corsHeadersFor } from '../_shared/cors.ts';
 import { admin } from '../_shared/supabaseAdmin.ts';
 
+const rateBuckets = new Map<string, number[]>();
+function checkRateLimit(req: Request, maxPerMinute = 30): boolean {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+  const now = Date.now();
+  const bucket = (rateBuckets.get(ip) ?? []).filter((ts) => ts > now - 60_000);
+  if (bucket.length >= maxPerMinute) return false;
+  bucket.push(now);
+  rateBuckets.set(ip, bucket);
+  return true;
+}
+
 type DemoOrder = Record<string, unknown> & {
   id: string;
   brand: 'hm' | 'zara' | 'amazon';
@@ -75,6 +86,7 @@ Deno.serve(async (req) => {
     }
 
     if (req.method !== 'POST') return json(req, { error: 'method_not_allowed' }, 405);
+    if (!checkRateLimit(req)) return json(req, { error: 'rate_limited' }, 429);
     const body = await req.json().catch(() => ({}));
     const incoming = Array.isArray(body?.orders) ? body.orders : [body?.order];
     const validOrders = incoming.filter(isValidOrder);
