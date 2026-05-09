@@ -1,8 +1,7 @@
 const required = (name: string, value: string | undefined): string => {
   if (!value) {
-    if (__DEV__) {
-      console.warn(`[env] Missing ${name}. Set it in .env / EAS secrets.`);
-    }
+    // Warn in all environments so missing keys surface in Sentry breadcrumbs.
+    console.warn(`[env] Missing ${name}. Set it in .env / EAS secrets.`);
     return '';
   }
   return value;
