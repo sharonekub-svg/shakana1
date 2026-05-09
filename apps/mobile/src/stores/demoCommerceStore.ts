@@ -733,9 +733,8 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
         return {
           ...order,
           paidParticipants,
-          status: allPaid ? 'accepted' : order.status,
           lastEvent: allPaid
-            ? `All payments received — order sent to ${demoStores[order.brand].name} 🎉`
+            ? `All payments received — order ready for ${demoStores[order.brand].name} 🎉`
             : `${name} paid ₪${myTotal} — payment secured in escrow`,
         };
       });
