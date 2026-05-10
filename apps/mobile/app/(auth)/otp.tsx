@@ -57,6 +57,8 @@ export default function Otp() {
       const session = await verify.mutateAsync({ phone: String(phoneE164), token: code });
       setSession(session);
       setHydrated(true);
+      // Yield a macrotask so the route guard sees the new session before navigation.
+      await new Promise<void>((r) => setTimeout(r, 0));
       router.replace('/(auth)/name');
     } catch (e) {
       pushToast(e instanceof Error ? e.message : t('auth.otp.verifyError'), 'error');

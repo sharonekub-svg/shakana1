@@ -18,6 +18,7 @@ import {
   demoStyles,
 } from '@/components/demo/DemoPrimitives';
 import { buildInviteMessage, demoCategories, demoStores, findProduct, getProductImage, productsForBrand, type DemoBrandId, type DemoProduct } from '@/demo/catalog';
+import { calcCommission } from '@/config/shippingPolicies';
 import {
   type DemoOrder,
   type DemoParticipant,
@@ -1077,23 +1078,43 @@ function PayButton({
   const myItems = order.items.filter((item) => item.participantId === activeParticipantId);
   if (myItems.length === 0) return null;
   const alreadyPaid = order.paidParticipants.includes(activeParticipantId);
-  const myTotal = myItems.reduce((sum, item) => {
+
+  const myItemsTotal = myItems.reduce((sum, item) => {
     const product = findProduct(item.productId);
     return sum + (product?.price ?? 0) * item.quantity;
   }, 0);
+  const groupTotal = order.items.reduce((sum, item) => {
+    const product = findProduct(item.productId);
+    return sum + (product?.price ?? 0) * item.quantity;
+  }, 0);
+  const { commissionILS, totalILS, savingsILS, soloShippingILS } = calcCommission(myItemsTotal, groupTotal, order.brand);
+  const fmtILS = (v: number) => Number.isInteger(v) ? String(v) : v.toFixed(2);
+  const total = fmtILS(Math.round(totalILS * 100) / 100);
+  const withoutShakana = fmtILS(Math.round((myItemsTotal + soloShippingILS) * 100) / 100);
+
   return (
     <View style={payStyles.paySection}>
+      {savingsILS > 0 && (
+        <View style={payStyles.savingsRow}>
+          <Text style={payStyles.savingsText}>
+            🎉 Saving ₪{fmtILS(savingsILS)} vs buying alone
+          </Text>
+        </View>
+      )}
       <View style={payStyles.payRow}>
         <View>
-          <Text style={payStyles.payLabel}>Your items total</Text>
-          <Text style={payStyles.payAmount}>₪{myTotal}</Text>
+          <Text style={payStyles.payLabel}>You pay today</Text>
+          <Text style={payStyles.payAmount}>₪{total}</Text>
+          {savingsILS > 0 && (
+            <Text style={payStyles.payAmountSub}>instead of ₪{withoutShakana}</Text>
+          )}
         </View>
         {alreadyPaid ? (
           <View style={payStyles.paidBadge}>
             <Text style={payStyles.paidBadgeText}>Payment confirmed ✓</Text>
           </View>
         ) : (
-          <DemoButton label={`Pay ₪${myTotal} securely`} onPress={onPay} tone="accent" style={payStyles.payBtn} />
+          <DemoButton label={`Pay ₪${total} securely`} onPress={onPay} tone="accent" style={payStyles.payBtn} />
         )}
       </View>
       {!alreadyPaid ? (
@@ -1119,10 +1140,17 @@ function MockPaymentModal({
   onClose: () => void;
 }) {
   const myItems = order.items.filter((item) => item.participantId === activeParticipantId);
-  const myTotal = myItems.reduce((sum, item) => {
+  const myItemsTotal = myItems.reduce((sum, item) => {
     const product = findProduct(item.productId);
     return sum + (product?.price ?? 0) * item.quantity;
   }, 0);
+  const groupTotal = order.items.reduce((sum, item) => {
+    const product = findProduct(item.productId);
+    return sum + (product?.price ?? 0) * item.quantity;
+  }, 0);
+  const { commissionILS, totalILS, savingsILS, soloShippingILS } = calcCommission(myItemsTotal, groupTotal, order.brand);
+  const fmtILS = (v: number) => Number.isInteger(v) ? String(v) : v.toFixed(2);
+  const myTotal = fmtILS(Math.round(totalILS * 100) / 100);
   const storeName = demoStores[order.brand].name;
 
   return (
@@ -1144,6 +1172,13 @@ function MockPaymentModal({
 
           {step === 'form' ? (
             <>
+              {savingsILS > 0 ? (
+                <View style={payStyles.modalSavingsBanner}>
+                  <Text style={payStyles.modalSavingsBannerText}>
+                    🎉  You're saving ₪{fmtILS(savingsILS)}
+                  </Text>
+                </View>
+              ) : null}
               <Text style={payStyles.modalTitle}>Pay ₪{myTotal}</Text>
               <Text style={payStyles.modalMuted}>
                 {activeParticipantName} · {myItems.length} item{myItems.length !== 1 ? 's' : ''} from {storeName}
@@ -1189,7 +1224,26 @@ function MockPaymentModal({
                 })}
                 <View style={payStyles.orderDivider} />
                 <View style={payStyles.orderLine}>
-                  <Text style={payStyles.orderLineTotal}>Total</Text>
+                  <Text style={payStyles.orderLineMuted}>Subtotal</Text>
+                  <Text style={payStyles.orderLineMuted}>₪{myItemsTotal}</Text>
+                </View>
+                {savingsILS > 0 ? (
+                  <>
+                    <View style={payStyles.orderLine}>
+                      <Text style={payStyles.orderLineMuted}>Shipping if buying alone</Text>
+                      <Text style={[payStyles.orderLineMuted, payStyles.strikethrough]}>
+                        ₪{fmtILS(soloShippingILS)}
+                      </Text>
+                    </View>
+                    <View style={payStyles.orderLine}>
+                      <Text style={payStyles.orderLineSavings}>Your saving</Text>
+                      <Text style={payStyles.orderLineSavings}>-₪{fmtILS(savingsILS)}</Text>
+                    </View>
+                  </>
+                ) : null}
+                <View style={payStyles.orderDivider} />
+                <View style={payStyles.orderLine}>
+                  <Text style={payStyles.orderLineTotal}>You pay today</Text>
                   <Text style={payStyles.orderLineTotal}>₪{myTotal}</Text>
                 </View>
               </View>
@@ -1210,9 +1264,13 @@ function MockPaymentModal({
               <View style={payStyles.successIcon}>
                 <Text style={payStyles.successIconText}>✓</Text>
               </View>
-              <Text style={payStyles.successTitle}>Payment confirmed!</Text>
+              <Text style={payStyles.successTitle}>
+                {savingsILS > 0 ? `You saved ₪${fmtILS(savingsILS)}! 🎉` : 'Payment confirmed!'}
+              </Text>
               <Text style={payStyles.successMuted}>
-                ₪{myTotal} is secured in escrow. {storeName} will ship your items once all neighbors have paid.
+                {savingsILS > 0
+                  ? `You paid ₪${myTotal} instead of ₪${fmtILS(Math.round((myItemsTotal + soloShippingILS) * 100) / 100)}. Payment secured until ${storeName} ships.`
+                  : `₪${myTotal} is secured until ${storeName} ships your order.`}
               </Text>
               <DemoButton label="Back to cart" onPress={onClose} tone="accent" style={payStyles.confirmBtn} />
             </View>
@@ -1247,6 +1305,23 @@ const payStyles = StyleSheet.create({
     color: colors.tx,
     fontFamily: fontFamily.display,
     fontSize: 26,
+  },
+  payAmountSub: {
+    color: colors.mu,
+    fontFamily: fontFamily.body,
+    fontSize: 11,
+    marginTop: 1,
+  },
+  savingsRow: {
+    backgroundColor: '#E6F4EA',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  savingsText: {
+    color: '#2E7D32',
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 12,
   },
   payBtn: { flexGrow: 1, flexBasis: 160 },
   payMuted: {
@@ -1339,6 +1414,19 @@ const payStyles = StyleSheet.create({
     color: colors.mu,
     fontFamily: fontFamily.bodyBold,
     fontSize: 14,
+  },
+  modalSavingsBanner: {
+    backgroundColor: '#E6F4EA',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    marginBottom: 8,
+    alignItems: 'center',
+  },
+  modalSavingsBannerText: {
+    color: '#2E7D32',
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 15,
   },
   modalTitle: {
     color: colors.tx,
@@ -1434,6 +1522,35 @@ const payStyles = StyleSheet.create({
     color: colors.tx,
     fontFamily: fontFamily.display,
     fontSize: 17,
+  },
+  orderLineMuted: {
+    color: colors.mu,
+    fontFamily: fontFamily.body,
+    fontSize: 12,
+    flex: 1,
+  },
+  strikethrough: {
+    textDecorationLine: 'line-through',
+    flex: 0,
+  },
+  orderLineSavings: {
+    color: '#2E7D32',
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 12,
+    flex: 1,
+  },
+  savingsBadge: {
+    backgroundColor: '#E6F4EA',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginTop: 4,
+  },
+  savingsBadgeText: {
+    color: '#2E7D32',
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 12,
+    textAlign: 'center',
   },
   confirmBtn: {
     minHeight: 52,

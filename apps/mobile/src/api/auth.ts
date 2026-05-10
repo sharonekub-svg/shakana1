@@ -47,7 +47,6 @@ export function useGoogleSignIn() {
       if (!env.supabaseUrl || !env.supabaseAnonKey) {
         throw new Error('Google sign-in is not configured yet.');
       }
-      await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
       const redirectTo =
         Platform.OS === 'web'
           ? `${window.location.origin}/auth-callback`

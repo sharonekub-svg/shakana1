@@ -110,6 +110,10 @@ export default function AuthCallback() {
       useAuthStore.getState().setSession(sessionData.session ?? null);
       useAuthStore.getState().setHydrated(true);
 
+      // Yield a macrotask so React can flush the Zustand session update before
+      // the route guard re-evaluates on navigation.
+      await new Promise<void>((r) => setTimeout(r, 0));
+
       const userId = sessionData.session?.user.id;
       if (!userId) {
         router.replace('/(auth)/welcome');
