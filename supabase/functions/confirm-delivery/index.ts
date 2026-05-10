@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
 
     const { data: participants, error: pErr } = await admin
       .from('participants')
-      .select('id, status, amount_agorot, stripe_payment_intent_id, delivered_to_user_at, received_confirmed_at')
+      .select('id, status, amount_agorot, commission_agorot, stripe_payment_intent_id, delivered_to_user_at, received_confirmed_at')
       .eq('order_id', order.id);
     if (pErr) throw pErr;
 
@@ -68,9 +68,11 @@ Deno.serve(async (req) => {
         idempotencyKey: `capture_${p.id}`,
       });
       if (CONNECTED_ACCOUNT_ID) {
+        // Transfer only the items + shipping portion; commission stays on the platform.
+        const transferAmount = p.amount_agorot - (p.commission_agorot ?? 0);
         await stripe.transfers.create(
           {
-            amount: p.amount_agorot,
+            amount: Math.max(0, transferAmount),
             currency: 'ils',
             destination: CONNECTED_ACCOUNT_ID,
             transfer_group: order.stripe_transfer_group ?? `order_${order.id}`,
