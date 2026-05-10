@@ -14,7 +14,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useUiStore } from '@/stores/uiStore';
 import { colors, radii } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
-import { formatAgorot } from '@/utils/format';
+import { calcCommission, formatAgorot } from '@/utils/format';
 import { newIdempotencyKey } from '@/utils/idempotency';
 
 type PaymentIntentResponse = {
@@ -87,7 +87,15 @@ export default function PayWeb() {
 
   const order = data?.order;
   const me = data?.participants.find((p) => p.user_id === userId);
-  const amountAgorot = me?.amount_agorot ?? 0;
+  const allItems = data?.items ?? [];
+  const myItemsAgorot = allItems
+    .filter((item) => item.participant_id === me?.id)
+    .reduce((sum, item) => sum + Math.max(0, item.price_agorot ?? 0), 0);
+  const groupTotalAgorot = allItems.reduce((sum, item) => sum + Math.max(0, item.price_agorot ?? 0), 0);
+  const breakdown = order && myItemsAgorot > 0
+    ? calcCommission(myItemsAgorot, groupTotalAgorot, order.store_key ?? 'manual')
+    : null;
+  const amountAgorot = breakdown?.totalAgorot ?? me?.amount_agorot ?? 0;
   const stripePromise = useMemo<Promise<Stripe | null> | null>(() => {
     if (!env.stripePublishableKey) return null;
     return loadStripe(env.stripePublishableKey);
@@ -95,7 +103,7 @@ export default function PayWeb() {
 
   useEffect(() => {
     if (!orderId || !order || !me || clientSecret || loadingIntent) return;
-    if (!['locked', 'escrow'].includes(order.status)) return;
+    if (!['locked', 'paying', 'escrow'].includes(order.status)) return;
 
     let active = true;
     setLoadingIntent(true);
@@ -155,7 +163,7 @@ export default function PayWeb() {
           <Text style={styles.warningBody}>Only participants can pay their share.</Text>
           <PrimaryBtn label="Back to order" onPress={goBackToOrder} />
         </View>
-      ) : !['locked', 'escrow'].includes(order.status) ? (
+      ) : !['locked', 'paying', 'escrow'].includes(order.status) ? (
         <View style={styles.card}>
           <Text style={styles.warningTitle}>Payment opens after the timer ends.</Text>
           <Text style={styles.warningBody}>The order must be locked before Stripe can collect payments.</Text>

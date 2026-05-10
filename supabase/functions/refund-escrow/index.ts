@@ -41,8 +41,15 @@ Deno.serve(async (req) => {
         await stripe.paymentIntents.cancel(p.stripe_payment_intent_id, undefined, {
           idempotencyKey: `cancel_${p.id}_${idemp}`,
         });
-      } catch {
-        // If already captured, refund instead.
+      } catch (cancelErr: unknown) {
+        // Only refund if Stripe rejected the cancel because the PI was already
+        // captured. Re-throw any other error (network failure, etc.) to prevent
+        // a phantom refund attempt on an uncaptured authorization.
+        const isAlreadyCaptured =
+          cancelErr instanceof Error &&
+          (cancelErr.message.toLowerCase().includes('captured') ||
+            (cancelErr as { code?: string }).code === 'payment_intent_unexpected_state');
+        if (!isAlreadyCaptured) throw cancelErr;
         await stripe.refunds.create(
           { payment_intent: p.stripe_payment_intent_id },
           { idempotencyKey: `refund_${p.id}_${idemp}` },

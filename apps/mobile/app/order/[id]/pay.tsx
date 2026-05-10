@@ -9,7 +9,7 @@ import { colors, radii } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { usePayForOrder } from '@/api/payments';
 import { useOrder } from '@/api/orders';
-import { formatAgorot } from '@/utils/format';
+import { calcCommission, formatAgorot } from '@/utils/format';
 import { useUiStore } from '@/stores/uiStore';
 import { usePaymentSettingsStore } from '@/stores/paymentSettingsStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -29,7 +29,15 @@ export default function Pay() {
 
   const order = data?.order;
   const me = data?.participants.find((p) => p.user_id === userId);
-  const amountAgorot = me?.amount_agorot ?? 0;
+  const allItems = data?.items ?? [];
+  const myItemsAgorot = allItems
+    .filter((item) => item.participant_id === me?.id)
+    .reduce((sum, item) => sum + Math.max(0, item.price_agorot ?? 0), 0);
+  const groupTotalAgorot = allItems.reduce((sum, item) => sum + Math.max(0, item.price_agorot ?? 0), 0);
+  const breakdown = order && myItemsAgorot > 0
+    ? calcCommission(myItemsAgorot, groupTotalAgorot, order.store_key ?? 'manual')
+    : null;
+  const amountAgorot = breakdown?.totalAgorot ?? me?.amount_agorot ?? 0;
   const canPay = Boolean(order && me && amountAgorot > 0);
 
   useEffect(() => {

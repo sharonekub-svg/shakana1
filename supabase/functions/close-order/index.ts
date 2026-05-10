@@ -34,6 +34,14 @@ Deno.serve(async (req) => {
       if (order.creator_id !== userId) throw httpError(403, 'only_creator_can_close');
     } else if (new Date(order.closes_at).getTime() > Date.now()) {
       throw httpError(409, 'timer_still_open');
+    } else if (order.creator_id !== userId) {
+      // Timed order past expiry: must be creator or a participant (not arbitrary users).
+      const { count: memberCount } = await admin
+        .from('participants')
+        .select('id', { count: 'exact', head: true })
+        .eq('order_id', order.id)
+        .eq('user_id', userId);
+      if (!memberCount) throw httpError(403, 'not_order_member');
     }
 
     const { count, error: countErr } = await admin
