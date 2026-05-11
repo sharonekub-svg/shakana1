@@ -11,7 +11,7 @@ import { useConfirmDelivery, useOrder, useUpdateDelivery, type DeliveryAction } 
 import { useAuthStore } from '@/stores/authStore';
 import { useUiStore } from '@/stores/uiStore';
 import { formatAgorot } from '@/utils/format';
-import type { Participant, ShippingStatus } from '@/types/domain';
+import type { Participant, ShippingStatus, TrackingEvent } from '@/types/domain';
 
 function Lock() {
   return (
@@ -48,6 +48,7 @@ export default function Escrow() {
 
   const order = data?.order;
   const participants = data?.participants ?? [];
+  const trackingEvents = data?.trackingEvents ?? [];
   const paidCount = participants.filter((p) => p.status === 'paid').length;
   const total = order?.max_participants ?? 0;
   const allPaid = total > 0 && paidCount >= total;
@@ -127,7 +128,7 @@ export default function Escrow() {
         <View style={styles.card}>
           <Text style={styles.kicker}>Delivery status</Text>
           <Text style={styles.cardTitle}>{statusLabels[shippingStatus]}</Text>
-          <Timeline order={order} />
+          <TrackingTimeline events={trackingEvents} shippingStatus={shippingStatus} />
           {canManageDelivery && next ? (
             <PrimaryBtn
               label={next.label}
@@ -169,19 +170,60 @@ export default function Escrow() {
   );
 }
 
-function Timeline({ order }: { order: { shipped_at?: string | null; ready_for_pickup_at?: string | null; picked_up_at?: string | null; ready_for_distribution_at?: string | null } }) {
-  const rows = [
-    ['Order shipped', order.shipped_at],
-    ['Ready for pickup', order.ready_for_pickup_at],
-    ['Picked up', order.picked_up_at],
-    ['Ready for distribution', order.ready_for_distribution_at],
-  ] as const;
+const STATUS_ORDER = ['shipped', 'ready_for_pickup', 'picked_up', 'ready_for_distribution'];
+
+function TrackingTimeline({
+  events,
+  shippingStatus,
+}: {
+  events: TrackingEvent[];
+  shippingStatus: ShippingStatus;
+}) {
+  const fmt = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleDateString('he-IL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  };
+
+  if (events.length === 0) {
+    // Fall back to milestone dots when no tracking events are logged yet.
+    const pendingLabels = STATUS_ORDER.filter(
+      (s) => STATUS_ORDER.indexOf(s) > STATUS_ORDER.indexOf(shippingStatus),
+    );
+    const doneLabels = STATUS_ORDER.filter(
+      (s) => STATUS_ORDER.indexOf(s) <= STATUS_ORDER.indexOf(shippingStatus),
+    );
+    const allLabels = [...doneLabels, ...pendingLabels];
+    return (
+      <View style={styles.timeline}>
+        {allLabels.map((s) => {
+          const done = doneLabels.includes(s);
+          return (
+            <View key={s} style={styles.timelineRow}>
+              <View style={[styles.dot, done && styles.dotOn]} />
+              <Text style={[styles.timelineText, done && styles.timelineTextOn]}>
+                {statusLabels[s as ShippingStatus] ?? s}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.timeline}>
-      {rows.map(([label, value]) => (
-        <View key={label} style={styles.timelineRow}>
-          <View style={[styles.dot, Boolean(value) && styles.dotOn]} />
-          <Text style={[styles.timelineText, Boolean(value) && styles.timelineTextOn]}>{label}</Text>
+      {events.map((ev, i) => (
+        <View key={ev.id} style={styles.timelineEventRow}>
+          <View style={styles.timelineStem}>
+            <View style={styles.dotOn} />
+            {i < events.length - 1 ? <View style={styles.stemLine} /> : null}
+          </View>
+          <View style={styles.timelineEventContent}>
+            <Text style={styles.timelineTextOn}>{ev.label}</Text>
+            {ev.location ? <Text style={styles.timelineMeta}>{ev.location}</Text> : null}
+            {ev.note ? <Text style={styles.timelineNote}>{ev.note}</Text> : null}
+            <Text style={styles.timelineTime}>{fmt(ev.at)}</Text>
+          </View>
         </View>
       ))}
     </View>
@@ -274,9 +316,16 @@ const styles = StyleSheet.create({
   timeline: { gap: 10 },
   timelineRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   dot: { width: 11, height: 11, borderRadius: 999, backgroundColor: colors.brBr },
-  dotOn: { backgroundColor: colors.grn },
+  dotOn: { width: 11, height: 11, borderRadius: 999, backgroundColor: colors.grn },
   timelineText: { fontFamily: fontFamily.body, color: colors.mu, fontSize: 13 },
-  timelineTextOn: { color: colors.tx, fontFamily: fontFamily.bodySemi },
+  timelineTextOn: { color: colors.tx, fontFamily: fontFamily.bodySemi, fontSize: 14 },
+  timelineEventRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
+  timelineStem: { alignItems: 'center', paddingTop: 2 },
+  stemLine: { width: 2, flex: 1, minHeight: 16, backgroundColor: colors.grn, opacity: 0.3, marginTop: 4 },
+  timelineEventContent: { flex: 1, gap: 2, paddingBottom: 12 },
+  timelineMeta: { fontFamily: fontFamily.bodySemi, fontSize: 12, color: colors.acc },
+  timelineNote: { fontFamily: fontFamily.body, fontSize: 12, color: colors.mu, lineHeight: 18 },
+  timelineTime: { fontFamily: fontFamily.body, fontSize: 11, color: colors.mu, marginTop: 2 },
   participantRow: {
     gap: 10,
     padding: 12,

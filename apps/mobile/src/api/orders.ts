@@ -7,7 +7,7 @@ import {
 import { invokeFn, supabase } from '@/lib/supabase';
 import { newIdempotencyKey } from '@/utils/idempotency';
 import { track } from '@/lib/posthog';
-import type { Order, OrderItem, Participant } from '@/types/domain';
+import type { Order, OrderItem, Participant, TrackingEvent } from '@/types/domain';
 
 type CreateOrderInput = {
   productUrl: string;
@@ -48,6 +48,7 @@ export function useOrder(orderId: string | undefined) {
         order: Order;
         participants: Participant[];
         items: OrderItem[];
+        trackingEvents: TrackingEvent[];
       }>('get-order', { orderId });
     },
   });
@@ -68,6 +69,16 @@ export function useOrder(orderId: string | undefined) {
           event: '*',
           schema: 'public',
           table: 'participants',
+          filter: `order_id=eq.${orderId}`,
+        },
+        () => qc.invalidateQueries({ queryKey: ['order', orderId] }),
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'tracking_events',
           filter: `order_id=eq.${orderId}`,
         },
         () => qc.invalidateQueries({ queryKey: ['order', orderId] }),
@@ -139,6 +150,8 @@ type UpdateDeliveryInput = {
   participantId?: string;
   pickupResponsibleUserId?: string;
   preferredPickupLocation?: string;
+  trackingNote?: string;
+  trackingLocation?: string;
 };
 
 type AddOrderItemInput = {

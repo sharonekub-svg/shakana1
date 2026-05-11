@@ -42,17 +42,22 @@ Deno.serve(async (req) => {
 
     if (!canRead) throw httpError(403, 'not_order_member');
 
-    const { data: items, error: itemsErr } = await admin
-      .from('order_items')
-      .select('*')
-      .eq('order_id', orderId);
+    const [
+      { data: items, error: itemsErr },
+      { data: trackingEvents, error: trackingErr },
+    ] = await Promise.all([
+      admin.from('order_items').select('*').eq('order_id', orderId),
+      admin.from('tracking_events').select('*').eq('order_id', orderId).order('at', { ascending: true }),
+    ]);
 
     if (itemsErr) throw itemsErr;
+    if (trackingErr) throw trackingErr;
 
     return json({
       order,
       participants: participants ?? [],
       items: items ?? [],
+      trackingEvents: trackingEvents ?? [],
     });
   } catch (e) {
     return errorJson(e);

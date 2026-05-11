@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Image, ImageBackground, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, ImageBackground, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -37,6 +37,7 @@ import { useLocale } from '@/i18n/locale';
 import { useAuthStore } from '@/stores/authStore';
 import { stashPendingInvite } from '@/lib/deeplinks';
 import { searchCities, searchStreets } from '@/lib/locationAutocomplete';
+import { env } from '@/lib/env';
 
 const ADDRESS_SUGGESTIONS = [
   'Rothschild Boulevard 12, Tel Aviv',
@@ -109,10 +110,284 @@ function addressValidationMessage(value: string) {
   return 'Required: valid timer, one store, and full address with house number before opening the cart.';
 }
 
+const TOUR_STEPS = [
+  {
+    step: '01',
+    title: 'A neighbor finds something she loves',
+    body: 'Sharone spots an H&M linen shirt. Solo delivery costs ₪29. But there\'s a smarter way — one that costs nothing.',
+    stat: '₪29',
+    statLabel: 'solo shipping',
+    image: 'https://images.unsplash.com/photo-1603252109303-2751441dd157?auto=format&fit=crop&w=600&q=80',
+  },
+  {
+    step: '02',
+    title: 'Group order live in 30 seconds',
+    body: 'Sharone opens Shakana, picks H&M, sets a 45-minute timer. A shared cart is created instantly — no app needed for neighbors.',
+    stat: '30s',
+    statLabel: 'to go live',
+    image: 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=600&q=80',
+  },
+  {
+    step: '03',
+    title: 'One WhatsApp message to the building',
+    body: '"Hey neighbors — I\'m ordering from H&M, join my cart and we all get free shipping!" Shakana writes the message. One tap to send.',
+    stat: '1 tap',
+    statLabel: 'to share',
+    image: 'https://images.unsplash.com/photo-1611746872915-64382b5c76da?auto=format&fit=crop&w=600&q=80',
+  },
+  {
+    step: '04',
+    title: 'Noa + Lior join. Free shipping unlocked.',
+    body: 'Each neighbor adds their items privately. ₪119 + ₪99 + ₪89 = ₪307. That\'s over the ₪299 threshold. H&M ships free to the building.',
+    stat: '₪0',
+    statLabel: 'shipping cost',
+    image: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?auto=format&fit=crop&w=600&q=80',
+  },
+  {
+    step: '05',
+    title: 'Everyone pays their share — securely',
+    body: 'Shakana holds all payments in Stripe escrow. Sharone buys the full order. Money only releases after every neighbor confirms delivery.',
+    stat: '100%',
+    statLabel: 'escrow protected',
+    image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=600&q=80',
+  },
+  {
+    step: '06',
+    title: 'Shakana earns ₪43.50 from this one order',
+    body: 'Half the shipping savings = Shakana\'s commission. Users pay nothing extra. The more buildings group together, the more everyone earns.',
+    stat: '₪43.50',
+    statLabel: 'Shakana commission',
+    image: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=600&q=80',
+  },
+];
+
+function DemoTour({ onClose }: { onClose: () => void }) {
+  const [step, setStep] = useState(0);
+  const [playing, setPlaying] = useState(true);
+  const current = TOUR_STEPS[step] ?? TOUR_STEPS[0];
+  const total = TOUR_STEPS.length;
+
+  useEffect(() => {
+    if (!playing) return;
+    const timer = globalThis.setTimeout(() => {
+      if (step < total - 1) {
+        setStep((s) => s + 1);
+      } else {
+        setPlaying(false);
+      }
+    }, 5000);
+    return () => globalThis.clearTimeout(timer);
+  }, [step, playing, total]);
+
+  const goNext = () => {
+    if (step < total - 1) { setStep((s) => s + 1); setPlaying(true); }
+    else onClose();
+  };
+  const goPrev = () => {
+    if (step > 0) { setStep((s) => s - 1); setPlaying(false); }
+  };
+
+  return (
+    <View style={tourStyles.overlay} pointerEvents="box-none">
+      <Pressable style={tourStyles.backdrop} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close tour" />
+      <View style={tourStyles.card}>
+        <Image source={{ uri: current?.image }} style={tourStyles.image} resizeMode="cover" />
+        <View style={tourStyles.content}>
+          <View style={tourStyles.topRow}>
+            <Text style={tourStyles.stepLabel}>{current?.step} / {String(total).padStart(2, '0')}</Text>
+            <Pressable onPress={onClose} accessibilityRole="button" style={tourStyles.closeBtn}>
+              <Text style={tourStyles.closeBtnText}>✕</Text>
+            </Pressable>
+          </View>
+          <View style={tourStyles.statRow}>
+            <Text style={tourStyles.statValue}>{current?.stat}</Text>
+            <Text style={tourStyles.statLabel}>{current?.statLabel}</Text>
+          </View>
+          <Text style={tourStyles.title}>{current?.title}</Text>
+          <Text style={tourStyles.body}>{current?.body}</Text>
+          <View style={tourStyles.dots}>
+            {TOUR_STEPS.map((_, i) => (
+              <Pressable key={i} onPress={() => { setStep(i); setPlaying(false); }} accessibilityRole="button">
+                <View style={[tourStyles.dot, i === step && tourStyles.dotActive]} />
+              </Pressable>
+            ))}
+          </View>
+          <View style={tourStyles.actions}>
+            <Pressable
+              onPress={goPrev}
+              disabled={step === 0}
+              accessibilityRole="button"
+              style={[tourStyles.navBtn, step === 0 && tourStyles.navBtnDisabled]}
+            >
+              <Text style={tourStyles.navBtnText}>← Back</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setPlaying((p) => !p)}
+              accessibilityRole="button"
+              style={tourStyles.playBtn}
+            >
+              <Text style={tourStyles.playBtnText}>{playing ? '⏸' : '▶'}</Text>
+            </Pressable>
+            <Pressable onPress={goNext} accessibilityRole="button" style={tourStyles.navBtnAccent}>
+              <Text style={tourStyles.navBtnAccentText}>{step < total - 1 ? 'Next →' : 'Done ✓'}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const tourStyles = StyleSheet.create({
+  overlay: {
+    position: 'absolute',
+    inset: 0,
+    zIndex: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  } as never,
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(20,14,10,0.88)',
+  },
+  card: {
+    width: '100%',
+    maxWidth: 480,
+    borderRadius: 24,
+    backgroundColor: colors.white,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.35,
+    shadowRadius: 40,
+    shadowOffset: { width: 0, height: 20 },
+    elevation: 20,
+  },
+  image: {
+    width: '100%',
+    height: 200,
+    backgroundColor: colors.s2,
+  },
+  content: {
+    padding: 22,
+    gap: 12,
+  },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  stepLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 11,
+    color: colors.mu2,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.s2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeBtnText: {
+    fontSize: 13,
+    color: colors.mu,
+    fontFamily: fontFamily.bodyBold,
+  },
+  statRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+  },
+  statValue: {
+    fontFamily: fontFamily.display,
+    fontSize: 36,
+    color: colors.gold,
+    lineHeight: 40,
+  },
+  statLabel: {
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    color: colors.mu,
+  },
+  title: {
+    fontFamily: fontFamily.display,
+    fontSize: 22,
+    color: colors.tx,
+    lineHeight: 28,
+  },
+  body: {
+    fontFamily: fontFamily.body,
+    fontSize: 14,
+    color: colors.mu,
+    lineHeight: 22,
+  },
+  dots: {
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'center',
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.br,
+  },
+  dotActive: {
+    width: 20,
+    backgroundColor: colors.gold,
+  },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  navBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: colors.s2,
+  },
+  navBtnDisabled: {
+    opacity: 0.35,
+  },
+  navBtnText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+    color: colors.tx,
+  },
+  playBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.s2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playBtnText: {
+    fontSize: 16,
+  },
+  navBtnAccent: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: colors.ink,
+  },
+  navBtnAccentText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+    color: colors.white,
+  },
+});
+
 export default function DemoUserScreen() {
   const router = useRouter();
   const { language } = useLocale();
-  const params = useLocalSearchParams<{ join?: string; new?: string }>();
+  const params = useLocalSearchParams<{ join?: string; new?: string; founder?: string }>();
   const session = useAuthStore((state) => state.session);
   const demoMode = useDemoCommerceStore((state) => state.demoMode);
   const selectedBrand = useDemoCommerceStore((state) => state.selectedBrand);
@@ -128,6 +403,7 @@ export default function DemoUserScreen() {
   const restoreSharedOrder = useDemoCommerceStore((state) => state.restoreSharedOrder);
   const setActiveParticipant = useDemoCommerceStore((state) => state.setActiveParticipant);
   const setDemoRole = useDemoCommerceStore((state) => state.setDemoRole);
+  const setDemoMode = useDemoCommerceStore((state) => state.setDemoMode);
   const resetDemo = useDemoCommerceStore((state) => state.resetDemo);
   const updateTimer = useDemoCommerceStore((state) => state.updateTimer);
   const updateDeliveryAddress = useDemoCommerceStore((state) => state.updateDeliveryAddress);
@@ -148,12 +424,35 @@ export default function DemoUserScreen() {
   const [joinRetry, setJoinRetry] = useState(0);
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [payStep, setPayStep] = useState<'form' | 'processing' | 'success'>('form');
+  const [tourOpen, setTourOpen] = useState(false);
+  const [demoVidOpen, setDemoVidOpen] = useState(false);
   const consumedNewParamRef = useRef(false);
 
   useEffect(() => {
     initDemoCommerceSync();
     if (demoMode) setDemoRole('user');
   }, [demoMode, setDemoRole]);
+
+  useEffect(() => {
+    if (env.enableDemo && !session?.user && !demoMode) {
+      setDemoMode(true);
+      setDemoRole('user');
+    }
+  }, [session?.user, demoMode, setDemoMode, setDemoRole]);
+
+  useEffect(() => {
+    if (!demoMode || orders.length > 0) return;
+    const store = useDemoCommerceStore.getState();
+    const now = Date.now();
+    const orderId = store.createNewOrder('hm', { id: 'user-a', name: 'Sharone', joinedAt: now }, 45);
+    store.updateDeliveryAddress(orderId, 'Rothschild Boulevard 12, Tel Aviv');
+    store.joinParticipant(orderId, { id: 'user-b', name: 'Noa M.', joinedAt: now - 120_000 });
+    store.joinParticipant(orderId, { id: 'user-c', name: 'Lior K.', joinedAt: now - 60_000 });
+    store.addItem(orderId, { productId: 'hm-linen-shirt', participantId: 'user-a', size: 'M', color: 'White', quantity: 1, private: false });
+    store.addItem(orderId, { productId: 'hm-basic-tee', participantId: 'user-b', size: 'S', color: 'Black', quantity: 1, private: false });
+    store.addItem(orderId, { productId: 'hm-wide-jeans', participantId: 'user-c', size: '32', color: 'Blue', quantity: 1, private: false });
+    store.selectBrand('hm');
+  }, [demoMode, orders.length]);
 
   const joinedOrder = useMemo(
     () => orders.find((order) => order.inviteCode === params.join),
@@ -207,11 +506,11 @@ export default function DemoUserScreen() {
         if (order) {
           restoreSharedOrder(order);
         } else {
-          setJoinError('We could not find this shared order. Ask the founder to send the latest invite link.');
+          setJoinError('Order not found — the founder may need to open the app once to sync it. Tap "Try again" after they do.');
         }
       })
       .catch(() => {
-        setJoinError('The invite did not load. Check your connection and try the link again.');
+        setJoinError('Could not reach the server. Check your connection and tap "Try again".');
       })
       .finally(() => setJoinLoading(false));
   }, [joinRetry, joinedOrder, params.join, restoreSharedOrder]);
@@ -380,6 +679,7 @@ export default function DemoUserScreen() {
 
   if (!brand || !store) {
     return (
+      <>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <DemoPage>
           <View style={styles.topBar}>
@@ -410,6 +710,53 @@ export default function DemoUserScreen() {
               </View>
             </Card>
           ) : null}
+          <Card style={styles.savingsHero}>
+            <View style={styles.savingsHeroTop}>
+              <View style={styles.savingsHeroAmountBlock}>
+                <Text style={styles.savingsHeroAmount}>₪47</Text>
+                <Text style={styles.savingsHeroAmountLabel}>avg saved{'\n'}per neighbor</Text>
+              </View>
+              <View style={styles.savingsHeroStats}>
+                <View style={styles.savingsHeroStat}>
+                  <Text style={styles.savingsHeroStatValue}>₪0</Text>
+                  <Text style={styles.savingsHeroStatLabel}>shipping{'\n'}when grouped</Text>
+                </View>
+                <View style={styles.savingsHeroDivider} />
+                <View style={styles.savingsHeroStat}>
+                  <Text style={styles.savingsHeroStatValue}>₪299</Text>
+                  <Text style={styles.savingsHeroStatLabel}>H&M free{'\n'}ship goal</Text>
+                </View>
+                <View style={styles.savingsHeroDivider} />
+                <View style={styles.savingsHeroStat}>
+                  <Text style={styles.savingsHeroStatValue}>3+</Text>
+                  <Text style={styles.savingsHeroStatLabel}>neighbors{'\n'}unlock it</Text>
+                </View>
+              </View>
+            </View>
+            <Text style={styles.savingsHeroBody}>
+              Sharone, Noa, and Lior each order ~₪100 from H&M. Their ₪307 combined order ships free — each saves ₪29 on delivery. Shakana earns ₪14.50 commission per person.
+            </Text>
+            <View style={styles.heroBtnRow}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setTourOpen(true)}
+                style={({ pressed }) => [styles.tourBtn, styles.tourBtnHalf, pressed && { opacity: 0.8 }]}
+              >
+                <Text style={styles.tourBtnIcon}>📖</Text>
+                <Text style={styles.tourBtnLabel}>Step-by-step tour</Text>
+              </Pressable>
+              {Platform.OS === 'web' ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => setDemoVidOpen(true)}
+                  style={({ pressed }) => [styles.tourBtn, styles.demoVidBtn, pressed && { opacity: 0.85 }]}
+                >
+                  <Text style={styles.tourBtnIcon}>▶</Text>
+                  <Text style={styles.tourBtnLabel}>Watch demo video</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          </Card>
           <BuildingSections
             orders={visibleOrders}
             onOpenStore={() => router.push('/store')}
@@ -431,6 +778,7 @@ export default function DemoUserScreen() {
                 : 'Open the invite link from WhatsApp and the shared cart loads directly, with no code and no paste field.'}
             </Text>
           </Card>
+          {(session || params.founder === '1') ? (
           <Card style={styles.demoScriptCard}>
             <View style={styles.demoScriptCopy}>
               <Text style={styles.whatsappTitle}>Presentation controls</Text>
@@ -449,6 +797,7 @@ export default function DemoUserScreen() {
               />
             </View>
           </Card>
+          ) : null}
           <SectionTitle title="Choose your store" kicker="User flow" />
           {newOrderMode ? (
             <Card style={styles.setupCard}>
@@ -573,6 +922,20 @@ export default function DemoUserScreen() {
           ) : null}
         </DemoPage>
       </ScrollView>
+      {tourOpen ? <DemoTour onClose={() => setTourOpen(false)} /> : null}
+      {demoVidOpen && Platform.OS === 'web' ? (
+        <View style={vidStyles.overlay}>
+          <Pressable style={vidStyles.backdrop} onPress={() => setDemoVidOpen(false)} accessibilityRole="button" accessibilityLabel="Close demo video" />
+          <View style={vidStyles.frame}>
+            <Pressable onPress={() => setDemoVidOpen(false)} accessibilityRole="button" style={vidStyles.closeBtn}>
+              <Text style={vidStyles.closeBtnText}>✕</Text>
+            </Pressable>
+            {/* @ts-ignore iframe works on web */}
+            <iframe src="/demo.html" style={{ width: '100%', height: '100%', border: 'none', borderRadius: 16 }} allow="autoplay" />
+          </View>
+        </View>
+      ) : null}
+      </>
     );
   }
 
@@ -651,7 +1014,7 @@ export default function DemoUserScreen() {
 
             <SectionTitle
               title={category}
-              kicker={order ? `Browsing ${store.name} only (locked for group order)` : `${store.name} scraped-style catalog`}
+              kicker={order ? `Browsing ${store.name} (locked for group order)` : `${store.name} catalog`}
             />
             {order ? (
               <View style={styles.lockBadge}>
@@ -2113,4 +2476,141 @@ const styles = StyleSheet.create({
   },
   itemName: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 14 },
   itemPrice: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 15 },
+  savingsHero: {
+    gap: 14,
+    padding: 20,
+    backgroundColor: colors.ink,
+    borderRadius: 20,
+    borderWidth: 0,
+  },
+  savingsHeroTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  savingsHeroAmountBlock: {
+    alignItems: 'center',
+    minWidth: 80,
+  },
+  savingsHeroAmount: {
+    fontFamily: fontFamily.display,
+    fontSize: 48,
+    color: colors.gold,
+    lineHeight: 52,
+  },
+  savingsHeroAmountLabel: {
+    fontFamily: fontFamily.body,
+    fontSize: 11,
+    color: colors.mu2,
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  savingsHeroStats: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+  },
+  savingsHeroStat: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  savingsHeroStatValue: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 18,
+    color: colors.white,
+  },
+  savingsHeroStatLabel: {
+    fontFamily: fontFamily.body,
+    fontSize: 10,
+    color: colors.mu2,
+    textAlign: 'center',
+    lineHeight: 14,
+  },
+  savingsHeroDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: colors.brBr,
+    opacity: 0.3,
+  },
+  savingsHeroBody: {
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    color: colors.mu2,
+    lineHeight: 20,
+  },
+  tourBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.gold,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+  },
+  tourBtnIcon: {
+    fontSize: 14,
+    color: colors.white,
+  },
+  tourBtnLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+    color: colors.white,
+  },
+  heroBtnRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  tourBtnHalf: {
+    flex: 1,
+    alignSelf: 'auto',
+  },
+  demoVidBtn: {
+    flex: 1,
+    alignSelf: 'auto',
+    backgroundColor: colors.navy,
+  },
+});
+
+const vidStyles = StyleSheet.create({
+  overlay: {
+    position: 'absolute',
+    inset: 0,
+    zIndex: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  } as never,
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(10,8,6,0.92)',
+  },
+  frame: {
+    width: '100%',
+    maxWidth: 860,
+    height: '85vh' as never,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#111009',
+    position: 'relative',
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeBtnText: {
+    fontSize: 15,
+    color: '#fff',
+    fontFamily: fontFamily.bodyBold,
+  },
 });

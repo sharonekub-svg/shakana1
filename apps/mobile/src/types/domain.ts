@@ -97,3 +97,14 @@ export type Invite = {
   uses_count: number;
   revoked_at: string | null;
 };
+
+export type TrackingEvent = {
+  id: string;
+  order_id: string;
+  shipping_status: string;
+  label: string;
+  location: string | null;
+  note: string | null;
+  at: string;
+  created_by: string | null;
+};

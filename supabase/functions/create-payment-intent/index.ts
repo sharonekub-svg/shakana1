@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (orderErr) throw orderErr;
     if (!order) throw httpError(404, 'order_not_found');
-    if (!['locked', 'escrow'].includes(order.status)) {
+    if (!['locked', 'paying', 'escrow'].includes(order.status)) {
       throw httpError(409, 'order_not_payable');
     }
 

@@ -1,6 +1,7 @@
 import { handleOptions } from '../_shared/cors.ts';
 import { errorJson, json, readJson } from '../_shared/json.ts';
 import { admin, authedUserId, httpError } from '../_shared/supabaseAdmin.ts';
+import { notifyOrderParticipants } from '../_shared/sendNotifications.ts';
 
 type DeliveryAction =
   | 'update_pickup'
@@ -16,6 +17,8 @@ type Body = {
   participantId?: string;
   pickupResponsibleUserId?: string;
   preferredPickupLocation?: string;
+  trackingNote?: string;
+  trackingLocation?: string;
 };
 
 type OrderRow = {
@@ -60,31 +63,34 @@ Deno.serve(async (req) => {
       throw httpError(409, 'order_not_ready_for_delivery_updates');
     }
 
+    const note = body.trackingNote?.trim() || undefined;
+    const location = body.trackingLocation?.trim() || undefined;
+
     switch (body.action) {
       case 'mark_shipped':
         return await updateOrderStatus(order, ['not_shipped'], {
           shipping_status: 'shipped',
           shipped_at: new Date().toISOString(),
-        });
+        }, userId, 'shipped', 'Order shipped by store', location, note);
       case 'mark_ready_for_pickup':
         return await updateOrderStatus(order, ['not_shipped', 'shipped'], {
           shipping_status: 'ready_for_pickup',
           ready_for_pickup_at: new Date().toISOString(),
-        });
+        }, userId, 'ready_for_pickup', 'Ready for building pickup', location, note);
       case 'mark_picked_up':
         return await updateOrderStatus(order, ['ready_for_pickup'], {
           shipping_status: 'picked_up',
           picked_up_at: new Date().toISOString(),
-        });
+        }, userId, 'picked_up', 'Picked up — on its way to you', location, note);
       case 'mark_ready_for_distribution':
         return await updateOrderStatus(order, ['picked_up'], {
           status: 'delivered',
           shipping_status: 'ready_for_distribution',
           ready_for_distribution_at: new Date().toISOString(),
           delivery_confirmed_at: new Date().toISOString(),
-        });
+        }, userId, 'ready_for_distribution', 'Your item is being handed out', location, note);
       case 'mark_delivered_to_user':
-        return await markDeliveredToUser(order, body);
+        return await markDeliveredToUser(order, body, userId);
       default:
         throw httpError(400, 'invalid_action');
     }
@@ -134,27 +140,59 @@ async function updatePickup(order: OrderRow, body: Body, isCreator: boolean): Pr
   return json({ ok: true });
 }
 
+const PUSH_MESSAGES: Partial<Record<string, { title: string; body: (label: string) => string }>> = {
+  shipped:                  { title: 'Order on its way 📦', body: (l) => l },
+  ready_for_pickup:         { title: 'Ready for pickup 🏪',  body: (l) => l },
+  picked_up:                { title: 'Picked up 🚶',         body: (l) => l },
+  ready_for_distribution:   { title: 'Almost there! 🎉',    body: (l) => l },
+  delivered_to_user:        { title: 'Item delivered ✅',    body: (l) => l },
+};
+
 async function updateOrderStatus(
   order: OrderRow,
   allowedFrom: string[],
   updates: Record<string, unknown>,
+  createdBy: string,
+  shippingStatus: string,
+  label: string,
+  location?: string,
+  note?: string,
 ): Promise<Response> {
   if (!allowedFrom.includes(order.shipping_status)) {
     throw httpError(409, 'invalid_delivery_transition');
   }
   const { error } = await admin.from('orders').update(updates).eq('id', order.id);
   if (error) throw error;
+
+  await admin.from('tracking_events').insert({
+    order_id: order.id,
+    shipping_status: shippingStatus,
+    label,
+    location: location ?? null,
+    note: note ?? null,
+    created_by: createdBy,
+  });
+
+  const push = PUSH_MESSAGES[shippingStatus];
+  if (push) {
+    await notifyOrderParticipants(order.id, {
+      title: push.title,
+      body: note ? `${label} — ${note}` : label,
+      data: { orderId: order.id, shippingStatus },
+    });
+  }
+
   return json({ ok: true });
 }
 
-async function markDeliveredToUser(order: OrderRow, body: Body): Promise<Response> {
+async function markDeliveredToUser(order: OrderRow, body: Body, createdBy: string): Promise<Response> {
   if (order.shipping_status !== 'ready_for_distribution' || order.status !== 'delivered') {
     throw httpError(409, 'order_not_ready_for_distribution');
   }
   if (!body.participantId) throw httpError(400, 'missing_participantId');
   const { data: participant, error: partErr } = await admin
     .from('participants')
-    .select('id, order_id, status')
+    .select('id, order_id, status, user_id')
     .eq('id', body.participantId)
     .eq('order_id', order.id)
     .maybeSingle();
@@ -167,5 +205,26 @@ async function markDeliveredToUser(order: OrderRow, body: Body): Promise<Respons
     .update({ delivered_to_user_at: new Date().toISOString() })
     .eq('id', participant.id);
   if (error) throw error;
+
+  // Notify only this specific participant.
+  const { data: tokenRows } = await admin
+    .from('push_tokens')
+    .select('token')
+    .eq('user_id', participant.user_id);
+  if (tokenRows && tokenRows.length > 0) {
+    const note = body.trackingNote?.trim();
+    await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(tokenRows.map((r) => ({
+        to: r.token,
+        title: 'Item delivered ✅',
+        body: note ? `Your item has been handed to you — ${note}` : 'Your item has been handed to you.',
+        data: { orderId: order.id },
+        sound: 'default',
+      }))),
+    }).catch(() => {});
+  }
+
   return json({ ok: true });
 }

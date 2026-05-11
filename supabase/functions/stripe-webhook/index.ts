@@ -103,7 +103,8 @@ async function handlePaid(event: { data: { object: Record<string, unknown> } }):
 
   if ((count ?? 0) >= order.max_participants && order.status !== 'escrow') {
     await admin.from('orders').update({ status: 'escrow' }).eq('id', orderId);
-  } else if (order.status === 'open') {
+  } else if (order.status === 'locked') {
+    // First payment received — surface the partial-payment state to the UI.
     await admin.from('orders').update({ status: 'paying' }).eq('id', orderId);
   }
 }

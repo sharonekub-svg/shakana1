@@ -26,6 +26,7 @@ import { FloatingNewOrderButton } from '@/components/demo/FloatingNewOrderButton
 import { FloatingProfileButton } from '@/components/demo/FloatingProfileButton';
 import { CookieConsentBanner } from '@/components/primitives/CookieConsentBanner';
 import { env } from '@/lib/env';
+import { registerPushToken } from '@/lib/pushNotifications';
 
 import '../global.css';
 
@@ -139,6 +140,7 @@ function RootLayoutInner() {
       if (current.session?.user) {
         identifySentryUser(current.session.user.id);
         identify(current.session.user.id);
+        registerPushToken().catch(() => {});
       }
       setHydrated(true);
 
@@ -147,6 +149,7 @@ function RootLayoutInner() {
         if (newSession?.user) {
           identifySentryUser(newSession.user.id);
           identify(newSession.user.id);
+          registerPushToken().catch(() => {});
         } else {
           identifySentryUser(null);
           resetAnalytics();
@@ -228,7 +231,7 @@ function RootLayoutInner() {
     if (inShare) return;
     if (inJoin && Platform.OS === 'web') return;
     if (isPublicRoute) return;
-    if (isDemoRoute && ((env.enableDemo && demoMode) || session)) return;
+    if (isDemoRoute && (env.enableDemo || session)) return;
     if (session && !profileQuery.isFetched && !profileQuery.isError) return;
     const profileComplete =
       !!profile &&

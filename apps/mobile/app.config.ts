@@ -31,6 +31,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           'אנו משתמשים בנתוני פעילות אנונימיים לשיפור האפליקציה.',
       },
     ],
+    [
+      'expo-notifications',
+      {
+        icon: './assets/icon.png',
+        color: '#9ECAF2',
+        defaultChannel: 'default',
+        sounds: [],
+      },
+    ],
   ],
   web: {
     bundler: 'metro',
