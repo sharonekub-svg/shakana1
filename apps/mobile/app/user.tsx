@@ -110,10 +110,284 @@ function addressValidationMessage(value: string) {
   return 'Required: valid timer, one store, and full address with house number before opening the cart.';
 }
 
+const TOUR_STEPS = [
+  {
+    step: '01',
+    title: 'A neighbor finds something she loves',
+    body: 'Sharone spots an H&M linen shirt. Solo delivery costs ₪29. But there\'s a smarter way — one that costs nothing.',
+    stat: '₪29',
+    statLabel: 'solo shipping',
+    image: 'https://images.unsplash.com/photo-1603252109303-2751441dd157?auto=format&fit=crop&w=600&q=80',
+  },
+  {
+    step: '02',
+    title: 'Group order live in 30 seconds',
+    body: 'Sharone opens Shakana, picks H&M, sets a 45-minute timer. A shared cart is created instantly — no app needed for neighbors.',
+    stat: '30s',
+    statLabel: 'to go live',
+    image: 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=600&q=80',
+  },
+  {
+    step: '03',
+    title: 'One WhatsApp message to the building',
+    body: '"Hey neighbors — I\'m ordering from H&M, join my cart and we all get free shipping!" Shakana writes the message. One tap to send.',
+    stat: '1 tap',
+    statLabel: 'to share',
+    image: 'https://images.unsplash.com/photo-1611746872915-64382b5c76da?auto=format&fit=crop&w=600&q=80',
+  },
+  {
+    step: '04',
+    title: 'Noa + Lior join. Free shipping unlocked.',
+    body: 'Each neighbor adds their items privately. ₪119 + ₪99 + ₪89 = ₪307. That\'s over the ₪299 threshold. H&M ships free to the building.',
+    stat: '₪0',
+    statLabel: 'shipping cost',
+    image: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?auto=format&fit=crop&w=600&q=80',
+  },
+  {
+    step: '05',
+    title: 'Everyone pays their share — securely',
+    body: 'Shakana holds all payments in Stripe escrow. Sharone buys the full order. Money only releases after every neighbor confirms delivery.',
+    stat: '100%',
+    statLabel: 'escrow protected',
+    image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=600&q=80',
+  },
+  {
+    step: '06',
+    title: 'Shakana earns ₪43.50 from this one order',
+    body: 'Half the shipping savings = Shakana\'s commission. Users pay nothing extra. The more buildings group together, the more everyone earns.',
+    stat: '₪43.50',
+    statLabel: 'Shakana commission',
+    image: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=600&q=80',
+  },
+];
+
+function DemoTour({ onClose }: { onClose: () => void }) {
+  const [step, setStep] = useState(0);
+  const [playing, setPlaying] = useState(true);
+  const current = TOUR_STEPS[step] ?? TOUR_STEPS[0];
+  const total = TOUR_STEPS.length;
+
+  useEffect(() => {
+    if (!playing) return;
+    const timer = globalThis.setTimeout(() => {
+      if (step < total - 1) {
+        setStep((s) => s + 1);
+      } else {
+        setPlaying(false);
+      }
+    }, 5000);
+    return () => globalThis.clearTimeout(timer);
+  }, [step, playing, total]);
+
+  const goNext = () => {
+    if (step < total - 1) { setStep((s) => s + 1); setPlaying(true); }
+    else onClose();
+  };
+  const goPrev = () => {
+    if (step > 0) { setStep((s) => s - 1); setPlaying(false); }
+  };
+
+  return (
+    <View style={tourStyles.overlay} pointerEvents="box-none">
+      <Pressable style={tourStyles.backdrop} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close tour" />
+      <View style={tourStyles.card}>
+        <Image source={{ uri: current?.image }} style={tourStyles.image} resizeMode="cover" />
+        <View style={tourStyles.content}>
+          <View style={tourStyles.topRow}>
+            <Text style={tourStyles.stepLabel}>{current?.step} / {String(total).padStart(2, '0')}</Text>
+            <Pressable onPress={onClose} accessibilityRole="button" style={tourStyles.closeBtn}>
+              <Text style={tourStyles.closeBtnText}>✕</Text>
+            </Pressable>
+          </View>
+          <View style={tourStyles.statRow}>
+            <Text style={tourStyles.statValue}>{current?.stat}</Text>
+            <Text style={tourStyles.statLabel}>{current?.statLabel}</Text>
+          </View>
+          <Text style={tourStyles.title}>{current?.title}</Text>
+          <Text style={tourStyles.body}>{current?.body}</Text>
+          <View style={tourStyles.dots}>
+            {TOUR_STEPS.map((_, i) => (
+              <Pressable key={i} onPress={() => { setStep(i); setPlaying(false); }} accessibilityRole="button">
+                <View style={[tourStyles.dot, i === step && tourStyles.dotActive]} />
+              </Pressable>
+            ))}
+          </View>
+          <View style={tourStyles.actions}>
+            <Pressable
+              onPress={goPrev}
+              disabled={step === 0}
+              accessibilityRole="button"
+              style={[tourStyles.navBtn, step === 0 && tourStyles.navBtnDisabled]}
+            >
+              <Text style={tourStyles.navBtnText}>← Back</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setPlaying((p) => !p)}
+              accessibilityRole="button"
+              style={tourStyles.playBtn}
+            >
+              <Text style={tourStyles.playBtnText}>{playing ? '⏸' : '▶'}</Text>
+            </Pressable>
+            <Pressable onPress={goNext} accessibilityRole="button" style={tourStyles.navBtnAccent}>
+              <Text style={tourStyles.navBtnAccentText}>{step < total - 1 ? 'Next →' : 'Done ✓'}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const tourStyles = StyleSheet.create({
+  overlay: {
+    position: 'absolute',
+    inset: 0,
+    zIndex: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  } as never,
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(20,14,10,0.88)',
+  },
+  card: {
+    width: '100%',
+    maxWidth: 480,
+    borderRadius: 24,
+    backgroundColor: colors.white,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.35,
+    shadowRadius: 40,
+    shadowOffset: { width: 0, height: 20 },
+    elevation: 20,
+  },
+  image: {
+    width: '100%',
+    height: 200,
+    backgroundColor: colors.s2,
+  },
+  content: {
+    padding: 22,
+    gap: 12,
+  },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  stepLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 11,
+    color: colors.mu2,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.s2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeBtnText: {
+    fontSize: 13,
+    color: colors.mu,
+    fontFamily: fontFamily.bodyBold,
+  },
+  statRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+  },
+  statValue: {
+    fontFamily: fontFamily.display,
+    fontSize: 36,
+    color: colors.gold,
+    lineHeight: 40,
+  },
+  statLabel: {
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    color: colors.mu,
+  },
+  title: {
+    fontFamily: fontFamily.display,
+    fontSize: 22,
+    color: colors.tx,
+    lineHeight: 28,
+  },
+  body: {
+    fontFamily: fontFamily.body,
+    fontSize: 14,
+    color: colors.mu,
+    lineHeight: 22,
+  },
+  dots: {
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'center',
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.br,
+  },
+  dotActive: {
+    width: 20,
+    backgroundColor: colors.gold,
+  },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  navBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: colors.s2,
+  },
+  navBtnDisabled: {
+    opacity: 0.35,
+  },
+  navBtnText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+    color: colors.tx,
+  },
+  playBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.s2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playBtnText: {
+    fontSize: 16,
+  },
+  navBtnAccent: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: colors.ink,
+  },
+  navBtnAccentText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+    color: colors.white,
+  },
+});
+
 export default function DemoUserScreen() {
   const router = useRouter();
   const { language } = useLocale();
-  const params = useLocalSearchParams<{ join?: string; new?: string }>();
+  const params = useLocalSearchParams<{ join?: string; new?: string; founder?: string }>();
   const session = useAuthStore((state) => state.session);
   const demoMode = useDemoCommerceStore((state) => state.demoMode);
   const selectedBrand = useDemoCommerceStore((state) => state.selectedBrand);
@@ -150,6 +424,7 @@ export default function DemoUserScreen() {
   const [joinRetry, setJoinRetry] = useState(0);
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [payStep, setPayStep] = useState<'form' | 'processing' | 'success'>('form');
+  const [tourOpen, setTourOpen] = useState(false);
   const consumedNewParamRef = useRef(false);
 
   useEffect(() => {
@@ -403,6 +678,7 @@ export default function DemoUserScreen() {
 
   if (!brand || !store) {
     return (
+      <>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <DemoPage>
           <View style={styles.topBar}>
@@ -459,6 +735,14 @@ export default function DemoUserScreen() {
             <Text style={styles.savingsHeroBody}>
               Sharone, Noa, and Lior each order ~₪100 from H&M. Their ₪307 combined order ships free — each saves ₪29 on delivery. Shakana earns ₪14.50 commission per person.
             </Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setTourOpen(true)}
+              style={({ pressed }) => [styles.tourBtn, pressed && { opacity: 0.8 }]}
+            >
+              <Text style={styles.tourBtnIcon}>▶</Text>
+              <Text style={styles.tourBtnLabel}>Watch how it works — 60 second tour</Text>
+            </Pressable>
           </Card>
           <BuildingSections
             orders={visibleOrders}
@@ -481,6 +765,7 @@ export default function DemoUserScreen() {
                 : 'Open the invite link from WhatsApp and the shared cart loads directly, with no code and no paste field.'}
             </Text>
           </Card>
+          {(session || params.founder === '1') ? (
           <Card style={styles.demoScriptCard}>
             <View style={styles.demoScriptCopy}>
               <Text style={styles.whatsappTitle}>Presentation controls</Text>
@@ -499,6 +784,7 @@ export default function DemoUserScreen() {
               />
             </View>
           </Card>
+          ) : null}
           <SectionTitle title="Choose your store" kicker="User flow" />
           {newOrderMode ? (
             <Card style={styles.setupCard}>
@@ -623,6 +909,8 @@ export default function DemoUserScreen() {
           ) : null}
         </DemoPage>
       </ScrollView>
+      {tourOpen ? <DemoTour onClose={() => setTourOpen(false)} /> : null}
+      </>
     );
   }
 
@@ -2225,5 +2513,25 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.mu2,
     lineHeight: 20,
+  },
+  tourBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.gold,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+  },
+  tourBtnIcon: {
+    fontSize: 14,
+    color: colors.white,
+  },
+  tourBtnLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+    color: colors.white,
   },
 });
