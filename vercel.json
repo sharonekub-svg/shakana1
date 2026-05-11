@@ -53,6 +53,11 @@
       ]
     }
   ],
+  "build": {
+    "env": {
+      "EXPO_PUBLIC_ENABLE_DEMO": "true"
+    }
+  },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     {

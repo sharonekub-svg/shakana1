@@ -231,7 +231,7 @@ function RootLayoutInner() {
     if (inShare) return;
     if (inJoin && Platform.OS === 'web') return;
     if (isPublicRoute) return;
-    if (isDemoRoute && ((env.enableDemo && demoMode) || session)) return;
+    if (isDemoRoute && (env.enableDemo || session)) return;
     if (session && !profileQuery.isFetched && !profileQuery.isError) return;
     const profileComplete =
       !!profile &&

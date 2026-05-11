@@ -37,6 +37,7 @@ import { useLocale } from '@/i18n/locale';
 import { useAuthStore } from '@/stores/authStore';
 import { stashPendingInvite } from '@/lib/deeplinks';
 import { searchCities, searchStreets } from '@/lib/locationAutocomplete';
+import { env } from '@/lib/env';
 
 const ADDRESS_SUGGESTIONS = [
   'Rothschild Boulevard 12, Tel Aviv',
@@ -128,6 +129,7 @@ export default function DemoUserScreen() {
   const restoreSharedOrder = useDemoCommerceStore((state) => state.restoreSharedOrder);
   const setActiveParticipant = useDemoCommerceStore((state) => state.setActiveParticipant);
   const setDemoRole = useDemoCommerceStore((state) => state.setDemoRole);
+  const setDemoMode = useDemoCommerceStore((state) => state.setDemoMode);
   const resetDemo = useDemoCommerceStore((state) => state.resetDemo);
   const updateTimer = useDemoCommerceStore((state) => state.updateTimer);
   const updateDeliveryAddress = useDemoCommerceStore((state) => state.updateDeliveryAddress);
@@ -154,6 +156,27 @@ export default function DemoUserScreen() {
     initDemoCommerceSync();
     if (demoMode) setDemoRole('user');
   }, [demoMode, setDemoRole]);
+
+  useEffect(() => {
+    if (env.enableDemo && !session?.user && !demoMode) {
+      setDemoMode(true);
+      setDemoRole('user');
+    }
+  }, [session?.user, demoMode, setDemoMode, setDemoRole]);
+
+  useEffect(() => {
+    if (!demoMode || orders.length > 0) return;
+    const store = useDemoCommerceStore.getState();
+    const now = Date.now();
+    const orderId = store.createNewOrder('hm', { id: 'user-a', name: 'Sharone', joinedAt: now }, 45);
+    store.updateDeliveryAddress(orderId, 'Rothschild Boulevard 12, Tel Aviv');
+    store.joinParticipant(orderId, { id: 'user-b', name: 'Noa M.', joinedAt: now - 120_000 });
+    store.joinParticipant(orderId, { id: 'user-c', name: 'Lior K.', joinedAt: now - 60_000 });
+    store.addItem(orderId, { productId: 'hm-linen-shirt', participantId: 'user-a', size: 'M', color: 'White', quantity: 1, private: false });
+    store.addItem(orderId, { productId: 'hm-basic-tee', participantId: 'user-b', size: 'S', color: 'Black', quantity: 1, private: false });
+    store.addItem(orderId, { productId: 'hm-wide-jeans', participantId: 'user-c', size: '32', color: 'Blue', quantity: 1, private: false });
+    store.selectBrand('hm');
+  }, [demoMode, orders.length]);
 
   const joinedOrder = useMemo(
     () => orders.find((order) => order.inviteCode === params.join),
@@ -207,11 +230,11 @@ export default function DemoUserScreen() {
         if (order) {
           restoreSharedOrder(order);
         } else {
-          setJoinError('We could not find this shared order. Ask the founder to send the latest invite link.');
+          setJoinError('Order not found — the founder may need to open the app once to sync it. Tap "Try again" after they do.');
         }
       })
       .catch(() => {
-        setJoinError('The invite did not load. Check your connection and try the link again.');
+        setJoinError('Could not reach the server. Check your connection and tap "Try again".');
       })
       .finally(() => setJoinLoading(false));
   }, [joinRetry, joinedOrder, params.join, restoreSharedOrder]);
@@ -410,6 +433,33 @@ export default function DemoUserScreen() {
               </View>
             </Card>
           ) : null}
+          <Card style={styles.savingsHero}>
+            <View style={styles.savingsHeroTop}>
+              <View style={styles.savingsHeroAmountBlock}>
+                <Text style={styles.savingsHeroAmount}>₪47</Text>
+                <Text style={styles.savingsHeroAmountLabel}>avg saved{'\n'}per neighbor</Text>
+              </View>
+              <View style={styles.savingsHeroStats}>
+                <View style={styles.savingsHeroStat}>
+                  <Text style={styles.savingsHeroStatValue}>₪0</Text>
+                  <Text style={styles.savingsHeroStatLabel}>shipping{'\n'}when grouped</Text>
+                </View>
+                <View style={styles.savingsHeroDivider} />
+                <View style={styles.savingsHeroStat}>
+                  <Text style={styles.savingsHeroStatValue}>₪299</Text>
+                  <Text style={styles.savingsHeroStatLabel}>H&M free{'\n'}ship goal</Text>
+                </View>
+                <View style={styles.savingsHeroDivider} />
+                <View style={styles.savingsHeroStat}>
+                  <Text style={styles.savingsHeroStatValue}>3+</Text>
+                  <Text style={styles.savingsHeroStatLabel}>neighbors{'\n'}unlock it</Text>
+                </View>
+              </View>
+            </View>
+            <Text style={styles.savingsHeroBody}>
+              Sharone, Noa, and Lior each order ~₪100 from H&M. Their ₪307 combined order ships free — each saves ₪29 on delivery. Shakana earns ₪14.50 commission per person.
+            </Text>
+          </Card>
           <BuildingSections
             orders={visibleOrders}
             onOpenStore={() => router.push('/store')}
@@ -651,7 +701,7 @@ export default function DemoUserScreen() {
 
             <SectionTitle
               title={category}
-              kicker={order ? `Browsing ${store.name} only (locked for group order)` : `${store.name} scraped-style catalog`}
+              kicker={order ? `Browsing ${store.name} (locked for group order)` : `${store.name} catalog`}
             />
             {order ? (
               <View style={styles.lockBadge}>
@@ -2113,4 +2163,67 @@ const styles = StyleSheet.create({
   },
   itemName: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 14 },
   itemPrice: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 15 },
+  savingsHero: {
+    gap: 14,
+    padding: 20,
+    backgroundColor: colors.ink,
+    borderRadius: 20,
+    borderWidth: 0,
+  },
+  savingsHeroTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  savingsHeroAmountBlock: {
+    alignItems: 'center',
+    minWidth: 80,
+  },
+  savingsHeroAmount: {
+    fontFamily: fontFamily.display,
+    fontSize: 48,
+    color: colors.gold,
+    lineHeight: 52,
+  },
+  savingsHeroAmountLabel: {
+    fontFamily: fontFamily.body,
+    fontSize: 11,
+    color: colors.mu2,
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  savingsHeroStats: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+  },
+  savingsHeroStat: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  savingsHeroStatValue: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 18,
+    color: colors.white,
+  },
+  savingsHeroStatLabel: {
+    fontFamily: fontFamily.body,
+    fontSize: 10,
+    color: colors.mu2,
+    textAlign: 'center',
+    lineHeight: 14,
+  },
+  savingsHeroDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: colors.brBr,
+    opacity: 0.3,
+  },
+  savingsHeroBody: {
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    color: colors.mu2,
+    lineHeight: 20,
+  },
 });
