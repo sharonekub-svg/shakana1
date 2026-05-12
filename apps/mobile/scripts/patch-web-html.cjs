@@ -87,3 +87,9 @@ fs.writeFileSync(htmlPath, html);
 if (fs.existsSync(demoSourcePath)) {
   fs.copyFileSync(demoSourcePath, demoOutputPath);
 }
+
+const demoJsSourcePath = path.join(__dirname, '..', 'web', 'demo.js');
+const demoJsOutputPath = path.join(__dirname, '..', 'dist', 'demo.js');
+if (fs.existsSync(demoJsSourcePath)) {
+  fs.copyFileSync(demoJsSourcePath, demoJsOutputPath);
+}
