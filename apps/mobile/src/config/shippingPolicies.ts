@@ -10,6 +10,8 @@ export const shippingPolicies: Record<string, ShippingPolicy> = {
   manual: { freeThresholdILS: 0,   flatRateILS: 0    },
 };
 
+const fallbackShippingPolicy: ShippingPolicy = { freeThresholdILS: 0, flatRateILS: 0 };
+
 export type CommissionBreakdown = {
   itemsTotalILS: number;
   soloShippingILS: number;
@@ -31,7 +33,7 @@ export function calcCommission(
   groupTotalILS: number,
   brand: string,
 ): CommissionBreakdown {
-  const policy = shippingPolicies[brand] ?? shippingPolicies.manual;
+  const policy = shippingPolicies[brand] ?? shippingPolicies.manual ?? fallbackShippingPolicy;
 
   const soloShippingILS =
     myItemsTotalILS >= policy.freeThresholdILS ? 0 : policy.flatRateILS;

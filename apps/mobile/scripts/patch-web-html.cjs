@@ -2,6 +2,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const htmlPath = path.join(__dirname, '..', 'dist', 'index.html');
+const demoSourcePath = path.join(__dirname, '..', 'web', 'demo.html');
+const demoOutputPath = path.join(__dirname, '..', 'dist', 'demo.html');
 let html = fs.readFileSync(htmlPath, 'utf8');
 html = html.replaceAll('\\', '/');
 
@@ -81,3 +83,7 @@ html = html
   .replace('<!-- The root element for your Expo app. -->', `${fallbackMarkup}\n    <!-- The root element for your Expo app. -->`);
 
 fs.writeFileSync(htmlPath, html);
+
+if (fs.existsSync(demoSourcePath)) {
+  fs.copyFileSync(demoSourcePath, demoOutputPath);
+}

@@ -65,7 +65,8 @@ export const demoStores: Record<DemoBrandId, DemoStore> = {
 const img = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=900&q=80`;
 
 export function getProductImage(product: DemoProduct, color?: string): string {
-  if (color && product.colorImages?.[color]) return product.colorImages[color];
+  const variantImage = color ? product.colorImages?.[color] : undefined;
+  if (variantImage) return variantImage;
   return product.image;
 }
 
