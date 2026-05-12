@@ -177,5 +177,8 @@ document.getElementById('stage').addEventListener('click', () => {
   if(current < SCENES.length - 1) goToScene(current + 1);
 });
 
+document.getElementById('skip-btn').addEventListener('click', skipToEnd);
+document.getElementById('replay-btn').addEventListener('click', replayDemo);
+
 updateDots();
 goToScene(0);
