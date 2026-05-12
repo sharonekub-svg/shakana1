@@ -425,7 +425,6 @@ export default function DemoUserScreen() {
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [payStep, setPayStep] = useState<'form' | 'processing' | 'success'>('form');
   const [tourOpen, setTourOpen] = useState(false);
-  const [demoVidOpen, setDemoVidOpen] = useState(false);
   const consumedNewParamRef = useRef(false);
 
   useEffect(() => {
@@ -748,7 +747,7 @@ export default function DemoUserScreen() {
               {Platform.OS === 'web' ? (
                 <Pressable
                   accessibilityRole="button"
-                  onPress={() => setDemoVidOpen(true)}
+                  onPress={() => { if (typeof window !== 'undefined') window.open('/demo.html', '_blank'); }}
                   style={({ pressed }) => [styles.tourBtn, styles.demoVidBtn, pressed && { opacity: 0.85 }]}
                 >
                   <Text style={styles.tourBtnIcon}>▶</Text>
@@ -923,18 +922,6 @@ export default function DemoUserScreen() {
         </DemoPage>
       </ScrollView>
       {tourOpen ? <DemoTour onClose={() => setTourOpen(false)} /> : null}
-      {demoVidOpen && Platform.OS === 'web' ? (
-        <View style={vidStyles.overlay}>
-          <Pressable style={vidStyles.backdrop} onPress={() => setDemoVidOpen(false)} accessibilityRole="button" accessibilityLabel="Close demo video" />
-          <View style={vidStyles.frame}>
-            <Pressable onPress={() => setDemoVidOpen(false)} accessibilityRole="button" style={vidStyles.closeBtn}>
-              <Text style={vidStyles.closeBtnText}>✕</Text>
-            </Pressable>
-            {/* @ts-ignore iframe works on web */}
-            <iframe src="/demo.html" style={{ width: '100%', height: '100%', border: 'none', borderRadius: 16 }} allow="autoplay" />
-          </View>
-        </View>
-      ) : null}
       </>
     );
   }
@@ -2571,46 +2558,5 @@ const styles = StyleSheet.create({
     flex: 1,
     alignSelf: 'auto',
     backgroundColor: colors.navy,
-  },
-});
-
-const vidStyles = StyleSheet.create({
-  overlay: {
-    position: 'absolute',
-    inset: 0,
-    zIndex: 200,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-  } as never,
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(10,8,6,0.92)',
-  },
-  frame: {
-    width: '100%',
-    maxWidth: 860,
-    height: '85vh' as never,
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: '#111009',
-    position: 'relative',
-  },
-  closeBtn: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    zIndex: 10,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeBtnText: {
-    fontSize: 15,
-    color: '#fff',
-    fontFamily: fontFamily.bodyBold,
   },
 });
