@@ -184,6 +184,13 @@ export default function InviteSheet() {
 
       <View style={{ gap: 10 }}>
         <PrimaryBtn label={copy.shareButton} onPress={onShare} disabled={!token} />
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.replace(`/order/${id}/created` as any)}
+          style={styles.doneBtn}
+        >
+          <Text style={styles.doneBtnText}>{isHebrew ? 'ראה את החיסכון שלך' : 'See your savings'}</Text>
+        </Pressable>
         <SecondaryBtn label={copy.back} onPress={() => router.back()} />
       </View>
     </ScreenBase>
@@ -191,6 +198,20 @@ export default function InviteSheet() {
 }
 
 const styles = StyleSheet.create({
+  doneBtn: {
+    minHeight: 50,
+    borderRadius: radii.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.acc,
+    backgroundColor: colors.accLight,
+  },
+  doneBtnText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+    color: colors.acc,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
