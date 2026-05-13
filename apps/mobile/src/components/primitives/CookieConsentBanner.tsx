@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
   body: { marginTop: 3, color: colors.mu, fontFamily: fontFamily.body, fontSize: 12, lineHeight: 17 },
   actions: { flexDirection: 'row', gap: 8 },
   secondary: { minHeight: 42, borderRadius: radii.pill, borderWidth: 1, borderColor: colors.br, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
-  primary: { minHeight: 42, borderRadius: radii.pill, backgroundColor: colors.gold, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },
+  primary: { minHeight: 42, borderRadius: radii.lg, backgroundColor: colors.acc, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },
   secondaryText: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 12 },
-  primaryText: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 12 },
+  primaryText: { color: colors.white, fontFamily: fontFamily.bodyBold, fontSize: 12 },
 });

@@ -39,8 +39,8 @@ const styles = StyleSheet.create({
   kicker: { fontFamily: fontFamily.bodyBold, fontSize: 10, letterSpacing: 2.4, color: colors.gold, marginBottom: 4 },
   title: { fontFamily: fontFamily.display, fontSize: 30, color: colors.tx },
   subtitle: { marginTop: 8, fontFamily: fontFamily.body, fontSize: 13, lineHeight: 20, color: colors.mu },
-  card: { gap: 14, padding: 16, borderWidth: 1, borderColor: colors.br, borderRadius: radii.xl, backgroundColor: colors.white, ...shadow.card },
+  card: { gap: 14, padding: 16, borderWidth: 1, borderColor: colors.br, borderRadius: radii.xl, backgroundColor: colors.s1, ...shadow.card },
   body: { fontFamily: fontFamily.body, fontSize: 14, lineHeight: 22, color: colors.tx },
-  button: { minHeight: 50, borderRadius: radii.pill, backgroundColor: colors.gold, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18 },
-  buttonText: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 14 },
+  button: { minHeight: 50, borderRadius: radii.lg, backgroundColor: colors.acc, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18 },
+  buttonText: { color: colors.white, fontFamily: fontFamily.bodyBold, fontSize: 14 },
 });

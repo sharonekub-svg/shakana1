@@ -120,8 +120,8 @@ const styles = StyleSheet.create({
   primary: {
     width: '100%',
     minHeight: 54,
-    borderRadius: radii.pill,
-    backgroundColor: colors.gold,
+    borderRadius: radii.lg,
+    backgroundColor: colors.acc,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -137,8 +137,8 @@ const styles = StyleSheet.create({
   secondary: {
     width: '100%',
     minHeight: 52,
-    borderRadius: radii.pill,
-    backgroundColor: colors.white,
+    borderRadius: radii.lg,
+    backgroundColor: colors.s1,
     borderColor: colors.br,
     borderWidth: 1,
     alignItems: 'center',

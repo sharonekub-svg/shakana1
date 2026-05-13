@@ -8,7 +8,8 @@ import {
 } from '@expo-google-fonts/rubik';
 import { Platform } from 'react-native';
 
-const webFont = "'Rubik', system-ui, sans-serif";
+const webBodyFont = "'Rubik', 'Heebo', system-ui, sans-serif";
+const webDisplayFont = "'Newsreader', Georgia, 'Times New Roman', serif";
 
 export function useAppFonts(): boolean {
   const [rubikLoaded] = useRubik({
@@ -22,9 +23,9 @@ export function useAppFonts(): boolean {
 }
 
 export const fontFamily = {
-  display: Platform.OS === 'web' ? webFont : 'Rubik_900Black',
-  body: Platform.OS === 'web' ? webFont : 'Rubik_400Regular',
-  bodyMedium: Platform.OS === 'web' ? webFont : 'Rubik_500Medium',
-  bodySemi: Platform.OS === 'web' ? webFont : 'Rubik_600SemiBold',
-  bodyBold: Platform.OS === 'web' ? webFont : 'Rubik_700Bold',
+  display: Platform.OS === 'web' ? webDisplayFont : 'Rubik_900Black',
+  body: Platform.OS === 'web' ? webBodyFont : 'Rubik_400Regular',
+  bodyMedium: Platform.OS === 'web' ? webBodyFont : 'Rubik_500Medium',
+  bodySemi: Platform.OS === 'web' ? webBodyFont : 'Rubik_600SemiBold',
+  bodyBold: Platform.OS === 'web' ? webBodyFont : 'Rubik_700Bold',
 } as const;

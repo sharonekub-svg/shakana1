@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    backgroundColor: colors.gold,
+    backgroundColor: colors.acc,
     borderWidth: 1,
     borderColor: colors.acc,
   },

@@ -108,8 +108,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.12)',
   },
   pillActive: {
-    backgroundColor: colors.tx,
-    borderColor: colors.tx,
+    backgroundColor: colors.ink,
+    borderColor: colors.ink,
   },
   pillActiveDark: {
     backgroundColor: '#FFFFFF',

@@ -32,7 +32,7 @@ import {
   type OrderStatus,
 } from '@/stores/demoCommerceStore';
 
-const glassWebStyle = Platform.OS === 'web' ? ({ backdropFilter: 'blur(24px)' } as any) : null;
+const glassWebStyle = Platform.OS === 'web' ? ({ backdropFilter: 'blur(10px)' } as any) : null;
 
 export function DemoPage({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
   return (
@@ -383,54 +383,58 @@ const styles = StyleSheet.create({
   shell: {
     width: '100%',
     maxWidth: 1180,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    gap: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 16,
   },
   wideShell: {
     maxWidth: 1320,
   },
   card: {
-    backgroundColor: 'rgba(255,252,247,0.82)',
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: 'rgba(43,33,24,0.12)',
-    borderRadius: 8,
+    borderColor: colors.br,
+    borderRadius: 22,
     ...shadow.card,
   },
   cardPad: {
-    padding: 14,
+    padding: 16,
   },
   button: {
-    minHeight: 46,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    minHeight: 54,
+    borderRadius: 18,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.tx,
+    backgroundColor: colors.ink,
+    borderWidth: 1,
+    borderColor: colors.ink,
   },
   lightButton: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     borderWidth: 1,
-    borderColor: 'rgba(43,33,24,0.14)',
+    borderColor: colors.br,
   },
   accentButton: {
-    backgroundColor: colors.gold,
+    backgroundColor: colors.acc,
+    borderColor: colors.acc,
     ...shadow.cta,
   },
   dangerButton: {
-    backgroundColor: '#C0392B',
+    backgroundColor: colors.err,
+    borderColor: colors.err,
   },
   disabledButton: {
-    backgroundColor: '#D9D2C8',
-    borderColor: '#D9D2C8',
+    backgroundColor: colors.s2,
+    borderColor: colors.br,
   },
   pressed: {
     transform: [{ scale: 0.98 }],
     opacity: 0.82,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontFamily: fontFamily.bodyBold,
     fontSize: 14,
     textAlign: 'center',
@@ -439,13 +443,13 @@ const styles = StyleSheet.create({
     color: colors.tx,
   },
   accentButtonText: {
-    color: colors.tx,
+    color: colors.white,
   },
   dangerButtonText: {
     color: '#FFFFFF',
   },
   disabledButtonText: {
-    color: '#71685D',
+    color: colors.mu2,
   },
   sectionTitle: {
     gap: 2,
@@ -453,13 +457,15 @@ const styles = StyleSheet.create({
   kicker: {
     color: colors.acc,
     fontFamily: fontFamily.bodyBold,
-    fontSize: 12,
-    letterSpacing: 0.4,
+    fontSize: 11,
+    letterSpacing: 1.3,
+    textTransform: 'uppercase',
   },
   h2: {
     color: colors.tx,
     fontFamily: fontFamily.display,
-    fontSize: 24,
+    fontSize: 28,
+    lineHeight: 32,
   },
   h3: {
     color: colors.tx,
@@ -481,10 +487,10 @@ const styles = StyleSheet.create({
   },
   brandPill: {
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     alignSelf: 'flex-start',
   },
   brandPillText: {
@@ -494,14 +500,14 @@ const styles = StyleSheet.create({
   productImage: {
     width: '100%',
     aspectRatio: 0.84,
-    borderRadius: 8,
+    borderRadius: 18,
     backgroundColor: colors.s2,
   },
   progressOuter: {
-    height: 9,
+    height: 10,
     borderRadius: 99,
     overflow: 'hidden',
-    backgroundColor: colors.s3,
+    backgroundColor: colors.s2,
   },
   progressInner: {
     height: '100%',
@@ -533,10 +539,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    borderRadius: 8,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(179,92,55,0.32)',
-    backgroundColor: 'rgba(246,228,214,0.96)',
+    borderColor: colors.brBr,
+    backgroundColor: colors.accLight,
     paddingHorizontal: 14,
     paddingVertical: 12,
     shadowColor: colors.acc,
@@ -572,7 +578,7 @@ const styles = StyleSheet.create({
   },
   socialBadge: {
     minWidth: 94,
-    borderRadius: 8,
+    borderRadius: 16,
     backgroundColor: colors.goldLight,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -598,7 +604,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   savingsBadge: {
-    borderRadius: 8,
+    borderRadius: 14,
     backgroundColor: colors.goldLight,
     paddingHorizontal: 10,
     paddingVertical: 8,
@@ -621,7 +627,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   statusItem: {
-    borderRadius: 4,
+    borderRadius: 10,
     backgroundColor: colors.s3,
     paddingHorizontal: 9,
     paddingVertical: 5,

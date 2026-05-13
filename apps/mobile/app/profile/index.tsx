@@ -199,12 +199,12 @@ export default function ProfileScreen() {
           <Stat label="Open" value={String(openOrders)} />
           <Stat label="Completed" value={String(stats.shippedOrders)} />
           <Stat label="My saves" value={String(personalSaves)} />
-          <Stat label="Saved this year" value={`₪${savingsThisYear}`} />
+          <Stat label="Saved this year" value={`NIS ${savingsThisYear}`} />
           <Stat label="Wallets" value={String(readyPayments)} />
         </View>
 
         <View style={styles.savingsHero}>
-          <Text style={styles.savingsHeroValue}>₪{savingsThisYear}</Text>
+          <Text style={styles.savingsHeroValue}>NIS {savingsThisYear}</Text>
           <Text style={styles.savingsHeroTitle}>Personal savings tracker</Text>
           <Text style={styles.sectionBody}>
             Your completed group orders feed this total. It gives returning users a clear reason to keep using Shakana.
@@ -428,10 +428,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.gold,
+    backgroundColor: colors.acc,
     flexShrink: 0,
   },
-  authPillText: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 12 },
+  authPillText: { color: colors.white, fontFamily: fontFamily.bodyBold, fontSize: 12 },
   toast: {
     padding: 12,
     borderRadius: radii.lg,
@@ -453,7 +453,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     ...shadow.card,
   },
-  quickCardPrimary: { backgroundColor: colors.gold, borderColor: colors.acc },
+  quickCardPrimary: { backgroundColor: colors.acc, borderColor: colors.acc },
   quickBadge: {
     width: 42,
     height: 42,
@@ -497,12 +497,12 @@ const styles = StyleSheet.create({
     minHeight: 50,
     minWidth: 92,
     borderRadius: radii.lg,
-    backgroundColor: colors.gold,
+    backgroundColor: colors.acc,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
   },
-  joinButtonText: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 14 },
+  joinButtonText: { color: colors.white, fontFamily: fontFamily.bodyBold, fontSize: 14 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
   statCard: {
     flexGrow: 1,
@@ -550,7 +550,7 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 12,
     borderRadius: radii.lg,
-    backgroundColor: colors.bg,
+    backgroundColor: colors.s2,
     borderWidth: 1,
     borderColor: colors.br,
   },
@@ -561,7 +561,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.br,
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     color: colors.tx,
     fontFamily: fontFamily.body,
     fontSize: 14,
@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 12,
     borderRadius: radii.lg,
-    backgroundColor: colors.bg,
+    backgroundColor: colors.s2,
     borderWidth: 1,
     borderColor: colors.br,
   },
@@ -589,7 +589,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  switchOn: { backgroundColor: colors.tx, borderColor: colors.tx },
+  switchOn: { backgroundColor: colors.acc, borderColor: colors.acc },
   switchText: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 11 },
   switchTextOn: { color: colors.white },
   linkList: { gap: 8 },
@@ -598,7 +598,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: radii.lg,
-    backgroundColor: colors.bg,
+    backgroundColor: colors.s2,
     borderWidth: 1,
     borderColor: colors.br,
     flexDirection: 'row',
@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
     borderColor: colors.err,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
   },
   deleteText: { color: colors.err, fontFamily: fontFamily.bodyBold, fontSize: 14 },
   resetButton: {

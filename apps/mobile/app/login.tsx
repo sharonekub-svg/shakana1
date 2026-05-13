@@ -47,7 +47,9 @@ export default function LoginScreen() {
           <View style={styles.heroTop}>
             <View style={styles.brandBlock}>
               <Text style={styles.logo}>shakana</Text>
-              <Text style={styles.brandCopy}>{isHebrew ? 'כניסה נקייה בעברית ובאנגלית' : 'Clean sign in in Hebrew and English'}</Text>
+              <Text style={styles.brandCopy}>
+                {isHebrew ? 'כניסה נקייה בעברית ובאנגלית' : 'Clean sign in in Hebrew and English'}
+              </Text>
             </View>
             <LanguageSwitcher />
           </View>
@@ -64,12 +66,16 @@ export default function LoginScreen() {
             <SectionTitle title={isHebrew ? 'התחברות' : 'Sign in'} kicker={isHebrew ? 'מסלול אמיתי' : 'Real auth'} />
             <Text style={styles.helper}>
               {isHebrew
-                ? 'זהו מסך ההתחברות האמיתי של Shakana. אין כאן קוד מהיר, רק התחברות פשוטה.'
+                ? 'זה מסך ההתחברות האמיתי של Shakana. אין כאן קוד מהיר, רק התחברות פשוטה.'
                 : 'This is the real Shakana login flow. No quick codes, just a clean sign-in.'}
             </Text>
             <View style={styles.buttonStack}>
               <DemoButton
-                label={googleSignIn.isPending ? (isHebrew ? 'פותח את Google...' : 'Opening Google...') : (isHebrew ? 'המשך עם Google' : 'Continue with Google')}
+                label={
+                  googleSignIn.isPending
+                    ? isHebrew ? 'פותח את Google...' : 'Opening Google...'
+                    : isHebrew ? 'המשך עם Google' : 'Continue with Google'
+                }
                 onPress={() =>
                   googleSignIn.mutate(undefined, {
                     onError: (error) => {
@@ -87,34 +93,38 @@ export default function LoginScreen() {
                 disabled={googleSignIn.isPending}
                 tone="accent"
               />
-              <DemoButton label={isHebrew ? 'המשך עם טלפון' : 'Continue with phone'} onPress={() => router.push('/(auth)/phone')} tone="light" />
+              <DemoButton
+                label={isHebrew ? 'המשך עם טלפון' : 'Continue with phone'}
+                onPress={() => router.push('/(auth)/phone')}
+                tone="light"
+              />
             </View>
           </Card>
 
           {env.enableDemo ? (
-          <Card style={styles.card}>
-            <SectionTitle title={isHebrew ? 'הדגמה' : 'Demo entry'} kicker={isHebrew ? 'לצוות ולמצגת' : 'For demo mode'} />
-            <Text style={styles.helper}>
-              {isHebrew
-                ? 'אם רוצים להציג את חוויית המשתמש או החנות בלי להתחבר, אפשר להיכנס ישירות לנתיב הדמו.'
-                : 'If you need the user or store demo without auth, jump straight into the demo path.'}
-            </Text>
-            <View style={styles.buttonStack}>
-              <DemoButton label={isHebrew ? 'המשך כמשתמש' : 'Continue as User'} onPress={continueAsUser} tone="accent" />
-              <DemoButton label={isHebrew ? 'המשך כחנות' : 'Continue as Store / Agent M'} onPress={continueAsStore} />
-              <DemoButton label={isHebrew ? 'מהלך הדמו' : 'How it works'} onPress={() => router.push('/how-it-works')} tone="light" />
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => {
-                  resetDemo();
-                  router.replace('/login');
-                }}
-                style={({ pressed }) => [styles.resetLink, pressed && { opacity: 0.75 }]}
-              >
-                <Text style={styles.resetText}>{isHebrew ? 'איפוס דמו' : 'Reset demo'}</Text>
-              </Pressable>
-            </View>
-          </Card>
+            <Card style={styles.card}>
+              <SectionTitle title={isHebrew ? 'הדגמה' : 'Demo entry'} kicker={isHebrew ? 'לצוות ולמצגת' : 'For demo mode'} />
+              <Text style={styles.helper}>
+                {isHebrew
+                  ? 'אם רוצים להציג את חוויית המשתמש או החנות בלי להתחבר, אפשר להיכנס ישירות למסלול הדמו.'
+                  : 'If you need the user or store demo without auth, jump straight into the demo path.'}
+              </Text>
+              <View style={styles.buttonStack}>
+                <DemoButton label={isHebrew ? 'המשך כמשתמש' : 'Continue as User'} onPress={continueAsUser} tone="accent" />
+                <DemoButton label={isHebrew ? 'המשך כחנות' : 'Continue as Store / Agent M'} onPress={continueAsStore} />
+                <DemoButton label={isHebrew ? 'מהלך הדמו' : 'How it works'} onPress={() => router.push('/how-it-works')} tone="light" />
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => {
+                    resetDemo();
+                    router.replace('/login');
+                  }}
+                  style={({ pressed }) => [styles.resetLink, pressed && { opacity: 0.75 }]}
+                >
+                  <Text style={styles.resetText}>{isHebrew ? 'איפוס דמו' : 'Reset demo'}</Text>
+                </Pressable>
+              </View>
+            </Card>
           ) : null}
         </View>
 
@@ -142,7 +152,7 @@ const styles = StyleSheet.create({
   hero: {
     minHeight: 210,
     justifyContent: 'center',
-    gap: 10,
+    gap: 12,
   },
   heroTop: {
     flexDirection: 'row',
@@ -153,13 +163,13 @@ const styles = StyleSheet.create({
   },
   brandBlock: {
     flex: 1,
-    gap: 4,
+    gap: 5,
   },
   logo: {
-    color: colors.gold,
+    color: colors.acc,
     fontFamily: fontFamily.bodyBold,
     fontSize: 15,
-    letterSpacing: 1.4,
+    letterSpacing: 1.6,
     textTransform: 'uppercase',
   },
   brandCopy: {
@@ -172,8 +182,8 @@ const styles = StyleSheet.create({
   title: {
     color: colors.tx,
     fontFamily: fontFamily.display,
-    fontSize: 36,
-    lineHeight: 40,
+    fontSize: 42,
+    lineHeight: 46,
     maxWidth: 740,
   },
   subtitle: {
@@ -207,7 +217,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   resetText: {
-    color: colors.gold,
+    color: colors.acc,
     fontFamily: fontFamily.bodyBold,
     fontSize: 13,
   },
