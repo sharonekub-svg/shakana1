@@ -280,7 +280,8 @@ async function searchRemote(
         })
         .catch(() => []),
     ]);
-    const merged = sortByQuery(trimmed, unique([...googleResult, ...govResult, ...nominatimResult, ...fallback])).slice(0, 12);
+    const hasRemote = googleResult.length > 0 || govResult.length > 0 || nominatimResult.length > 0;
+    const merged = sortByQuery(trimmed, unique([...googleResult, ...govResult, ...nominatimResult, ...(hasRemote ? [] : fallback)])).slice(0, 12);
     cache.set(cacheKey, merged);
     return merged;
   } catch {
