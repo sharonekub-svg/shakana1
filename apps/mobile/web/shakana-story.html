@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Shakana Story Video</title>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  :root {
+    --orange: #C96442;
+    --orange-dark: #7A351F;
+    --cream: #F8F2EA;
+    --paper: #FFFCF7;
+    --soft: #F1E7DA;
+    --line: #E6DCCE;
+    --ink: #211D19;
+    --muted: #70675F;
+  }
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    background: var(--cream);
+    color: var(--ink);
+    font-family: Rubik, Arial, sans-serif;
+    overflow: hidden;
+  }
+  body {
+    display: grid;
+    place-items: center;
+    padding: 18px;
+  }
+  .frame {
+    width: min(1120px, 100%);
+    height: min(680px, calc(100vh - 36px));
+    min-height: 560px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 32px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    box-shadow: 0 34px 90px rgba(33, 29, 25, 0.12);
+  }
+  .topbar {
+    position: absolute;
+    top: 18px;
+    left: 18px;
+    right: 18px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--orange-dark);
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .mark {
+    width: 38px;
+    height: 38px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    background: var(--orange);
+    color: #fff;
+    letter-spacing: 0;
+  }
+  .nav {
+    display: flex;
+    gap: 8px;
+  }
+  .nav a {
+    border: 1px solid var(--line);
+    background: rgba(255, 252, 247, 0.9);
+    color: var(--ink);
+    border-radius: 999px;
+    padding: 10px 15px;
+    font-size: 13px;
+    font-weight: 800;
+    text-decoration: none;
+  }
+  .progress {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 5px;
+    background: #E9D9C8;
+    z-index: 30;
+  }
+  .progress::after {
+    content: "";
+    display: block;
+    height: 100%;
+    width: 100%;
+    background: var(--orange);
+    transform-origin: left center;
+    animation: progress 42s linear infinite;
+  }
+  .scene {
+    position: absolute;
+    inset: 0;
+    padding: 92px 64px 54px;
+    display: grid;
+    grid-template-columns: minmax(280px, 0.9fr) minmax(310px, 1.1fr);
+    align-items: center;
+    gap: 42px;
+    opacity: 0;
+    animation: scene 42s linear infinite;
+  }
+  .scene:nth-of-type(1) { animation-delay: 0s; }
+  .scene:nth-of-type(2) { animation-delay: 7s; }
+  .scene:nth-of-type(3) { animation-delay: 14s; }
+  .scene:nth-of-type(4) { animation-delay: 21s; }
+  .scene:nth-of-type(5) { animation-delay: 28s; }
+  .scene:nth-of-type(6) { animation-delay: 35s; }
+  .copy {
+    display: grid;
+    gap: 16px;
+    transform: translateY(18px);
+    animation: copyIn 42s ease infinite;
+  }
+  .scene:nth-of-type(1) .copy { animation-delay: 0s; }
+  .scene:nth-of-type(2) .copy { animation-delay: 7s; }
+  .scene:nth-of-type(3) .copy { animation-delay: 14s; }
+  .scene:nth-of-type(4) .copy { animation-delay: 21s; }
+  .scene:nth-of-type(5) .copy { animation-delay: 28s; }
+  .scene:nth-of-type(6) .copy { animation-delay: 35s; }
+  .kicker {
+    color: var(--orange);
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  h1, h2 {
+    margin: 0;
+    font-size: clamp(34px, 5vw, 64px);
+    line-height: 0.98;
+    letter-spacing: -0.02em;
+  }
+  h2 { font-size: clamp(30px, 4vw, 54px); }
+  p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 17px;
+    line-height: 1.65;
+    max-width: 560px;
+  }
+  .metricRow {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .metric {
+    min-width: 132px;
+    padding: 15px;
+    border-radius: 20px;
+    background: var(--soft);
+    border: 1px solid var(--line);
+  }
+  .metric strong {
+    display: block;
+    color: var(--orange-dark);
+    font-size: 28px;
+    line-height: 1;
+  }
+  .metric span {
+    display: block;
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .phone, .dashboard, .message, .catalog {
+    justify-self: center;
+    width: min(390px, 100%);
+    border-radius: 34px;
+    background: #fff;
+    border: 1px solid var(--line);
+    box-shadow: 0 28px 70px rgba(33, 29, 25, 0.12);
+    overflow: hidden;
+    transform: translateY(20px) scale(0.96);
+    animation: deviceIn 42s ease infinite;
+  }
+  .scene:nth-of-type(1) .phone,
+  .scene:nth-of-type(1) .dashboard,
+  .scene:nth-of-type(1) .message,
+  .scene:nth-of-type(1) .catalog { animation-delay: 0s; }
+  .scene:nth-of-type(2) .phone,
+  .scene:nth-of-type(2) .dashboard,
+  .scene:nth-of-type(2) .message,
+  .scene:nth-of-type(2) .catalog { animation-delay: 7s; }
+  .scene:nth-of-type(3) .phone,
+  .scene:nth-of-type(3) .dashboard,
+  .scene:nth-of-type(3) .message,
+  .scene:nth-of-type(3) .catalog { animation-delay: 14s; }
+  .scene:nth-of-type(4) .phone,
+  .scene:nth-of-type(4) .dashboard,
+  .scene:nth-of-type(4) .message,
+  .scene:nth-of-type(4) .catalog { animation-delay: 21s; }
+  .scene:nth-of-type(5) .phone,
+  .scene:nth-of-type(5) .dashboard,
+  .scene:nth-of-type(5) .message,
+  .scene:nth-of-type(5) .catalog { animation-delay: 28s; }
+  .scene:nth-of-type(6) .phone,
+  .scene:nth-of-type(6) .dashboard,
+  .scene:nth-of-type(6) .message,
+  .scene:nth-of-type(6) .catalog { animation-delay: 35s; }
+  .phoneTop {
+    padding: 14px 16px;
+    background: var(--soft);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 900;
+    color: var(--orange-dark);
+    letter-spacing: 0.08em;
+  }
+  .timer {
+    background: #fff;
+    color: var(--orange-dark);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 5px 9px;
+    font-size: 11px;
+  }
+  .phoneBody, .dashboardBody, .catalogBody, .messageBody {
+    padding: 16px;
+    display: grid;
+    gap: 12px;
+  }
+  .storeHero {
+    height: 92px;
+    border-radius: 20px;
+    display: grid;
+    place-items: center;
+    background: var(--orange);
+    color: #fff;
+    font-size: 34px;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+  }
+  .pillRow {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+  }
+  .pill {
+    border-radius: 999px;
+    padding: 8px 10px;
+    background: var(--soft);
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+  }
+  .pill.active {
+    background: var(--orange);
+    color: #fff;
+  }
+  .field {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 12px;
+    display: flex;
+    justify-content: space-between;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .button {
+    border-radius: 14px;
+    background: var(--orange);
+    color: #fff;
+    padding: 13px;
+    text-align: center;
+    font-weight: 900;
+  }
+  .chatBubble {
+    padding: 16px;
+    border-radius: 6px 22px 22px 22px;
+    background: var(--soft);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    line-height: 1.55;
+    font-size: 15px;
+  }
+  .miniProduct {
+    display: grid;
+    grid-template-columns: 76px 1fr;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+  }
+  .thumb {
+    height: 76px;
+    border-radius: 14px;
+    background: var(--soft);
+    display: grid;
+    place-items: center;
+    color: var(--orange-dark);
+    font-weight: 900;
+    font-size: 12px;
+  }
+  .miniProduct h3, .orderLine h3 {
+    margin: 0 0 5px;
+    font-size: 15px;
+  }
+  .miniProduct span, .orderLine span {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .goal {
+    height: 10px;
+    border-radius: 999px;
+    background: #E9D9C8;
+    overflow: hidden;
+  }
+  .goal div {
+    height: 100%;
+    width: 82%;
+    background: var(--orange);
+    animation: fillGoal 42s ease infinite;
+  }
+  .dashboard {
+    width: min(520px, 100%);
+    border-radius: 28px;
+  }
+  .dashGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .dashTile {
+    background: var(--soft);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 13px;
+  }
+  .dashTile strong {
+    display: block;
+    color: var(--orange-dark);
+    font-size: 24px;
+  }
+  .dashTile span {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+  }
+  .orderLine {
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 12px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+  }
+  .status {
+    border-radius: 999px;
+    background: var(--orange);
+    color: #fff;
+    padding: 7px 10px;
+    font-size: 11px;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+  .finalCard {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: min(760px, 100%);
+    padding: 46px;
+    border-radius: 34px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    box-shadow: 0 30px 80px rgba(33, 29, 25, 0.12);
+    text-align: center;
+    display: grid;
+    gap: 18px;
+  }
+  .finalCard h2 {
+    font-size: clamp(36px, 7vw, 82px);
+  }
+  .finalCard p {
+    margin: 0 auto;
+  }
+  @keyframes scene {
+    0%, 13% { opacity: 1; pointer-events: all; }
+    16%, 100% { opacity: 0; pointer-events: none; }
+  }
+  @keyframes copyIn {
+    0% { opacity: 0; transform: translateY(20px); }
+    2%, 12% { opacity: 1; transform: translateY(0); }
+    15%, 100% { opacity: 0; transform: translateY(-10px); }
+  }
+  @keyframes deviceIn {
+    0% { opacity: 0; transform: translateY(22px) scale(0.96); }
+    2%, 12% { opacity: 1; transform: translateY(0) scale(1); }
+    15%, 100% { opacity: 0; transform: translateY(-8px) scale(0.99); }
+  }
+  @keyframes progress {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+  @keyframes fillGoal {
+    0%, 49% { width: 42%; }
+    55%, 100% { width: 100%; }
+  }
+  @media (max-width: 760px) {
+    body { padding: 0; }
+    .frame {
+      min-height: 100vh;
+      height: 100vh;
+      border-radius: 0;
+      border: 0;
+    }
+    .topbar {
+      top: 12px;
+      left: 12px;
+      right: 12px;
+    }
+    .brand { font-size: 12px; }
+    .nav a { padding: 8px 10px; font-size: 12px; }
+    .scene {
+      padding: 78px 16px 34px;
+      grid-template-columns: 1fr;
+      gap: 18px;
+      align-content: center;
+    }
+    h1, h2 { font-size: 38px; }
+    p { font-size: 15px; }
+    .phone, .dashboard, .message, .catalog { width: min(370px, 100%); }
+    .dashGrid { grid-template-columns: repeat(2, 1fr); }
+    .finalCard { padding: 28px 18px; }
+  }
+</style>
+</head>
+<body>
+  <main class="frame" aria-label="Shakana animated product story">
+    <header class="topbar">
+      <div class="brand"><span class="mark">S</span>shakana</div>
+      <nav class="nav">
+        <a href="/demo.html">Recording</a>
+        <a href="/user">Back to app</a>
+      </nav>
+    </header>
+
+    <section class="scene">
+      <div class="copy">
+        <div class="kicker">The flow</div>
+        <h1>One neighbor opens the order before anyone shops.</h1>
+        <p>The founder chooses the store, delivery address, and timer first. Only then does the group cart open.</p>
+        <div class="metricRow">
+          <div class="metric"><strong>45m</strong><span>founder timer</span></div>
+          <div class="metric"><strong>1</strong><span>locked store</span></div>
+        </div>
+      </div>
+      <div class="phone">
+        <div class="phoneTop"><span>NEW ORDER</span><span class="timer">45:00</span></div>
+        <div class="phoneBody">
+          <div class="storeHero">Amazon</div>
+          <div class="field"><span>Timer</span><strong>45 minutes</strong></div>
+          <div class="field"><span>Address</span><strong>Rothschild 12</strong></div>
+          <div class="button">Create group order</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="scene">
+      <div class="copy">
+        <div class="kicker">The invite</div>
+        <h2>Friends join from one WhatsApp link.</h2>
+        <p>They log in, land inside the exact same order, and can add products only from the founder’s selected store.</p>
+        <div class="metricRow">
+          <div class="metric"><strong>0</strong><span>paste fields</span></div>
+          <div class="metric"><strong>1 tap</strong><span>to join</span></div>
+        </div>
+      </div>
+      <div class="message">
+        <div class="phoneTop"><span>BUILDING CHAT</span><span class="timer">38:14</span></div>
+        <div class="messageBody">
+          <div class="chatBubble">
+            Sharone is ordering from Amazon. Join the cart, add your own item, and save on delivery together.
+            <br><br>
+            shakana1.vercel.app/join/3847
+          </div>
+          <div class="button">Open shared cart</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="scene">
+      <div class="copy">
+        <div class="kicker">Locked catalog</div>
+        <h2>The friend sees only this store.</h2>
+        <p>The catalog stays clear: real product photos, exact variants, quantity, address, and savings all in one place.</p>
+        <div class="metricRow">
+          <div class="metric"><strong>NIS 29</strong><span>saved today</span></div>
+          <div class="metric"><strong>3</strong><span>neighbors joined</span></div>
+        </div>
+      </div>
+      <div class="catalog">
+        <div class="phoneTop"><span>AMAZON CATALOG</span><span class="timer">29:07</span></div>
+        <div class="catalogBody">
+          <div class="pillRow">
+            <span class="pill active">Best Sellers</span>
+            <span class="pill">Home</span>
+            <span class="pill">Fashion</span>
+          </div>
+          <div class="miniProduct">
+            <div class="thumb">PHOTO</div>
+            <div>
+              <h3>Everyday Tee</h3>
+              <span>Black · M · In stock</span>
+              <div class="button" style="margin-top:10px">Add to group cart</div>
+            </div>
+          </div>
+          <div class="goal"><div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="scene">
+      <div class="copy">
+        <div class="kicker">Timer closes</div>
+        <h2>The order becomes ready for the store.</h2>
+        <p>When the timer ends, the group cart locks. The merchant sees one clean order instead of scattered messages.</p>
+        <div class="metricRow">
+          <div class="metric"><strong>NIS 412</strong><span>cart total</span></div>
+          <div class="metric"><strong>NIS 0</strong><span>group shipping</span></div>
+        </div>
+      </div>
+      <div class="phone">
+        <div class="phoneTop"><span>GROUP CART</span><span class="timer">00:00</span></div>
+        <div class="phoneBody">
+          <div class="field"><span>Status</span><strong>Locked</strong></div>
+          <div class="field"><span>Items</span><strong>5 products</strong></div>
+          <div class="field"><span>Delivery</span><strong>Rothschild 12</strong></div>
+          <div class="button">Pay your share</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="scene">
+      <div class="copy">
+        <div class="kicker">Merchant dashboard</div>
+        <h2>The store tracks everything clearly.</h2>
+        <p>Zara, Amazon, and H&M each see only their own incoming orders, exact variants, master picking list, and user breakdown.</p>
+      </div>
+      <div class="dashboard">
+        <div class="phoneTop"><span>MERCHANT VIEW</span><span class="timer">READY</span></div>
+        <div class="dashboardBody">
+          <div class="dashGrid">
+            <div class="dashTile"><strong>3</strong><span>participants</span></div>
+            <div class="dashTile"><strong>5</strong><span>items</span></div>
+            <div class="dashTile"><strong>NIS 412</strong><span>value</span></div>
+          </div>
+          <div class="orderLine">
+            <div><h3>Amazon group order</h3><span>Rothschild 12 · 5 exact variants</span></div>
+            <span class="status">packing</span>
+          </div>
+          <div class="orderLine">
+            <div><h3>Master picking list</h3><span>2x tee M black · 1x jeans 32 blue</span></div>
+            <span class="status">clear</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="scene">
+      <div class="finalCard">
+        <div class="kicker">The promise</div>
+        <h2>NIS 2.4K saved per building per year.</h2>
+        <p>Shakana turns one small neighbor action into repeatable savings, cleaner merchant operations, and a shopping flow people can understand immediately.</p>
+        <div class="metricRow" style="justify-content:center">
+          <div class="metric"><strong>Less friction</strong><span>one link to join</span></div>
+          <div class="metric"><strong>More trust</strong><span>locked order flow</span></div>
+          <div class="metric"><strong>Clear ops</strong><span>merchant dashboard</span></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="progress"></div>
+  </main>
+</body>
+</html>

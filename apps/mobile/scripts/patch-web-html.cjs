@@ -88,6 +88,12 @@ if (fs.existsSync(demoSourcePath)) {
   fs.copyFileSync(demoSourcePath, demoOutputPath);
 }
 
+const storySourcePath = path.join(__dirname, '..', 'web', 'shakana-story.html');
+const storyOutputPath = path.join(__dirname, '..', 'dist', 'shakana-story.html');
+if (fs.existsSync(storySourcePath)) {
+  fs.copyFileSync(storySourcePath, storyOutputPath);
+}
+
 const demoJsSourcePath = path.join(__dirname, '..', 'web', 'demo.js');
 const demoJsOutputPath = path.join(__dirname, '..', 'dist', 'demo.js');
 if (fs.existsSync(demoJsSourcePath)) {

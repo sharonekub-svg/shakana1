@@ -683,6 +683,12 @@ export default function DemoUserScreen() {
     }
   };
 
+  const openStoryVideo = () => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.location.assign('/shakana-story.html');
+    }
+  };
+
   if (!brand || !store) {
     return (
       <>
@@ -752,13 +758,22 @@ export default function DemoUserScreen() {
                 <Text style={styles.tourBtnLabel}>Step-by-step tour</Text>
               </Pressable>
               {Platform.OS === 'web' ? (
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={openDemoVideo}
-                  style={({ pressed }) => [styles.tourBtn, styles.demoVidBtn, pressed && { opacity: 0.85 }]}
-                >
-                  <Text style={styles.tourBtnLabel}>Open full demo</Text>
-                </Pressable>
+                <>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={openDemoVideo}
+                    style={({ pressed }) => [styles.tourBtn, styles.demoVidBtn, pressed && { opacity: 0.85 }]}
+                  >
+                    <Text style={styles.tourBtnLabel}>Open recording</Text>
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={openStoryVideo}
+                    style={({ pressed }) => [styles.tourBtn, styles.storyVidBtn, pressed && { opacity: 0.85 }]}
+                  >
+                    <Text style={styles.tourBtnLabel}>Open story video</Text>
+                  </Pressable>
+                </>
               ) : null}
             </View>
           </Card>
@@ -2554,6 +2569,7 @@ const styles = StyleSheet.create({
   },
   heroBtnRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
   },
   tourBtnHalf: {
@@ -2562,7 +2578,14 @@ const styles = StyleSheet.create({
   },
   demoVidBtn: {
     flex: 1,
+    minWidth: 150,
     alignSelf: 'auto',
     backgroundColor: colors.navy,
+  },
+  storyVidBtn: {
+    flex: 1,
+    minWidth: 150,
+    alignSelf: 'auto',
+    backgroundColor: colors.acc,
   },
 });
