@@ -1,4 +1,4 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
 
@@ -41,6 +41,7 @@ function ProfileIcon({ color, active }: IconProps) {
 
 export default function TabsLayout() {
   const { language, setLanguage, t } = useLocale();
+  const router = useRouter();
   const mainRoutes = new Set(['building', 'orders', 'account', 'language']);
 
   const selectLanguage = (nextLanguage: Language) => {
@@ -77,43 +78,53 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="building" options={{ title: t('tabs.home.title') }} />
       <Tabs.Screen name="orders" options={{ title: t('tabs.orders.title') }} />
-      <Tabs.Screen name="account" options={{ title: t('tabs.profile.title') }} />
       <Tabs.Screen
         name="language"
         options={{
-          title: t('language.label'),
+          title: '',
           tabBarButton: () => (
-            <View style={styles.languageSlot}>
-              <View style={styles.languagePill}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="עברית"
-                  accessibilityState={{ selected: language === 'he' }}
-                  onPress={() => selectLanguage('he')}
-                  style={[styles.languageOption, language === 'he' && styles.languageOptionActive]}
-                >
-                  <Text style={[styles.languageText, language === 'he' && styles.languageTextActive]}>עברית</Text>
-                </Pressable>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="English"
-                  accessibilityState={{ selected: language === 'en' }}
-                  onPress={() => selectLanguage('en')}
-                  style={[styles.languageOption, language === 'en' && styles.languageOptionActive]}
-                >
-                  <Text style={[styles.languageText, language === 'en' && styles.languageTextActive]}>EN</Text>
-                </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={language === 'he' ? 'הזמנה חדשה' : 'New order'}
+              onPress={() => router.push('/order/new')}
+              style={styles.plusSlot}
+            >
+              <View style={styles.plusBtn}>
+                <Text style={styles.plusBtnText}>+</Text>
               </View>
-              <Text style={styles.languageLabel}>{t('language.label')}</Text>
-            </View>
+            </Pressable>
           ),
         }}
       />
+      <Tabs.Screen name="account" options={{ title: t('tabs.profile.title') }} />
     </Tabs>
   );
 }
 
 const styles = StyleSheet.create({
+  plusSlot: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 3,
+  },
+  plusBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.acc,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: -8,
+    ...shadow.cta,
+  },
+  plusBtnText: {
+    color: colors.white,
+    fontSize: 28,
+    fontFamily: fontFamily.bodyBold,
+    lineHeight: 32,
+  },
   languageSlot: {
     flex: 1,
     minWidth: 0,
