@@ -144,7 +144,7 @@ function OrderCard({
 export default function BuildingTab() {
   const router = useRouter();
   const [selectedCat, setSelectedCat] = useState(0);
-  const { language, t } = useLocale();
+  const { language, setLanguage, t } = useLocale();
   const isHebrew = language === 'he';
   const homeCopy = isHebrew
     ? {
@@ -191,9 +191,27 @@ export default function BuildingTab() {
                 <Text style={styles.brandTitle}>{t('tabs.home.title')}</Text>
               </View>
             </View>
-          <Pressable style={styles.topAction} onPress={() => router.push('/(tabs)/account' as never)}>
+          <View style={styles.topRight}>
+            <View style={styles.langPill}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => void setLanguage('he')}
+                style={[styles.langOpt, language === 'he' && styles.langOptActive]}
+              >
+                <Text style={[styles.langOptText, language === 'he' && styles.langOptTextActive]}>עברית</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => void setLanguage('en')}
+                style={[styles.langOpt, language === 'en' && styles.langOptActive]}
+              >
+                <Text style={[styles.langOptText, language === 'en' && styles.langOptTextActive]}>EN</Text>
+              </Pressable>
+            </View>
+            <Pressable style={styles.topAction} onPress={() => router.push('/(tabs)/account' as never)}>
               <Text style={styles.topActionText}>{t('tabs.home.profile')}</Text>
             </Pressable>
+          </View>
           </View>
 
           <View style={styles.heroCard}>
@@ -347,6 +365,32 @@ const styles = StyleSheet.create({
     color: colors.tx,
     lineHeight: 28,
   },
+  topRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  langPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.br,
+    backgroundColor: colors.white,
+    padding: 2,
+    ...shadow.glass,
+  },
+  langOpt: {
+    minWidth: 32,
+    minHeight: 28,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  langOptActive: { backgroundColor: colors.tx },
+  langOptText: { color: colors.mu, fontFamily: fontFamily.bodyBold, fontSize: 10 },
+  langOptTextActive: { color: colors.white },
   topAction: {
     paddingHorizontal: 14,
     height: 42,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
@@ -14,7 +14,7 @@ import { productUrlSchema } from '@/utils/validation';
 import { useCreateOrder } from '@/api/orders';
 import { useUiStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
-import { useLocale } from '@/i18n/locale';
+import { useLocale, type Language } from '@/i18n/locale';
 import { loadSharedProductInsights, parseSharedProduct, type SharedProductInsights } from '@/lib/sharedProduct';
 import { fetchProductPageHtml } from '@/api/productInsights';
 import { formatAgorot } from '@/utils/format';
@@ -38,13 +38,54 @@ const TIMER_PRESETS = [
   { label: '1d', value: '1', unit: 'days' },
 ] as const;
 
+const TOTAL_STEPS = 3;
+
+function LanguagePill({ language, onSelect }: { language: Language; onSelect: (l: Language) => void }) {
+  return (
+    <View style={styles.langPill}>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => onSelect('he')}
+        style={[styles.langOpt, language === 'he' && styles.langOptActive]}
+      >
+        <Text style={[styles.langText, language === 'he' && styles.langTextActive]}>עברית</Text>
+      </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => onSelect('en')}
+        style={[styles.langOpt, language === 'en' && styles.langOptActive]}
+      >
+        <Text style={[styles.langText, language === 'en' && styles.langTextActive]}>EN</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function StepBar({ current, total }: { current: number; total: number }) {
+  return (
+    <View style={styles.stepBar}>
+      {Array.from({ length: total }, (_, i) => (
+        <View
+          key={i}
+          style={[styles.stepBarSegment, i + 1 <= current && styles.stepBarSegmentActive]}
+        />
+      ))}
+    </View>
+  );
+}
+
 export default function NewOrder() {
   const router = useRouter();
   const params = useLocalSearchParams<NewOrderParams>();
-  const { language, t } = useLocale();
+  const { language, setLanguage, t } = useLocale();
   const isHebrew = language === 'he';
   const copy = isHebrew
     ? {
+        step1Title: 'המוצר',
+        step2Title: 'כתובת לאיסוף',
+        step3Title: 'טיימר ואישור',
+        next: 'הבא',
+        back: 'חזרה',
         detectedAfterPaste: 'יזוהה אחרי הדבקת הקישור',
         waitingForLink: 'ממתין לקישור מוצר',
         addPrice: 'הוסף מחיר ידנית',
@@ -55,11 +96,9 @@ export default function NewOrder() {
         linkNotWorking: 'הלינק לא עובד?',
         closeHelp: 'סגור עזרה',
         linkHelpTitle: 'אפשר להמשיך גם בלי זיהוי אוטומטי',
-        linkHelpBody:
-          'אם Amazon או חנות אחרת חסמה מחיר, תמונה או משלוח, מלא את שם המוצר, המחיר, החנות והמשלוח בשדות למעלה. ההזמנה והשיתוף עדיין יעבדו רגיל.',
+        linkHelpBody: 'אם Amazon או חנות אחרת חסמה מחיר, תמונה או משלוח, מלא את שם המוצר, המחיר, החנות והמשלוח בשדות למטה.',
         findProductTitle: 'מצא מוצר, העתק קישור וחזור לכאן.',
-        findProductBody:
-          'זה המסלול הבטוח והפשוט: Shakana פותחת את החנות, אתה בוחר את הפריט המדויק, מעתיק את הקישור של דף המוצר, ואז Shakana קוראת מידע ציבורי ומשאירה שדות ידניים אם החנות חוסמת פרטים.',
+        findProductBody: 'Shakana פותחת את החנות, אתה בוחר את הפריט המדויק, מעתיק את הקישור, ואז Shakana קוראת מידע ציבורי.',
         openZara: 'פתח את Zara',
         useCopiedLink: 'השתמש בקישור שהועתק',
         copyLinkHelp: 'מצא את המוצר, העתק את קישור הדף וחזור לכאן.',
@@ -69,9 +108,18 @@ export default function NewOrder() {
         storePlaceholder: 'Zara, H&M, Amazon...',
         titlePlaceholder: 'חולצה מזארה',
         stepProduct: 'קישור מוצר',
-        stepProductBody: 'הדבק קישור מכל חנות. פרמטרים של מעקב יוסרו אוטומטית.',
+        stepProductBody: 'הדבק קישור מכל חנות.',
+        addrTitle: 'כתובת לאיסוף',
+        addrSubtitle: 'כולם בקבוצה יראו כתובת זו.',
+        addrCity: 'עיר',
+        addrStreet: 'שם הרחוב',
+        addrHouseNum: 'מספר בית',
+        addrHouseNumPlaceholder: '22',
+        addrApt: 'דירה',
+        addrFloor: 'קומה (אופציונלי)',
+        addrNote: 'ניתן לעדכן אחרי יצירת ההזמנה.',
         timerShipping: 'טיימר ומשלוח',
-        timerShippingBody: 'שכנים יכולים להצטרף עד שהטיימר מסתיים. עריכות ננעלות מעט לפני הסגירה.',
+        timerShippingBody: 'שכנים יכולים להצטרף עד שהטיימר מסתיים.',
         timer: 'טיימר',
         freeShippingFrom: 'משלוח חינם מסכום',
         product: 'מוצר',
@@ -79,44 +127,28 @@ export default function NewOrder() {
         readingProduct: 'קורא את דף המוצר...',
         deal: 'מבצע',
         simpleOrder: 'הזמנה פשוטה, בלי בלגן.',
-        finderResult: 'תוצאת איתור מוצר',
-        finderTitle: 'מה Shakana מצאה מהקישור',
-        whatItIs: 'מה המוצר',
-        whereFrom: 'מאיפה זה מגיע',
         productCost: 'מחיר המוצר',
         deliveryFee: 'דמי משלוח',
-        importantCosts: 'עלויות חשובות',
-        freeShippingMinimum: 'סכום למשלוח חינם',
-        costCardNote: 'אלה המספרים שרואים מיד אחרי הלינק: מחיר המוצר, דמי המשלוח, מאיזה סכום המשלוח חינם, וכמה חסר.',
-        freeDeliveryFrom: 'משלוח חינם מ',
+        importantCosts: 'עלויות',
+        freeShippingMinimum: 'משלוח חינם מ',
         missingFreeDelivery: 'חסר למשלוח חינם',
-        dealCheck: 'בדיקת מבצע / 1+1',
-        finderNote: 'אם החנות חוסמת פרטים ציבוריים, Shakana משאירה את השדות הידניים כדי שההזמנה עדיין תמשיך.',
-        timerPlan: 'תוכנית הזמנה לפי טיימר',
-        timerPlanIntro: 'אין יעד סכום: ההזמנה נסגרת לפי זמן, ואז מייסד ההזמנה מקבל קישור וקונה ידנית.',
-        timerClosesIn: 'הטיימר נסגר בעוד',
-        showCart: 'הצג סל',
-        hideCart: 'הסתר סל',
-        oneItem: 'פריט אחד',
-        shoppingCart: 'סל קניות',
-        manualProduct: 'מוצר שלא זוהה אוטומטית',
-        chooseStore: 'בחר חנות',
-        productPrice: 'מחיר מוצר',
-        cartHint: 'המגירה משאירה את הגלישה נקייה ועדיין מראה מה יוזמן.',
-        pickup: 'איסוף',
-        pickupManager: 'אחראי איסוף: אתה',
-        pickupBody:
-          'בחר נקודת איסוף מועדפת לפני יצירת ההזמנה. כולם יראו אותה, ואפשר לעדכן אותה בהמשך.',
-        pickupLocation: 'מיקום איסוף מועדף',
-        pickupPlaceholder: 'לובי הבניין, נקודת איסוף, או הדירה שלך',
-        pickupUncertain: 'מיקום האיסוף עשוי להשתנות לפי החנות או חברת המשלוחים',
+        costCardNote: 'מחיר המוצר, דמי משלוח וסכום למשלוח חינם — ישירות מהקישור.',
         noTimerLabel: 'ללא טיימר',
         noTimerDesc: 'ההזמנה תישאר פתוחה עד שתסגור אותה ידנית.',
         min: 'דק׳',
         hr: 'שעה',
         day: 'יום',
+        timerClosesIn: 'הטיימר נסגר בעוד',
+        createOrder: 'צור הזמנה',
+        orderSummary: 'סיכום הזמנה',
+        finderNote: 'אם החנות חוסמת פרטים, Shakana משאירה את השדות הידניים.',
       }
     : {
+        step1Title: 'The product',
+        step2Title: 'Pickup address',
+        step3Title: 'Timer & review',
+        next: 'Next',
+        back: 'Back',
         detectedAfterPaste: 'Detected after link paste',
         waitingForLink: 'Waiting for product link',
         addPrice: 'Add price manually',
@@ -127,11 +159,9 @@ export default function NewOrder() {
         linkNotWorking: 'Link not working?',
         closeHelp: 'Close help',
         linkHelpTitle: 'You can continue without automatic detection',
-        linkHelpBody:
-          'If Amazon or another store blocks price, image, or shipping details, fill in product name, price, store, and shipping in the fields above. The order and invite link will still work.',
+        linkHelpBody: 'If a store blocks price, image, or shipping details, fill in product name, price, store, and shipping below.',
         findProductTitle: 'Find a product, copy the URL, then come back.',
-        findProductBody:
-          'This is the safe practical flow: Shakana opens the store, you choose the exact item, copy the product page link, then Shakana reads public product data and keeps manual fields ready if the store blocks details.',
+        findProductBody: 'Shakana opens the store, you choose the exact item, copy the product page link, then Shakana reads public data.',
         openZara: 'Open Zara',
         useCopiedLink: 'Use copied link',
         copyLinkHelp: 'Find the product, copy its page link, then come back here.',
@@ -141,9 +171,18 @@ export default function NewOrder() {
         storePlaceholder: 'Zara, H&M, Amazon...',
         titlePlaceholder: 'Zara shirt',
         stepProduct: 'Product link',
-        stepProductBody: 'Paste any store link. Tracking parameters are removed automatically.',
-        timerShipping: 'Timer and shipping',
-        timerShippingBody: 'People can join until the timer ends. Edits lock right before closing.',
+        stepProductBody: 'Paste any store link.',
+        addrTitle: 'Pickup address',
+        addrSubtitle: 'Everyone in the group will see this address.',
+        addrCity: 'City',
+        addrStreet: 'Street name',
+        addrHouseNum: 'House / building no.',
+        addrHouseNumPlaceholder: '22',
+        addrApt: 'Apt no.',
+        addrFloor: 'Floor (optional)',
+        addrNote: 'You can update this after creating the order.',
+        timerShipping: 'Timer & shipping',
+        timerShippingBody: 'Neighbors can join until the timer ends.',
         timer: 'Timer',
         freeShippingFrom: 'Free shipping from',
         product: 'Product',
@@ -151,49 +190,31 @@ export default function NewOrder() {
         readingProduct: 'Reading the product page...',
         deal: 'Deal',
         simpleOrder: 'Simple order, no extra clutter.',
-        finderResult: 'Product finder result',
-        finderTitle: 'What Shakana found from the link',
-        whatItIs: 'What it is',
-        whereFrom: 'Where it comes from',
         productCost: 'Product cost',
         deliveryFee: 'Delivery fee',
-        importantCosts: 'Important costs',
-        freeShippingMinimum: 'Free delivery minimum',
-        costCardNote: 'These are shown first after the link: product price, delivery fee, free-delivery minimum, and how much is missing.',
-        freeDeliveryFrom: 'Free delivery from',
+        importantCosts: 'Costs',
+        freeShippingMinimum: 'Free delivery from',
         missingFreeDelivery: 'Missing for free delivery',
-        dealCheck: 'Deal / 1+1 check',
-        finderNote: 'If the store blocks public details, Shakana keeps the manual fields above so the order can still continue.',
-        timerPlan: 'Timer-based order plan',
-        timerPlanIntro: 'No target amount: the order closes by time, then the founder gets the checkout link and buys manually.',
-        timerClosesIn: 'Timer closes in',
-        showCart: 'Show cart drawer',
-        hideCart: 'Hide cart drawer',
-        oneItem: '1 item',
-        shoppingCart: 'Shopping cart',
-        manualProduct: 'Manual product',
-        chooseStore: 'Choose store',
-        productPrice: 'Product price',
-        cartHint: 'This drawer keeps browsing clean while still showing what will be ordered.',
-        pickup: 'Pickup',
-        pickupManager: 'Pickup manager: you',
-        pickupBody:
-          'Choose the preferred pickup point before creating the order. Everyone will see it, and it can be updated later.',
-        pickupLocation: 'Preferred pickup location',
-        pickupPlaceholder: 'Building lobby, pickup point, or your apartment',
-        pickupUncertain: 'Pickup location may vary depending on the store/shipping provider',
+        costCardNote: 'Product price, delivery fee, and free-shipping minimum — pulled directly from the link.',
         noTimerLabel: 'No timer',
         noTimerDesc: 'The order stays open until you close it manually.',
         min: 'min',
         hr: 'hr',
         day: 'day',
+        timerClosesIn: 'Timer closes in',
+        createOrder: 'Create order',
+        orderSummary: 'Order summary',
+        finderNote: 'If the store blocks public details, Shakana keeps manual fields ready.',
       };
+
   const initialDraft = parseSharedProduct({
     url: typeof params.url === 'string' ? params.url : null,
     title: typeof params.title === 'string' ? params.title : null,
     manualStoreLabel: typeof params.store === 'string' ? params.store : null,
   });
   const isZaraStart = params.store === 'zara' || initialDraft?.source === 'zara';
+
+  const [step, setStep] = useState(1);
   const [url, setUrl] = useState(() => initialDraft?.url ?? '');
   const [storeLabel, setStoreLabel] = useState(() => initialDraft?.storeLabel ?? (typeof params.store === 'string' ? params.store : ''));
   const [title, setTitle] = useState(() => initialDraft?.title ?? '');
@@ -202,19 +223,23 @@ export default function NewOrder() {
   const [timerValue, setTimerValue] = useState('30');
   const [timerUnit, setTimerUnit] = useState<(typeof TIMER_UNITS)[number]>('minutes');
   const [freeShippingThreshold, setFreeShippingThreshold] = useState('199');
-  const [cartOpen, setCartOpen] = useState(false);
   const [linkHelpOpen, setLinkHelpOpen] = useState(false);
+  const [linkMessage, setLinkMessage] = useState('');
   const [insights, setInsights] = useState<SharedProductInsights | null>(null);
   const [insightsLoading, setInsightsLoading] = useState(Boolean(initialDraft));
-  const [linkMessage, setLinkMessage] = useState('');
+
+  const profile = useAuthStore((s) => s.profile);
+  const user = useAuthStore((s) => s.user);
+
+  const [addrCity, setAddrCity] = useState(() => profile?.city ?? '');
+  const [addrStreet, setAddrStreet] = useState(() => profile?.street ?? '');
+  const [addrHouseNum, setAddrHouseNum] = useState(() => profile?.building ?? '');
+  const [addrApt, setAddrApt] = useState(() => profile?.apt ?? '');
+  const [addrFloor, setAddrFloor] = useState(() => profile?.floor ?? '');
+
   const create = useCreateOrder();
   const pushToast = useUiStore((s) => s.pushToast);
-  const user = useAuthStore((s) => s.user);
-  const profile = useAuthStore((s) => s.profile);
-  const defaultPickupLocation = [profile?.street, profile?.building, profile?.city]
-    .filter(Boolean)
-    .join(', ');
-  const [pickupLocation, setPickupLocation] = useState(defaultPickupLocation);
+
   const currentDraft = parseSharedProduct({
     url,
     title: title || initialDraft?.title || null,
@@ -240,14 +265,15 @@ export default function NewOrder() {
   const sourceLabel = insights?.sourceLabel || storeLabel || currentDraft?.storeLabel || copy.detectedAfterPaste;
   const productName = insights?.title || title || currentDraft?.title || copy.waitingForLink;
   const productCostLabel = priceAgorot > 0 ? formatAgorot(priceAgorot) : insightsLoading ? copy.readingPrice : copy.addPrice;
-  const freeShippingThresholdLabel =
-    freeShippingThresholdAgorot > 0 ? formatAgorot(freeShippingThresholdAgorot) : copy.addThreshold;
-  const freeShippingGapLabel =
-    freeShippingThresholdAgorot > 0 ? formatAgorot(freeShippingGapAgorot) : copy.unknownThreshold;
+  const freeShippingThresholdLabel = freeShippingThresholdAgorot > 0 ? formatAgorot(freeShippingThresholdAgorot) : copy.addThreshold;
+  const freeShippingGapLabel = freeShippingThresholdAgorot > 0 ? formatAgorot(freeShippingGapAgorot) : copy.unknownThreshold;
   const dealLabel = insights?.promotionText || insights?.dealSummary || copy.noDeal;
   const deliveryFeeLabel = insightsLoading ? copy.readingProduct : formatAgorot(deliveryFeeAgorot);
-  const fallbackPickupLocation = language === 'he' ? 'יתואם אחרי פתיחת ההזמנה' : 'Will be coordinated after opening the order';
-  const valid =
+  const fallbackPickupLocation = isHebrew ? 'יתואם אחרי פתיחת ההזמנה' : 'Will be coordinated after opening the order';
+  const pickupLocation = [addrStreet, addrHouseNum, addrApt ? (isHebrew ? `דירה ${addrApt}` : `apt ${addrApt}`) : '', addrCity].filter(Boolean).join(', ') || fallbackPickupLocation;
+
+  const step1Valid = urlCheck.success;
+  const step3Valid =
     urlCheck.success &&
     sourceLabel.trim().length > 1 &&
     productName.trim().length > 1 &&
@@ -255,21 +281,13 @@ export default function NewOrder() {
     Boolean(user?.id);
 
   useEffect(() => {
-    if (!pickupLocation.trim() && defaultPickupLocation) {
-      setPickupLocation(defaultPickupLocation);
-    }
-  }, [defaultPickupLocation, pickupLocation]);
-
-  useEffect(() => {
     if (!currentDraft) {
       setInsights(null);
       setInsightsLoading(false);
       return;
     }
-
     let active = true;
     setInsightsLoading(true);
-
     void loadSharedProductInsights(currentDraft, fetchProductPageHtml)
       .then((next) => {
         if (!active) return;
@@ -283,17 +301,9 @@ export default function NewOrder() {
           setFreeShippingThreshold((next.freeShippingThresholdAgorot / 100).toFixed(2).replace(/\.00$/, ''));
         }
       })
-      .catch(() => {
-        if (active) setInsights(null);
-      })
-      .finally(() => {
-        if (active) setInsightsLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-    // Re-read only when the product URL changes.
+      .catch(() => { if (active) setInsights(null); })
+      .finally(() => { if (active) setInsightsLoading(false); });
+    return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentDraft?.url]);
 
@@ -305,10 +315,7 @@ export default function NewOrder() {
   const useCopiedLink = async () => {
     const copied = await Clipboard.getStringAsync();
     const draft = parseSharedProduct({ url: copied, text: copied });
-    if (!draft) {
-      setLinkMessage(copy.noProductLink);
-      return;
-    }
+    if (!draft) { setLinkMessage(copy.noProductLink); return; }
     setUrl(draft.url);
     setStoreLabel(draft.storeLabel);
     setTitle((prev) => prev || draft.title);
@@ -316,7 +323,7 @@ export default function NewOrder() {
   };
 
   const submit = async () => {
-    if (!valid || create.isPending) return;
+    if (!step3Valid || create.isPending) return;
     try {
       const order = await create.mutateAsync({
         productUrl: url.trim(),
@@ -330,294 +337,351 @@ export default function NewOrder() {
         timerMinutes: noTimer ? 0 : timerMinutesNumber,
         maxParticipants: 12,
         pickupResponsibleUserId: user!.id,
-        preferredPickupLocation: pickupLocation.trim() || fallbackPickupLocation,
+        preferredPickupLocation: pickupLocation,
       });
-      router.replace(`/order/${order.id}`);
+      router.replace(`/order/${order.id}/invite`);
     } catch (e) {
       pushToast(e instanceof Error ? e.message : t('order.new.error'), 'error');
     }
   };
 
+  const stepTitle = step === 1 ? copy.step1Title : step === 2 ? copy.step2Title : copy.step3Title;
+
   return (
     <ScreenBase padded={false}>
-      <ScrollView contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <BackBtn onPress={() => router.back()} />
-          <Text style={styles.title}>{t('order.new.title')}</Text>
-          <View style={{ width: 40 }} />
+      <View style={styles.header}>
+        <View style={styles.headerTop}>
+          <BackBtn onPress={step === 1 ? () => router.back() : () => setStep((s) => s - 1)} />
+          <Text style={styles.headerStepLabel}>{step}/{TOTAL_STEPS}</Text>
+          <LanguagePill language={language} onSelect={(l) => void setLanguage(l)} />
         </View>
+        <StepBar current={step} total={TOTAL_STEPS} />
+        <Text style={styles.stepTitle}>{stepTitle}</Text>
+      </View>
 
-        {isZaraStart ? (
-          <View style={styles.guideCard}>
-            <Text style={styles.kicker}>ZARA</Text>
-            <Text style={styles.guideTitle}>{copy.findProductTitle}</Text>
-            <Text style={styles.guideBody}>
-              {copy.findProductBody}
-            </Text>
-            <View style={styles.actions}>
-              <Pressable style={styles.primarySmall} onPress={openZara}>
-                <Text style={styles.primarySmallText}>{copy.openZara}</Text>
-              </Pressable>
-              <Pressable style={styles.secondarySmall} onPress={useCopiedLink}>
-                <Text style={styles.secondarySmallText}>{copy.useCopiedLink}</Text>
-              </Pressable>
-            </View>
-            {linkMessage ? <Text style={styles.noteText}>{linkMessage}</Text> : null}
-          </View>
-        ) : null}
-
-        <View style={styles.formCard}>
-          <View style={styles.stepHeader}>
-            <View style={styles.stepBadge}>
-              <Text style={styles.stepBadgeText}>1</Text>
-            </View>
-            <View style={styles.stepCopy}>
-              <Text style={styles.stepTitle}>{copy.stepProduct}</Text>
-              <Text style={styles.stepBody}>{copy.stepProductBody}</Text>
-            </View>
-          </View>
-          <Field
-            label={t('order.new.urlLabel')}
-            value={url}
-            onChange={setUrl}
-            placeholder="https://..."
-            ltr
-            keyboardType="url"
-            autoCapitalize="none"
-          />
-          <View style={styles.costCard}>
-            <Text style={styles.kicker}>{copy.importantCosts}</Text>
-            <View style={styles.costGrid}>
-              <View style={styles.costItem}>
-                <Text style={styles.costLabel}>{copy.productCost}</Text>
-                <Text style={styles.costValue}>{productCostLabel}</Text>
-              </View>
-              <View style={styles.costItem}>
-                <Text style={styles.costLabel}>{copy.deliveryFee}</Text>
-                <Text style={styles.costValue}>{deliveryFeeLabel}</Text>
-              </View>
-              <View style={styles.costItem}>
-                <Text style={styles.costLabel}>{copy.freeShippingMinimum}</Text>
-                <Text style={styles.costValue}>{freeShippingThresholdLabel}</Text>
-              </View>
-              <View style={styles.costItem}>
-                <Text style={styles.costLabel}>{copy.missingFreeDelivery}</Text>
-                <Text style={styles.costValue}>{freeShippingGapLabel}</Text>
-              </View>
-            </View>
-            <Text style={styles.costNote}>{copy.costCardNote}</Text>
-          </View>
-          <View style={styles.stepHeader}>
-            <View style={styles.stepBadge}>
-              <Text style={styles.stepBadgeText}>2</Text>
-            </View>
-            <View style={styles.stepCopy}>
-              <Text style={styles.stepTitle}>{copy.timerShipping}</Text>
-              <Text style={styles.stepBody}>{copy.timerShippingBody}</Text>
-            </View>
-          </View>
-          <View style={styles.timerPresetRow}>
-            <Pressable
-              style={[styles.timerPresetChip, noTimer && styles.timerPresetChipActive]}
-              onPress={() => setNoTimer(true)}
-            >
-              <Text style={[styles.timerPresetText, noTimer && styles.timerPresetTextActive]}>{copy.noTimerLabel}</Text>
-            </Pressable>
-            {TIMER_PRESETS.map((preset) => {
-              const selected = !noTimer && timerValue === preset.value && timerUnit === preset.unit;
-              return (
-                <Pressable
-                  key={preset.label}
-                  style={[styles.timerPresetChip, selected && styles.timerPresetChipActive]}
-                  onPress={() => {
-                    setNoTimer(false);
-                    setTimerValue(preset.value);
-                    setTimerUnit(preset.unit);
-                  }}
-                >
-                  <Text style={[styles.timerPresetText, selected && styles.timerPresetTextActive]}>{preset.label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-          {noTimer ? (
-            <View style={styles.timerSummaryBox}>
-              <Text style={styles.timerSummaryLabel}>{copy.noTimerDesc}</Text>
-            </View>
-          ) : (
-            <>
-              <View style={styles.timerPickRow}>
-                <View style={{ flex: 1 }}>
-                  <NumField label={copy.timer} value={timerValue} onChange={setTimerValue} placeholder="30" />
+      <ScrollView contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        {step === 1 && (
+          <>
+            {isZaraStart ? (
+              <View style={styles.guideCard}>
+                <Text style={styles.kicker}>ZARA</Text>
+                <Text style={styles.guideTitle}>{copy.findProductTitle}</Text>
+                <Text style={styles.guideBody}>{copy.findProductBody}</Text>
+                <View style={styles.actionRow}>
+                  <Pressable style={styles.primarySmall} onPress={openZara}>
+                    <Text style={styles.primarySmallText}>{copy.openZara}</Text>
+                  </Pressable>
+                  <Pressable style={styles.secondarySmall} onPress={useCopiedLink}>
+                    <Text style={styles.secondarySmallText}>{copy.useCopiedLink}</Text>
+                  </Pressable>
                 </View>
-                <View style={styles.timerUnitWrap}>
-                  {TIMER_UNITS.map((unit) => (
-                    <Pressable
-                      key={unit}
-                      style={[styles.unitChip, timerUnit === unit && styles.unitChipActive]}
-                      onPress={() => setTimerUnit(unit)}
-                    >
-                      <Text style={[styles.unitChipText, timerUnit === unit && styles.unitChipTextActive]}>
-                        {unit === 'minutes' ? copy.min : unit === 'hours' ? copy.hr : copy.day}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
+                {linkMessage ? <Text style={styles.noteText}>{linkMessage}</Text> : null}
               </View>
-              <View style={styles.timerSummaryBox}>
-                <Text style={styles.timerSummaryLabel}>{copy.timerClosesIn}</Text>
-                <Text style={styles.timerSummaryValue}>{timerLabel}</Text>
-              </View>
-            </>
-          )}
-        </View>
+            ) : null}
 
-        <View style={styles.productCard}>
-          <View style={styles.productCopy}>
-            <Text style={styles.kicker}>{copy.product}</Text>
-            <Text style={styles.productTitle} numberOfLines={2}>
-              {insights?.title || title || copy.pasteProductLink}
-            </Text>
-            <Text style={styles.productBody}>
-              {insightsLoading
-                ? copy.readingProduct
-                : insights?.promotionText
-                  ? `${copy.deal}: ${insights.promotionText}`
-                  : copy.simpleOrder}
-            </Text>
-            {insightsLoading ? <ActivityIndicator color={colors.acc} /> : null}
-          </View>
-          {insights?.imageUrl ? <Image source={{ uri: insights.imageUrl }} style={styles.productImage} /> : null}
-        </View>
-
-        <View style={styles.finderCard}>
-          <Text style={styles.kicker}>{copy.finderResult}</Text>
-          <Text style={styles.finderTitle}>{copy.finderTitle}</Text>
-          <View style={styles.finderGrid}>
-            <View style={styles.finderCell}>
-              <Text style={styles.finderLabel}>{copy.whatItIs}</Text>
-              <Text style={styles.finderValue}>{productName}</Text>
-            </View>
-            <View style={styles.finderCell}>
-              <Text style={styles.finderLabel}>{copy.whereFrom}</Text>
-              <Text style={styles.finderValue}>{sourceLabel}</Text>
-            </View>
-            <View style={styles.finderCell}>
-              <Text style={styles.finderLabel}>{copy.productCost}</Text>
-              <Text style={styles.finderValue}>{productCostLabel}</Text>
-            </View>
-            <View style={styles.finderCell}>
-              <Text style={styles.finderLabel}>{copy.deliveryFee}</Text>
-              <Text style={styles.finderValue}>{deliveryFeeLabel}</Text>
-            </View>
-            <View style={styles.finderCell}>
-              <Text style={styles.finderLabel}>{copy.freeDeliveryFrom}</Text>
-              <Text style={styles.finderValue}>{freeShippingThresholdLabel}</Text>
-            </View>
-            <View style={styles.finderCell}>
-              <Text style={styles.finderLabel}>{copy.missingFreeDelivery}</Text>
-              <Text style={styles.finderValue}>{freeShippingGapLabel}</Text>
-            </View>
-          </View>
-          <View style={styles.dealBox}>
-            <Text style={styles.finderLabel}>{copy.dealCheck}</Text>
-            <Text style={styles.dealText}>{dealLabel}</Text>
-          </View>
-          <Text style={styles.finderNote}>{copy.finderNote}</Text>
-          <Pressable style={styles.linkHelpButton} onPress={() => setLinkHelpOpen((open) => !open)}>
-            <Text style={styles.linkHelpButtonText}>{linkHelpOpen ? copy.closeHelp : copy.linkNotWorking}</Text>
-          </Pressable>
-          {linkHelpOpen ? (
-            <View style={styles.linkHelpCard}>
-              <Text style={styles.linkHelpTitle}>{copy.linkHelpTitle}</Text>
-              <Text style={styles.linkHelpBody}>{copy.linkHelpBody}</Text>
-              <Field label={copy.store} value={storeLabel} onChange={setStoreLabel} placeholder={copy.storePlaceholder} />
-              <Field label={t('order.new.titleLabel')} value={title} onChange={setTitle} placeholder={copy.titlePlaceholder} />
-              <NumField label={t('order.new.priceLabel')} value={price} onChange={setPrice} placeholder="199" />
-              <NumField
-                label={copy.freeShippingFrom}
-                value={freeShippingThreshold}
-                onChange={setFreeShippingThreshold}
-                placeholder="199"
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>{copy.stepProduct}</Text>
+              <Text style={styles.cardNote}>{copy.stepProductBody}</Text>
+              <Field
+                label={t('order.new.urlLabel')}
+                value={url}
+                onChange={setUrl}
+                placeholder="https://..."
+                ltr
+                keyboardType="url"
+                autoCapitalize="none"
               />
+              <View style={styles.costCard}>
+                <Text style={styles.kicker}>{copy.importantCosts}</Text>
+                <View style={styles.costGrid}>
+                  <View style={styles.costItem}>
+                    <Text style={styles.costLabel}>{copy.productCost}</Text>
+                    <Text style={styles.costValue}>{productCostLabel}</Text>
+                  </View>
+                  <View style={styles.costItem}>
+                    <Text style={styles.costLabel}>{copy.deliveryFee}</Text>
+                    <Text style={styles.costValue}>{deliveryFeeLabel}</Text>
+                  </View>
+                  <View style={styles.costItem}>
+                    <Text style={styles.costLabel}>{copy.freeShippingMinimum}</Text>
+                    <Text style={styles.costValue}>{freeShippingThresholdLabel}</Text>
+                  </View>
+                  <View style={styles.costItem}>
+                    <Text style={styles.costLabel}>{copy.missingFreeDelivery}</Text>
+                    <Text style={styles.costValue}>{freeShippingGapLabel}</Text>
+                  </View>
+                </View>
+                <Text style={styles.costNote}>{copy.costCardNote}</Text>
+              </View>
             </View>
-          ) : null}
-        </View>
 
-        <View style={styles.planCard}>
-          <Text style={styles.planTitle}>{copy.timerPlan}</Text>
-          <Text style={styles.planIntro}>{copy.timerPlanIntro}</Text>
-          <View style={styles.planRow}>
-            <Text style={styles.planLabel}>{copy.timerClosesIn}</Text>
-            <Text style={styles.planValue}>{noTimer ? copy.noTimerLabel : timerLabel}</Text>
-          </View>
-          <View style={styles.planRow}>
-            <Text style={styles.planLabel}>{copy.missingFreeDelivery}</Text>
-            <Text style={styles.planValue}>{formatAgorot(freeShippingGapAgorot)}</Text>
-          </View>
-        </View>
+            {url.trim().length > 4 ? (
+              <View style={styles.productCard}>
+                <View style={styles.productCopy}>
+                  <Text style={styles.kicker}>{copy.product}</Text>
+                  <Text style={styles.productTitle} numberOfLines={2}>
+                    {insights?.title || title || copy.pasteProductLink}
+                  </Text>
+                  <Text style={styles.productBody}>
+                    {insightsLoading ? copy.readingProduct : insights?.promotionText ? `${copy.deal}: ${insights.promotionText}` : copy.simpleOrder}
+                  </Text>
+                  {insightsLoading ? <ActivityIndicator color={colors.acc} /> : null}
+                </View>
+                {insights?.imageUrl ? <Image source={{ uri: insights.imageUrl }} style={styles.productImage} /> : null}
+              </View>
+            ) : null}
 
-        <Pressable style={styles.drawerHandle} onPress={() => setCartOpen((open) => !open)}>
-          <Text style={styles.drawerHandleText}>{cartOpen ? copy.hideCart : copy.showCart}</Text>
-          <Text style={styles.drawerCount}>{copy.oneItem}</Text>
-        </Pressable>
+            <Pressable style={styles.linkHelpButton} onPress={() => setLinkHelpOpen((o) => !o)}>
+              <Text style={styles.linkHelpButtonText}>{linkHelpOpen ? copy.closeHelp : copy.linkNotWorking}</Text>
+            </Pressable>
+            {linkHelpOpen ? (
+              <View style={styles.linkHelpCard}>
+                <Text style={styles.linkHelpTitle}>{copy.linkHelpTitle}</Text>
+                <Text style={styles.linkHelpBody}>{copy.linkHelpBody}</Text>
+                <Field label={copy.store} value={storeLabel} onChange={setStoreLabel} placeholder={copy.storePlaceholder} />
+                <Field label={t('order.new.titleLabel')} value={title} onChange={setTitle} placeholder={copy.titlePlaceholder} />
+                <NumField label={t('order.new.priceLabel')} value={price} onChange={setPrice} placeholder="199" />
+                <NumField label={copy.freeShippingFrom} value={freeShippingThreshold} onChange={setFreeShippingThreshold} placeholder="199" />
+                <Text style={styles.finderNote}>{copy.finderNote}</Text>
+              </View>
+            ) : null}
 
-        {cartOpen ? (
-          <View style={styles.cartDrawer}>
-            <Text style={styles.kicker}>{copy.shoppingCart}</Text>
-            <Text style={styles.cartTitle}>{productName || copy.manualProduct}</Text>
-            <Text style={styles.cartLine}>{copy.store}: {sourceLabel || copy.chooseStore}</Text>
-            <Text style={styles.cartLine}>{copy.productPrice}: {formatAgorot(priceAgorot)}</Text>
-            <Text style={styles.cartLine}>{copy.deliveryFee}: {deliveryFeeLabel}</Text>
-            <Text style={styles.cartLine}>{copy.missingFreeDelivery}: {formatAgorot(freeShippingGapAgorot)}</Text>
-            <Text style={styles.cartHint}>{copy.cartHint}</Text>
-          </View>
-        ) : null}
+            <PrimaryBtn label={copy.next} onPress={() => setStep(2)} disabled={!step1Valid} />
+          </>
+        )}
 
-        <View style={styles.pickupCard}>
-          <Text style={styles.kicker}>{copy.pickup}</Text>
-          <Text style={styles.pickupTitle}>{copy.pickupManager}</Text>
-          <Text style={styles.pickupBody}>{copy.pickupBody}</Text>
-          <Field
-            label={copy.pickupLocation}
-            value={pickupLocation}
-            onChange={setPickupLocation}
-            placeholder={copy.pickupPlaceholder}
-          />
-          <Text style={styles.uncertainText}>{copy.pickupUncertain}</Text>
-        </View>
+        {step === 2 && (
+          <>
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>{copy.addrTitle}</Text>
+              <Text style={styles.cardNote}>{copy.addrSubtitle}</Text>
 
-        <PrimaryBtn label={t('order.new.submit')} onPress={submit} disabled={!valid} loading={create.isPending} />
+              <Field
+                label={copy.addrCity}
+                value={addrCity}
+                onChange={setAddrCity}
+                placeholder={isHebrew ? 'תל אביב' : 'Tel Aviv'}
+              />
+              <Field
+                label={copy.addrStreet}
+                value={addrStreet}
+                onChange={setAddrStreet}
+                placeholder={isHebrew ? 'דיזנגוף' : 'Dizengoff'}
+              />
+
+              <View style={styles.houseRow}>
+                <View style={styles.houseNumWrap}>
+                  <Text style={styles.houseNumLabel}>{copy.addrHouseNum}</Text>
+                  <NumField
+                    label=""
+                    value={addrHouseNum}
+                    onChange={setAddrHouseNum}
+                    placeholder={copy.addrHouseNumPlaceholder}
+                  />
+                </View>
+                <View style={styles.aptWrap}>
+                  <NumField
+                    label={copy.addrApt}
+                    value={addrApt}
+                    onChange={setAddrApt}
+                    placeholder="4"
+                  />
+                </View>
+              </View>
+
+              <NumField
+                label={copy.addrFloor}
+                value={addrFloor}
+                onChange={setAddrFloor}
+                placeholder="2"
+              />
+
+              {(addrStreet || addrHouseNum || addrCity) ? (
+                <View style={styles.addrPreview}>
+                  <Text style={styles.addrPreviewLabel}>{isHebrew ? 'תצוגה מקדימה' : 'Preview'}</Text>
+                  <Text style={styles.addrPreviewText}>{pickupLocation}</Text>
+                </View>
+              ) : null}
+
+              <Text style={styles.addrNote}>{copy.addrNote}</Text>
+            </View>
+
+            <PrimaryBtn label={copy.next} onPress={() => setStep(3)} />
+          </>
+        )}
+
+        {step === 3 && (
+          <>
+            <View style={styles.productCard}>
+              <View style={styles.productCopy}>
+                <Text style={styles.kicker}>{copy.orderSummary}</Text>
+                <Text style={styles.productTitle} numberOfLines={2}>
+                  {productName !== copy.waitingForLink ? productName : copy.pasteProductLink}
+                </Text>
+                <Text style={styles.productBody}>{sourceLabel}</Text>
+                <Text style={styles.productBody}>
+                  {copy.productCost}: {productCostLabel} · {copy.deliveryFee}: {deliveryFeeLabel}
+                </Text>
+              </View>
+              {insights?.imageUrl ? <Image source={{ uri: insights.imageUrl }} style={styles.productImage} /> : null}
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>{copy.timerShipping}</Text>
+              <Text style={styles.cardNote}>{copy.timerShippingBody}</Text>
+              <View style={styles.timerPresetRow}>
+                <Pressable
+                  style={[styles.timerPresetChip, noTimer && styles.timerPresetChipActive]}
+                  onPress={() => setNoTimer(true)}
+                >
+                  <Text style={[styles.timerPresetText, noTimer && styles.timerPresetTextActive]}>{copy.noTimerLabel}</Text>
+                </Pressable>
+                {TIMER_PRESETS.map((preset) => {
+                  const selected = !noTimer && timerValue === preset.value && timerUnit === preset.unit;
+                  return (
+                    <Pressable
+                      key={preset.label}
+                      style={[styles.timerPresetChip, selected && styles.timerPresetChipActive]}
+                      onPress={() => { setNoTimer(false); setTimerValue(preset.value); setTimerUnit(preset.unit); }}
+                    >
+                      <Text style={[styles.timerPresetText, selected && styles.timerPresetTextActive]}>{preset.label}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              {noTimer ? (
+                <View style={styles.timerSummaryBox}>
+                  <Text style={styles.timerSummaryLabel}>{copy.noTimerDesc}</Text>
+                </View>
+              ) : (
+                <>
+                  <View style={styles.timerPickRow}>
+                    <View style={{ flex: 1 }}>
+                      <NumField label={copy.timer} value={timerValue} onChange={setTimerValue} placeholder="30" />
+                    </View>
+                    <View style={styles.timerUnitWrap}>
+                      {TIMER_UNITS.map((unit) => (
+                        <Pressable
+                          key={unit}
+                          style={[styles.unitChip, timerUnit === unit && styles.unitChipActive]}
+                          onPress={() => setTimerUnit(unit)}
+                        >
+                          <Text style={[styles.unitChipText, timerUnit === unit && styles.unitChipTextActive]}>
+                            {unit === 'minutes' ? copy.min : unit === 'hours' ? copy.hr : copy.day}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+                  <View style={styles.timerSummaryBox}>
+                    <Text style={styles.timerSummaryLabel}>{copy.timerClosesIn}</Text>
+                    <Text style={styles.timerSummaryValue}>{timerLabel}</Text>
+                  </View>
+                </>
+              )}
+            </View>
+
+            <PrimaryBtn label={copy.createOrder} onPress={submit} disabled={!step3Valid} loading={create.isPending} />
+          </>
+        )}
       </ScrollView>
     </ScreenBase>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    gap: 14,
-    paddingHorizontal: 18,
-    paddingTop: 20,
-    paddingBottom: 110,
-    backgroundColor: colors.bg,
-  },
   header: {
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 12,
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.br,
+    backgroundColor: colors.s1,
+  },
+  headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 4,
   },
-  title: {
+  headerStepLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
+    color: colors.mu,
+  },
+  stepTitle: {
     fontFamily: fontFamily.display,
-    fontSize: 22,
+    fontSize: 26,
     color: colors.tx,
+    lineHeight: 30,
+  },
+  stepBar: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  stepBarSegment: {
+    flex: 1,
+    height: 4,
+    borderRadius: radii.pill,
+    backgroundColor: colors.br,
+  },
+  stepBarSegmentActive: {
+    backgroundColor: colors.acc,
+  },
+  langPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.br,
+    backgroundColor: colors.s1,
+    padding: 2,
+  },
+  langOpt: {
+    minWidth: 32,
+    minHeight: 26,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  langOptActive: { backgroundColor: colors.tx },
+  langText: { color: colors.mu, fontFamily: fontFamily.bodyBold, fontSize: 10 },
+  langTextActive: { color: colors.white },
+  screen: {
+    gap: 14,
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 110,
+    backgroundColor: colors.bg,
+  },
+  card: {
+    gap: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.br,
+    borderRadius: radii.xl,
+    backgroundColor: colors.s1,
+    ...shadow.card,
+  },
+  cardLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 15,
+    color: colors.tx,
+  },
+  cardNote: {
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.mu,
+    marginTop: -4,
   },
   guideCard: {
     gap: 10,
     padding: 16,
     borderWidth: 1,
-    borderColor: colors.brBr,
-    borderRadius: radii.lg,
+    borderColor: colors.br,
+    borderRadius: radii.xl,
     backgroundColor: colors.white,
     ...shadow.card,
   },
@@ -630,20 +694,17 @@ const styles = StyleSheet.create({
   },
   guideTitle: {
     fontFamily: fontFamily.display,
-    fontSize: 21,
-    lineHeight: 25,
+    fontSize: 20,
+    lineHeight: 24,
     color: colors.tx,
   },
   guideBody: {
     fontFamily: fontFamily.body,
     fontSize: 13,
-    lineHeight: 20,
+    lineHeight: 19,
     color: colors.mu,
   },
-  actions: {
-    flexDirection: 'row',
-    gap: 10,
-  },
+  actionRow: { flexDirection: 'row', gap: 10 },
   primarySmall: {
     flex: 1,
     minHeight: 46,
@@ -652,11 +713,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.navy,
   },
-  primarySmallText: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 13,
-    color: colors.white,
-  },
+  primarySmallText: { fontFamily: fontFamily.bodyBold, fontSize: 13, color: colors.white },
   secondarySmall: {
     flex: 1,
     minHeight: 46,
@@ -664,330 +721,132 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: colors.brBr,
-    backgroundColor: colors.cardSoft,
+    borderColor: colors.br,
+    backgroundColor: colors.s2,
   },
-  secondarySmallText: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 13,
-    color: colors.tx,
-  },
-  noteText: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.acc,
-  },
-  formCard: {
-    gap: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(15,122,67,0.12)',
-    borderRadius: 30,
-    backgroundColor: colors.white,
-    ...shadow.card,
-  },
-  stepHeader: {
-    flexDirection: 'row',
+  secondarySmallText: { fontFamily: fontFamily.bodyBold, fontSize: 13, color: colors.tx },
+  noteText: { fontFamily: fontFamily.bodyBold, fontSize: 12, color: colors.acc },
+  costCard: {
     gap: 10,
-    alignItems: 'flex-start',
+    padding: 14,
+    borderRadius: radii.lg,
+    backgroundColor: colors.s2,
+    borderWidth: 1,
+    borderColor: colors.br,
+  },
+  costGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  costItem: {
+    width: '48%',
+    gap: 4,
     padding: 12,
-    borderRadius: 24,
-    backgroundColor: colors.limeSoft,
+    borderRadius: radii.md,
+    backgroundColor: colors.s1,
+    borderWidth: 1,
+    borderColor: colors.br,
   },
-  stepBadge: {
-    width: 30,
-    height: 30,
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.navy,
-  },
-  stepBadgeText: {
+  costLabel: {
     fontFamily: fontFamily.bodyBold,
-    fontSize: 12,
-    color: colors.white,
+    fontSize: 10,
+    letterSpacing: 0.6,
+    color: colors.mu,
+    textTransform: 'uppercase',
   },
-  stepCopy: {
-    flex: 1,
-    gap: 3,
-  },
-  stepTitle: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 13,
+  costValue: {
+    fontFamily: fontFamily.display,
+    fontSize: 20,
     color: colors.tx,
   },
-  stepBody: {
-    fontFamily: fontFamily.body,
-    fontSize: 12,
-    lineHeight: 17,
-    color: colors.mu,
-  },
+  costNote: { fontFamily: fontFamily.body, fontSize: 12, lineHeight: 17, color: colors.mu },
   productCard: {
     flexDirection: 'row',
     gap: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(15,122,67,0.12)',
-    borderRadius: 30,
-    backgroundColor: colors.white,
-    ...shadow.card,
-  },
-  productCopy: {
-    flex: 1,
-    gap: 8,
-  },
-  productTitle: {
-    fontFamily: fontFamily.display,
-    fontSize: 20,
-    color: colors.tx,
-  },
-  productBody: {
-    fontFamily: fontFamily.body,
-    fontSize: 13,
-    lineHeight: 20,
-    color: colors.mu,
-  },
-  productImage: {
-    width: 84,
-    height: 104,
-    borderRadius: radii.md,
-    backgroundColor: colors.s1,
-  },
-  finderCard: {
-    gap: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(15,122,67,0.12)',
-    borderRadius: 30,
-    backgroundColor: colors.white,
-    ...shadow.card,
-  },
-  costCard: {
-    gap: 12,
-    padding: 18,
-    borderRadius: 30,
-    backgroundColor: colors.lime,
-    ...shadow.cta,
-  },
-  costGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  costItem: {
-    width: '48%',
-    gap: 6,
-    padding: 14,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.86)',
-    borderWidth: 1,
-    borderColor: 'rgba(15,122,67,0.12)',
-  },
-  costLabel: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 11,
-    letterSpacing: 0.8,
-    color: colors.acc,
-    textTransform: 'uppercase',
-  },
-  costValue: {
-    fontFamily: fontFamily.display,
-    fontSize: 24,
-    color: colors.navy,
-  },
-  costNote: {
-    fontFamily: fontFamily.body,
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.navy,
-  },
-  finderTitle: {
-    fontFamily: fontFamily.display,
-    fontSize: 21,
-    color: colors.tx,
-  },
-  finderGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  finderCell: {
-    width: '48%',
-    minHeight: 86,
-    justifyContent: 'space-between',
-    padding: 12,
-    borderRadius: 22,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: 'rgba(15,122,67,0.13)',
-    ...shadow.glass,
-  },
-  finderLabel: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 10,
-    letterSpacing: 0.7,
-    color: colors.mu,
-    textTransform: 'uppercase',
-  },
-  finderValue: {
-    marginTop: 8,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.tx,
-  },
-  dealBox: {
-    gap: 6,
-    padding: 12,
-    borderRadius: 22,
-    backgroundColor: colors.limeSoft,
-  },
-  dealText: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 14,
-    color: colors.acc,
-  },
-  finderNote: {
-    fontFamily: fontFamily.body,
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.mu,
-  },
-  linkHelpButton: {
-    minHeight: 44,
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.navy,
-  },
-  linkHelpButtonText: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 13,
-    color: colors.white,
-  },
-  linkHelpCard: {
-    gap: 6,
-    padding: 12,
-    borderRadius: radii.md,
-    backgroundColor: colors.cardSoft,
-    borderWidth: 1,
     borderColor: colors.br,
-  },
-  linkHelpTitle: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 14,
-    color: colors.tx,
-  },
-  linkHelpBody: {
-    fontFamily: fontFamily.body,
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.mu,
-  },
-  planCard: {
-    gap: 10,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(15,122,67,0.12)',
-    borderRadius: 30,
-    backgroundColor: colors.white,
+    borderRadius: radii.xl,
+    backgroundColor: colors.s1,
     ...shadow.card,
   },
-  planTitle: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 15,
-    color: colors.tx,
-  },
-  planIntro: {
-    fontFamily: fontFamily.body,
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.mu,
-  },
-  planRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  planLabel: {
-    flex: 1,
-    fontFamily: fontFamily.body,
-    fontSize: 13,
-    color: colors.mu,
-  },
-  planValue: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 14,
-    color: colors.tx,
-  },
-  pickupCard: {
-    gap: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(15,122,67,0.12)',
-    borderRadius: 30,
-    backgroundColor: colors.white,
-    ...shadow.card,
-  },
-  pickupTitle: {
-    fontFamily: fontFamily.display,
-    fontSize: 20,
-    color: colors.tx,
-  },
-  pickupBody: {
-    fontFamily: fontFamily.body,
-    fontSize: 13,
-    lineHeight: 20,
-    color: colors.mu,
-  },
-  uncertainText: {
-    fontFamily: fontFamily.bodySemi,
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.acc,
-  },
-  timerPickRow: {
+  productCopy: { flex: 1, gap: 6 },
+  productTitle: { fontFamily: fontFamily.display, fontSize: 20, color: colors.tx },
+  productBody: { fontFamily: fontFamily.body, fontSize: 13, lineHeight: 19, color: colors.mu },
+  productImage: { width: 84, height: 104, borderRadius: radii.md, backgroundColor: colors.s2 },
+  houseRow: {
     flexDirection: 'row',
     gap: 10,
     alignItems: 'flex-end',
   },
-  timerUnitWrap: {
-    flexDirection: 'row',
-    gap: 6,
-    paddingBottom: 2,
+  houseNumWrap: { flex: 1.2 },
+  houseNumLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
+    color: colors.tx,
+    marginBottom: 4,
   },
-  timerPresetRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+  aptWrap: { flex: 1 },
+  addrPreview: {
+    padding: 12,
+    borderRadius: radii.lg,
+    backgroundColor: colors.goldLight,
+    borderWidth: 1,
+    borderColor: colors.br,
+    gap: 4,
   },
-  timerPresetChip: {
-    minHeight: 38,
-    minWidth: 64,
+  addrPreviewLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 10,
+    letterSpacing: 1,
+    color: colors.acc,
+    textTransform: 'uppercase',
+  },
+  addrPreviewText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+    color: colors.tx,
+    lineHeight: 20,
+  },
+  addrNote: { fontFamily: fontFamily.body, fontSize: 12, color: colors.mu, lineHeight: 18 },
+  linkHelpButton: {
+    minHeight: 46,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.limeSoft,
     borderWidth: 1,
-    borderColor: colors.brBr,
+    borderColor: colors.br,
+    backgroundColor: colors.s2,
   },
-  timerPresetChipActive: {
-    backgroundColor: colors.acc,
-    borderColor: colors.acc,
+  linkHelpButtonText: { fontFamily: fontFamily.bodyBold, fontSize: 13, color: colors.tx },
+  linkHelpCard: {
+    gap: 8,
+    padding: 14,
+    borderRadius: radii.lg,
+    backgroundColor: colors.s1,
+    borderWidth: 1,
+    borderColor: colors.br,
   },
-  timerPresetText: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 12,
-    color: colors.navy,
+  linkHelpTitle: { fontFamily: fontFamily.bodyBold, fontSize: 14, color: colors.tx },
+  linkHelpBody: { fontFamily: fontFamily.body, fontSize: 12, lineHeight: 18, color: colors.mu },
+  finderNote: { fontFamily: fontFamily.body, fontSize: 12, lineHeight: 18, color: colors.mu },
+  timerPresetRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  timerPresetChip: {
+    minHeight: 38,
+    minWidth: 60,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.s2,
+    borderWidth: 1,
+    borderColor: colors.br,
+    paddingHorizontal: 12,
   },
-  timerPresetTextActive: {
-    color: colors.white,
-  },
+  timerPresetChipActive: { backgroundColor: colors.acc, borderColor: colors.acc },
+  timerPresetText: { fontFamily: fontFamily.bodyBold, fontSize: 12, color: colors.tx },
+  timerPresetTextActive: { color: colors.white },
+  timerPickRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-end' },
+  timerUnitWrap: { flexDirection: 'row', gap: 6, paddingBottom: 2 },
   timerSummaryBox: {
-    minHeight: 58,
-    borderRadius: 22,
+    minHeight: 56,
+    borderRadius: radii.lg,
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: colors.navy,
@@ -996,82 +855,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
-  timerSummaryLabel: {
-    flex: 1,
-    fontFamily: fontFamily.bodySemi,
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.78)',
-  },
-  timerSummaryValue: {
-    fontFamily: fontFamily.display,
-    fontSize: 22,
-    color: colors.white,
-  },
+  timerSummaryLabel: { flex: 1, fontFamily: fontFamily.body, fontSize: 12, color: 'rgba(250,246,239,0.78)' },
+  timerSummaryValue: { fontFamily: fontFamily.display, fontSize: 22, color: colors.white },
   unitChip: {
     minHeight: 42,
-    minWidth: 48,
+    minWidth: 46,
     borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: colors.br,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.cardSoft,
+    backgroundColor: colors.s2,
   },
-  unitChipActive: {
-    backgroundColor: colors.acc,
-    borderColor: colors.acc,
-  },
-  unitChipText: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 11,
-    color: colors.tx,
-  },
-  unitChipTextActive: {
-    color: colors.white,
-  },
-  drawerHandle: {
-    minHeight: 54,
-    paddingHorizontal: 16,
-    borderRadius: 24,
-    backgroundColor: colors.navy,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  drawerHandleText: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 14,
-    color: colors.white,
-  },
-  drawerCount: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 12,
-    color: colors.s1,
-  },
-  cartDrawer: {
-    gap: 8,
-    padding: 16,
-    borderRadius: 30,
-    borderWidth: 1,
-    borderColor: 'rgba(15,122,67,0.12)',
-    backgroundColor: colors.white,
-    ...shadow.card,
-  },
-  cartTitle: {
-    fontFamily: fontFamily.display,
-    fontSize: 21,
-    color: colors.tx,
-  },
-  cartLine: {
-    fontFamily: fontFamily.body,
-    fontSize: 13,
-    color: colors.mu,
-  },
-  cartHint: {
-    marginTop: 4,
-    fontFamily: fontFamily.bodySemi,
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.acc,
-  },
+  unitChipActive: { backgroundColor: colors.acc, borderColor: colors.acc },
+  unitChipText: { fontFamily: fontFamily.bodyBold, fontSize: 11, color: colors.tx },
+  unitChipTextActive: { color: colors.white },
 });

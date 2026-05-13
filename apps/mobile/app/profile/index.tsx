@@ -231,11 +231,31 @@ export default function ProfileScreen() {
     }
   };
 
+  const { setLanguage } = useLocale();
+
   return (
     <ScreenBase padded={false}>
+      <View style={styles.topBar}>
+        <Text style={styles.brand}>SHAKANA</Text>
+        <View style={styles.langPill}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => void setLanguage('he')}
+            style={[styles.langOpt, language === 'he' && styles.langOptActive]}
+          >
+            <Text style={[styles.langText, language === 'he' && styles.langTextActive]}>עברית</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => void setLanguage('en')}
+            style={[styles.langOpt, language === 'en' && styles.langOptActive]}
+          >
+            <Text style={[styles.langText, language === 'en' && styles.langTextActive]}>EN</Text>
+          </Pressable>
+        </View>
+      </View>
       <ScrollView contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.brand}>SHAKANA</Text>
           <Text style={styles.title}>{copy.title}</Text>
           <Text style={styles.subtitle}>{copy.subtitle}</Text>
         </View>
@@ -381,9 +401,19 @@ export default function ProfileScreen() {
         </View>
 
         {session ? (
-          <Pressable accessibilityRole="button" onPress={() => router.push('/profile/delete')} style={styles.deleteButton}>
-            <Text style={styles.deleteText}>{copy.deleteAccount}</Text>
-          </Pressable>
+          <View style={styles.accountActions}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onSignOut}
+              disabled={signOut.isPending}
+              style={({ pressed }) => [styles.signOutButton, pressed && styles.pressed]}
+            >
+              <Text style={styles.signOutText}>{signOut.isPending ? copy.signingOut : copy.signOut}</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" onPress={() => router.push('/profile/delete')} style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed]}>
+              <Text style={styles.deleteText}>{copy.deleteAccount}</Text>
+            </Pressable>
+          </View>
         ) : null}
         <Pressable
           accessibilityRole="button"
@@ -481,6 +511,50 @@ function ToggleRow({
 }
 
 const styles = StyleSheet.create({
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingTop: 16,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.br,
+    backgroundColor: colors.s1,
+  },
+  langPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.br,
+    backgroundColor: colors.s2,
+    padding: 2,
+  },
+  langOpt: {
+    minWidth: 36,
+    minHeight: 28,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  langOptActive: { backgroundColor: colors.tx },
+  langText: { color: colors.mu, fontFamily: fontFamily.bodyBold, fontSize: 11 },
+  langTextActive: { color: colors.white },
+  accountActions: {
+    gap: 10,
+  },
+  signOutButton: {
+    minHeight: 52,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.br,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.s1,
+  },
+  signOutText: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 14 },
   screen: { flexGrow: 1, width: '100%', maxWidth: 780, alignSelf: 'center', paddingHorizontal: 14, paddingTop: 14, paddingBottom: 104, gap: 14 },
   header: { gap: 5, paddingTop: 4 },
   brand: { color: colors.acc, fontFamily: fontFamily.bodyBold, fontSize: 11, letterSpacing: 2 },
