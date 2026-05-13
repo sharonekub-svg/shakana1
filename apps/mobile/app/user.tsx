@@ -24,6 +24,7 @@ import {
   type DemoParticipant,
   getOrderItemCount,
   getOrderTotal,
+  getGroupSavings,
   getProductLine,
   getVisibleOrdersForParticipant,
   initDemoCommerceSync,
@@ -32,7 +33,6 @@ import {
 } from '@/stores/demoCommerceStore';
 import { fontFamily } from '@/theme/fonts';
 import { colors } from '@/theme/tokens';
-import { BuildingSections } from '@/components/demo/BuildingSections';
 import { useLocale } from '@/i18n/locale';
 import { formatMoney } from '@/utils/money';
 import { useAuthStore } from '@/stores/authStore';
@@ -513,6 +513,13 @@ export default function DemoUserScreen() {
       ? visibleOrders
       : [joinedOrder, ...visibleOrders];
   }, [joinedOrder, visibleOrders]);
+  const homeStats = useMemo(() => {
+    const participantIds = new Set(visibleOrJoinedOrders.flatMap((candidate) => candidate.participants.map((participant) => participant.id)));
+    return {
+      totalSavings: visibleOrJoinedOrders.reduce((total, candidate) => total + getGroupSavings(candidate), 0),
+      totalParticipants: participantIds.size,
+    };
+  }, [visibleOrJoinedOrders]);
 
   useEffect(() => {
     if (joinedOrder && !joinedOrder.participants.some((participant) => participant.id === activeParticipantId)) {
@@ -611,6 +618,35 @@ export default function DemoUserScreen() {
           ['3', 'Your name', 'Shown to friends and store'],
           ['4', 'Open catalog', 'Share link or code'],
         ],
+      };
+  const homeDashboardCopy = language === 'he'
+    ? {
+        title: 'לוח ההזמנות שלך',
+        subtitle: 'פתחו הזמנה חדשה, בחרו חנות אחת, שתפו חברים, ועקבו אחרי הכל ממקום אחד.',
+        newOrder: 'הזמנה חדשה',
+        profile: 'פרופיל',
+        store: 'חנות',
+        openOrders: 'הזמנות פתוחות',
+        saved: 'נחסך בקבוצה',
+        neighbors: 'משתתפים',
+        joinTitle: 'קיבלתם קישור מחבר?',
+        joinBody: 'התחברו, פתחו את הקישור או הקוד, ותראו את אותה הזמנה עם אותה חנות נעולה.',
+        presentationTitle: 'כלי הצגה',
+        presentationBody: 'אפסו את הדמו לפני פגישה או פתחו את התסריט הקצר.',
+      }
+    : {
+        title: 'Your order hub',
+        subtitle: 'Open a new order, lock one store, invite friends, and track everything from one clean place.',
+        newOrder: 'New order',
+        profile: 'Profile',
+        store: 'Store',
+        openOrders: 'Open orders',
+        saved: 'Group saved',
+        neighbors: 'Participants',
+        joinTitle: 'Joining from a friend?',
+        joinBody: 'Sign in, open the invite link or code, and you will see the same shared order with the store locked.',
+        presentationTitle: 'Presentation tools',
+        presentationBody: 'Reset the demo before a meeting or open the short founder script.',
       };
   const orderLocked = order ? order.closesAt <= nowMs || order.status !== 'collecting' : false;
   const addressMissing = order ? !isCompleteDeliveryAddress(order.deliveryAddress) : false;
@@ -778,6 +814,53 @@ export default function DemoUserScreen() {
               </View>
             </Card>
           ) : null}
+          <Card style={styles.homeHeroCard}>
+            <View style={styles.homeHeroCopy}>
+              <Text style={styles.homeHeroKicker}>SHAKANA</Text>
+              <Text style={styles.homeHeroTitle}>{homeDashboardCopy.title}</Text>
+              <Text style={styles.homeHeroBody}>{homeDashboardCopy.subtitle}</Text>
+            </View>
+            <View style={styles.homeHeroStats}>
+              <View style={styles.homeHeroStatBox}>
+                <Text style={styles.homeHeroStatValue}>{visibleOrJoinedOrders.length}</Text>
+                <Text style={styles.homeHeroStatLabel}>{homeDashboardCopy.openOrders}</Text>
+              </View>
+              <View style={styles.homeHeroStatBox}>
+                <Text style={styles.homeHeroStatValue}>{formatMoney(Math.round(homeStats.totalSavings), language)}</Text>
+                <Text style={styles.homeHeroStatLabel}>{homeDashboardCopy.saved}</Text>
+              </View>
+              <View style={styles.homeHeroStatBox}>
+                <Text style={styles.homeHeroStatValue}>{homeStats.totalParticipants}</Text>
+                <Text style={styles.homeHeroStatLabel}>{homeDashboardCopy.neighbors}</Text>
+              </View>
+            </View>
+            <View style={styles.homeActionGrid}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => openNewOrderSetup()}
+                style={({ pressed }) => [styles.homeActionCard, styles.homeActionPrimary, pressed && demoStyles.pressed]}
+              >
+                <Text style={styles.homeActionIcon}>+</Text>
+                <Text style={styles.homeActionTitlePrimary}>{homeDashboardCopy.newOrder}</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push('/profile')}
+                style={({ pressed }) => [styles.homeActionCard, pressed && demoStyles.pressed]}
+              >
+                <Text style={styles.homeActionIcon}>ID</Text>
+                <Text style={styles.homeActionTitle}>{homeDashboardCopy.profile}</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push('/store')}
+                style={({ pressed }) => [styles.homeActionCard, pressed && demoStyles.pressed]}
+              >
+                <Text style={styles.homeActionIcon}>ST</Text>
+                <Text style={styles.homeActionTitle}>{homeDashboardCopy.store}</Text>
+              </Pressable>
+            </View>
+          </Card>
           <Card style={styles.savingsHero}>
             <View style={styles.savingsHeroTop}>
               <View style={styles.savingsHeroAmountBlock}>
@@ -827,32 +910,17 @@ export default function DemoUserScreen() {
               ) : null}
             </View>
           </Card>
-          <BuildingSections
-            orders={visibleOrders}
-            onOpenStore={() => router.push('/store')}
-            onOpenLogin={() => router.push('/login')}
-            onChooseBrand={(brand) => {
-              if (newOrderMode) {
-                setSetupBrand(brand);
-              } else {
-                selectBrand(brand);
-              }
-              setCategory('Best Sellers');
-            }}
-          />
           <Card style={styles.whatsappCard}>
-            <Text style={styles.whatsappTitle}>{language === 'he' ? 'Join from WhatsApp' : 'Join from WhatsApp'}</Text>
+            <Text style={styles.whatsappTitle}>{homeDashboardCopy.joinTitle}</Text>
             <Text style={styles.muted}>
-              {language === 'he'
-                ? 'Open the invite link from WhatsApp and the shared cart loads directly, with no code and no paste field.'
-                : 'Open the invite link from WhatsApp and the shared cart loads directly, with no code and no paste field.'}
+              {homeDashboardCopy.joinBody}
             </Text>
           </Card>
           {(session || params.founder === '1') ? (
           <Card style={styles.demoScriptCard}>
             <View style={styles.demoScriptCopy}>
-              <Text style={styles.whatsappTitle}>Presentation controls</Text>
-              <Text style={styles.muted}>Reset before a meeting, then follow the short founder demo script.</Text>
+              <Text style={styles.whatsappTitle}>{homeDashboardCopy.presentationTitle}</Text>
+              <Text style={styles.muted}>{homeDashboardCopy.presentationBody}</Text>
             </View>
             <View style={styles.lockActions}>
               <DemoButton label="View script" onPress={() => router.push('/how-it-works')} tone="light" style={styles.lockActionBtn} />
@@ -2732,7 +2800,97 @@ const styles = StyleSheet.create({
   },
   itemName: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 14 },
   itemPrice: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 15 },
+  homeHeroCard: {
+    gap: 18,
+    padding: 20,
+    backgroundColor: colors.card,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: colors.brBr,
+  },
+  homeHeroCopy: {
+    gap: 7,
+  },
+  homeHeroKicker: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 10,
+    letterSpacing: 1.8,
+    color: colors.acc,
+  },
+  homeHeroTitle: {
+    fontFamily: fontFamily.display,
+    fontSize: 34,
+    lineHeight: 38,
+    color: colors.tx,
+  },
+  homeHeroBody: {
+    fontFamily: fontFamily.body,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.mu,
+  },
+  homeHeroStats: {
+    flexDirection: 'row',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  homeHeroStatBox: {
+    flex: 1,
+    minWidth: 96,
+    borderRadius: 18,
+    backgroundColor: colors.s2,
+    borderWidth: 1,
+    borderColor: colors.br,
+    padding: 14,
+    gap: 5,
+  },
+  homeHeroStatValue: {
+    fontFamily: fontFamily.display,
+    fontSize: 25,
+    lineHeight: 29,
+    color: colors.acc,
+  },
+  homeHeroStatLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 11,
+    color: colors.mu,
+  },
+  homeActionGrid: {
+    flexDirection: 'row',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  homeActionCard: {
+    flex: 1,
+    minWidth: 96,
+    borderRadius: 18,
+    backgroundColor: colors.s1,
+    borderWidth: 1,
+    borderColor: colors.br,
+    padding: 14,
+    gap: 10,
+  },
+  homeActionPrimary: {
+    backgroundColor: colors.acc,
+    borderColor: colors.acc,
+  },
+  homeActionIcon: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
+    color: colors.tx,
+  },
+  homeActionTitle: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+    color: colors.tx,
+  },
+  homeActionTitlePrimary: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+    color: colors.ink,
+  },
   savingsHero: {
+    display: 'none',
     gap: 14,
     padding: 20,
     backgroundColor: colors.card,
