@@ -304,8 +304,8 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   statCardFeatured: {
-    backgroundColor: colors.goldLight,
-    borderColor: colors.goldLight,
+    backgroundColor: colors.acc,
+    borderColor: colors.acc,
   },
   statValue: {
     fontFamily: fontFamily.display,
@@ -322,10 +322,10 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   statValueFeatured: {
-    color: colors.tx,
+    color: colors.white,
   },
   statLabelFeatured: {
-    color: colors.tx,
+    color: 'rgba(255,255,255,0.75)',
   },
   categoryRow: {
     gap: 8,
@@ -341,8 +341,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   categoryChipActive: {
-    backgroundColor: colors.goldLight,
-    borderColor: colors.goldLight,
+    backgroundColor: colors.acc,
+    borderColor: colors.acc,
   },
   categoryChipText: {
     fontFamily: fontFamily.bodyBold,
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
     color: colors.tx,
   },
   categoryChipTextActive: {
-    color: colors.tx,
+    color: colors.white,
   },
   categoryChipDetail: {
     marginTop: 4,
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     color: colors.mu,
   },
   categoryChipDetailActive: {
-    color: colors.tx,
+    color: 'rgba(255,255,255,0.8)',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -470,7 +470,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 30,
     borderRadius: radii.pill,
-    backgroundColor: colors.goldLight,
+    backgroundColor: colors.s1,
+    borderWidth: 1,
+    borderColor: colors.br,
     alignItems: 'center',
     justifyContent: 'center',
   },

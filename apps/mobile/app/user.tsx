@@ -2635,10 +2635,8 @@ const styles = StyleSheet.create({
   savingsHero: {
     gap: 14,
     padding: 20,
-    backgroundColor: colors.card,
+    backgroundColor: colors.ink,
     borderRadius: 24,
-    borderWidth: 1,
-    borderColor: colors.br,
   },
   savingsHeroTop: {
     flexDirection: 'row',
@@ -2658,7 +2656,7 @@ const styles = StyleSheet.create({
   savingsHeroAmountLabel: {
     fontFamily: fontFamily.body,
     fontSize: 11,
-    color: colors.mu,
+    color: 'rgba(255,255,255,0.55)',
     textAlign: 'center',
     lineHeight: 16,
   },
@@ -2675,24 +2673,24 @@ const styles = StyleSheet.create({
   savingsHeroStatValue: {
     fontFamily: fontFamily.bodyBold,
     fontSize: 18,
-    color: colors.tx,
+    color: colors.white,
   },
   savingsHeroStatLabel: {
     fontFamily: fontFamily.body,
     fontSize: 10,
-    color: colors.mu,
+    color: 'rgba(255,255,255,0.55)',
     textAlign: 'center',
     lineHeight: 14,
   },
   savingsHeroDivider: {
     width: 1,
     height: 32,
-    backgroundColor: colors.br,
+    backgroundColor: 'rgba(255,255,255,0.15)',
   },
   savingsHeroBody: {
     fontFamily: fontFamily.body,
     fontSize: 13,
-    color: colors.mu,
+    color: 'rgba(255,255,255,0.65)',
     lineHeight: 20,
   },
   tourBtn: {
