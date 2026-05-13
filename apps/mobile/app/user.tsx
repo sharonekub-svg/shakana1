@@ -33,7 +33,6 @@ import {
 import { fontFamily } from '@/theme/fonts';
 import { colors } from '@/theme/tokens';
 import { BuildingSections } from '@/components/demo/BuildingSections';
-import { ShakanaLogoCompact } from '@/components/ShakanaLogo';
 import { useLocale } from '@/i18n/locale';
 import { formatMoney } from '@/utils/money';
 import { useAuthStore } from '@/stores/authStore';
@@ -335,7 +334,7 @@ const tourStyles = StyleSheet.create({
   statValue: {
     fontFamily: fontFamily.display,
     fontSize: 36,
-    color: colors.acc,
+    color: colors.gold,
     lineHeight: 40,
   },
   statLabel: {
@@ -725,7 +724,7 @@ export default function DemoUserScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <DemoPage>
           <View style={styles.topBar}>
-            <ShakanaLogoCompact size={24} />
+            <Text style={styles.logo}>shakana</Text>
             <View style={styles.topActions}>
               <DemoButton label="New order" onPress={() => openNewOrderSetup()} tone="accent" style={styles.smallBtn} />
               <DemoButton label="How it works" onPress={() => router.push('/how-it-works')} tone="light" style={styles.smallBtn} />
@@ -976,7 +975,7 @@ export default function DemoUserScreen() {
       <DemoPage wide>
         <View style={styles.topBar}>
           <Pressable onPress={goToOrderHome} accessibilityRole="button">
-            <ShakanaLogoCompact size={24} />
+            <Text style={styles.logo}>shakana demo</Text>
           </Pressable>
           <View style={styles.topActions}>
             <DemoButton label="Home" onPress={goToOrderHome} tone="light" style={styles.smallBtn} />
@@ -1806,7 +1805,7 @@ const payStyles = StyleSheet.create({
     marginTop: 1,
   },
   savingsRow: {
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
     borderRadius: 14,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -1827,9 +1826,9 @@ const payStyles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 9,
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
     borderWidth: 1,
-    borderColor: colors.acc,
+    borderColor: colors.brBr,
   },
   paidBadgeText: {
     color: colors.acc,
@@ -1909,7 +1908,7 @@ const payStyles = StyleSheet.create({
     fontSize: 14,
   },
   modalSavingsBanner: {
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -1934,7 +1933,7 @@ const payStyles = StyleSheet.create({
   },
   demoNotice: {
     borderRadius: 14,
-    backgroundColor: colors.s2,
+    backgroundColor: colors.goldLight,
     borderWidth: 1,
     borderColor: colors.brBr,
     paddingHorizontal: 12,
@@ -2033,7 +2032,7 @@ const payStyles = StyleSheet.create({
     flex: 1,
   },
   savingsBadge: {
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -2079,7 +2078,7 @@ const payStyles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2114,9 +2113,10 @@ const styles = StyleSheet.create({
   },
   topActions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   logo: {
-    color: colors.tx,
-    fontFamily: fontFamily.display,
-    fontSize: 22,
+    color: colors.acc,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 15,
+    textTransform: 'uppercase',
   },
   smallBtn: { flexGrow: 1, flexBasis: 136, minHeight: 40 },
   storeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
@@ -2125,13 +2125,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
     padding: 16,
     borderRadius: 22,
-    backgroundColor: colors.s2,
+    backgroundColor: colors.goldLight,
     borderWidth: 1,
     borderColor: colors.br,
   },
   joinStateCard: {
     gap: 10,
-    borderColor: colors.br,
+    borderColor: colors.gold,
     backgroundColor: colors.s2,
   },
   joinStateTitle: {
@@ -2227,56 +2227,54 @@ const styles = StyleSheet.create({
   categoryRow: { gap: 8, paddingVertical: 4 },
   categoryPill: {
     borderRadius: 999,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.br,
+    backgroundColor: colors.s2,
   },
   categoryText: { color: colors.mu, fontFamily: fontFamily.bodyBold, fontSize: 13 },
   categoryTextActive: { color: '#FFFFFF' },
   productSearchInput: {
     minHeight: 48,
-    borderRadius: 999,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.br,
+    borderColor: colors.brBr,
     backgroundColor: colors.white,
     color: colors.tx,
     fontFamily: fontFamily.bodySemi,
     fontSize: 14,
-    paddingHorizontal: 18,
+    paddingHorizontal: 14,
   },
-  productGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
-  productCard: { flexGrow: 1, flexBasis: 280, overflow: 'hidden', padding: 0, borderRadius: 24 },
-  productInfo: { padding: 16, gap: 10 },
-  productName: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 16, flex: 1 },
-  price: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 20 },
-  sku: { color: colors.mu2, fontFamily: fontFamily.body, fontSize: 11 },
-  selectorLabel: { color: colors.mu, fontFamily: fontFamily.bodyBold, fontSize: 11, letterSpacing: 0.8, textTransform: 'uppercase' as const },
-  optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  productGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  productCard: { flexGrow: 1, flexBasis: 155, maxWidth: 320, overflow: 'hidden', padding: 0, borderRadius: 22 },
+  productInfo: { padding: 12, gap: 8 },
+  productName: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 15, flex: 1 },
+  price: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 15 },
+  sku: { color: colors.acc, fontFamily: fontFamily.bodyBold, fontSize: 12 },
+  selectorLabel: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 13 },
+  optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   option: {
-    borderRadius: 999,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.br,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    backgroundColor: colors.s1,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: colors.white,
   },
-  optionActive: { backgroundColor: colors.tx, borderColor: colors.tx },
-  optionText: { color: colors.mu, fontFamily: fontFamily.bodySemi, fontSize: 12 },
+  optionActive: { backgroundColor: colors.ink, borderColor: colors.ink },
+  optionText: { color: colors.tx, fontFamily: fontFamily.bodySemi, fontSize: 12 },
   optionTextActive: { color: '#FFFFFF' },
   qtyRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  qtyBtn: { width: 40, minHeight: 36, paddingHorizontal: 0 },
-  qtyText: { color: colors.tx, fontFamily: fontFamily.bodyBold, minWidth: 50, textAlign: 'center' },
+  qtyBtn: { width: 44, minHeight: 38, paddingHorizontal: 0 },
+  qtyText: { color: colors.tx, fontFamily: fontFamily.bodyBold, minWidth: 54, textAlign: 'center' },
   privateToggle: {
-    borderRadius: 999,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.br,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    backgroundColor: colors.s1,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    backgroundColor: colors.white,
   },
-  privateToggleActive: { backgroundColor: colors.accLight, borderColor: colors.acc },
+  privateToggleActive: { backgroundColor: colors.goldLight, borderColor: colors.acc },
   privateText: { color: colors.mu, fontFamily: fontFamily.bodyBold, fontSize: 12 },
   privateTextActive: { color: colors.acc },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
@@ -2286,7 +2284,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.acc,
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
     padding: 12,
   },
   pendingTitle: {
@@ -2307,8 +2305,8 @@ const styles = StyleSheet.create({
   },
   authGate: {
     gap: 10,
-    borderColor: colors.br,
-    backgroundColor: colors.s2,
+    borderColor: 'rgba(201,168,76,0.45)',
+    backgroundColor: colors.goldLight,
   },
   authTitle: {
     color: colors.tx,
@@ -2345,7 +2343,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.br,
-    backgroundColor: colors.s2,
+    backgroundColor: colors.goldLight,
     padding: 12,
   },
   timerTitle: {
@@ -2367,7 +2365,7 @@ const styles = StyleSheet.create({
   preLaunchTimer: {
     flexBasis: '100%',
     gap: 12,
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
     borderColor: colors.acc,
     borderWidth: 1,
     marginBottom: 8,
@@ -2400,7 +2398,7 @@ const styles = StyleSheet.create({
   },
   setupStepDone: {
     borderColor: colors.acc,
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
   },
   setupStepNumber: {
     width: 24,
@@ -2465,7 +2463,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.acc,
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 4,
@@ -2494,7 +2492,7 @@ const styles = StyleSheet.create({
   },
   addressInputMissing: {
     borderColor: colors.acc,
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
   },
   addressSuggestionList: {
     gap: 6,
@@ -2529,28 +2527,28 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: colors.s2,
   },
-  joinedPill: { backgroundColor: colors.accLight },
+  joinedPill: { backgroundColor: colors.goldLight },
   activePill: { backgroundColor: colors.ink },
   participantRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   participantText: { color: colors.mu, fontFamily: fontFamily.bodyBold, fontSize: 12 },
   activePillText: { color: '#FFFFFF' },
   lockBadge: {
-    backgroundColor: colors.s2,
+    backgroundColor: colors.ink,
     borderWidth: 1,
-    borderColor: colors.br,
-    borderRadius: 14,
-    padding: 10,
+    borderColor: colors.ink,
+    borderRadius: 18,
+    padding: 13,
     marginBottom: 12,
   },
   lockBadgeText: {
-    color: colors.mu,
-    fontFamily: fontFamily.bodySemi,
-    fontSize: 12,
+    color: colors.white,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
     textAlign: 'center',
   },
   participantBadge: {
     color: colors.acc,
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 999,
@@ -2563,7 +2561,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     minWidth: 140,
     borderRadius: 16,
-    backgroundColor: colors.s2,
+    backgroundColor: colors.goldLight,
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 2,
@@ -2636,8 +2634,10 @@ const styles = StyleSheet.create({
   savingsHero: {
     gap: 14,
     padding: 20,
-    backgroundColor: colors.ink,
+    backgroundColor: colors.card,
     borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.br,
   },
   savingsHeroTop: {
     flexDirection: 'row',
@@ -2657,7 +2657,7 @@ const styles = StyleSheet.create({
   savingsHeroAmountLabel: {
     fontFamily: fontFamily.body,
     fontSize: 11,
-    color: 'rgba(255,255,255,0.55)',
+    color: colors.mu,
     textAlign: 'center',
     lineHeight: 16,
   },
@@ -2674,24 +2674,24 @@ const styles = StyleSheet.create({
   savingsHeroStatValue: {
     fontFamily: fontFamily.bodyBold,
     fontSize: 18,
-    color: colors.white,
+    color: colors.tx,
   },
   savingsHeroStatLabel: {
     fontFamily: fontFamily.body,
     fontSize: 10,
-    color: 'rgba(255,255,255,0.55)',
+    color: colors.mu,
     textAlign: 'center',
     lineHeight: 14,
   },
   savingsHeroDivider: {
     width: 1,
     height: 32,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: colors.br,
   },
   savingsHeroBody: {
     fontFamily: fontFamily.body,
     fontSize: 13,
-    color: 'rgba(255,255,255,0.65)',
+    color: colors.mu,
     lineHeight: 20,
   },
   tourBtn: {

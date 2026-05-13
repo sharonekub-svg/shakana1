@@ -3,9 +3,14 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { useRouter } from 'expo-router';
 import {
   BrandPill,
+  Card,
   CelebrationBanner,
+  DemoButton,
+  DemoPage,
+  EmptyNotice,
   ProgressBar,
   SavingsTracker,
+  SectionTitle,
   SelfUpdatingTimerRing,
   StatusRail,
   demoStyles,
@@ -23,7 +28,7 @@ import {
   type OrderStatus,
 } from '@/stores/demoCommerceStore';
 import { fontFamily } from '@/theme/fonts';
-import { colors, radii, shadow } from '@/theme/tokens';
+import { colors } from '@/theme/tokens';
 import { useLocale } from '@/i18n/locale';
 import { formatMoney } from '@/utils/money';
 
@@ -53,20 +58,6 @@ function isDisplayableMerchantOrder(order: DemoOrder) {
     typeof order.createdAt === 'number'
   );
 }
-
-function getOrderPriority(order: DemoOrder, nowMs: number) {
-  if (order.status === 'shipped') return { label: 'Done', tone: 'calm' as const };
-  if (order.status === 'ready') return { label: 'Ship next', tone: 'hot' as const };
-  if (order.status === 'packing') return { label: 'Packing', tone: 'hot' as const };
-  if (order.status === 'accepted') return { label: 'Accepted', tone: 'calm' as const };
-  if (order.closesAt <= nowMs) return { label: 'Timer ended', tone: 'hot' as const };
-  if (order.items.length > 0) return { label: 'New items', tone: 'hot' as const };
-  return { label: 'Collecting', tone: 'calm' as const };
-}
-
-const BAR_BUILDINGS = ['Tower A', 'Tower B', 'Tower C', 'Hillside', 'Garden'];
-const BAR_VALUES = [12, 8, 6, 4, 3];
-const BAR_MAX = 14;
 
 export default function StoreDashboardScreen() {
   const router = useRouter();
@@ -101,12 +92,6 @@ export default function StoreDashboardScreen() {
   const itemsToPick = activeOrders.reduce((total, order) => total + getOrderItemCount(order), 0);
   const totalGmv = visibleStoreOrders.reduce((total, order) => total + getOrderTotal(order), 0);
   const totalSavings = Math.round(visibleStoreOrders.reduce((total, order) => total + getGroupSavings(order), 0));
-  const avgGroupSize = merchantOrders.length > 0
-    ? Math.round((merchantOrders.reduce((sum, o) => sum + o.participants.length, 0) / merchantOrders.length) * 10) / 10
-    : 0;
-  const fulfillmentPct = visibleStoreOrders.length > 0
-    ? Math.round((visibleStoreOrders.filter((o) => o.status === 'shipped').length / visibleStoreOrders.length) * 100)
-    : 96;
 
   const filteredOrders = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -127,161 +112,148 @@ export default function StoreDashboardScreen() {
     });
   }, [filter, nowMs, query, visibleStoreOrders]);
 
-  const selectedStore = storeFilter !== 'all' ? demoStores[storeFilter] : null;
-  const hubName = selectedStore ? `${selectedStore.name.toUpperCase()} · TEL AVIV HUB` : 'ALL STORES · TEL AVIV HUB';
+  const selectedStoreName = storeFilter === 'all' ? 'All stores' : demoStores[storeFilter].name;
 
   return (
-    <ScrollView style={styles.bg} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-
-      {/* Hero header card */}
-      <View style={styles.heroCard}>
-        <View style={styles.heroTop}>
-          <View style={styles.storeBadge}>
-            <Text style={styles.storeBadgeText}>STORE</Text>
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <DemoPage wide>
+        <View style={styles.topBar}>
+          <View>
+            <Text style={styles.logo}>Agent M</Text>
+            <Text style={styles.title}>Merchant dashboard</Text>
+            <Text style={styles.muted}>Choose Zara, Amazon, or H&M, then track only that store's orders and items.</Text>
           </View>
-          <Pressable onPress={() => router.push('/user')} accessibilityRole="button" style={styles.switchBtn}>
-            <Text style={styles.switchBtnText}>User view</Text>
-          </Pressable>
-        </View>
-        <Text style={styles.heroHub}>{hubName}</Text>
-        <Text style={styles.heroSub}>Merchant dashboard · Today</Text>
-
-        {/* Key metrics row */}
-        <View style={styles.heroMetrics}>
-          <View style={styles.heroMetric}>
-            <Text style={styles.heroMetricValue}>{activeOrders.length || 38}</Text>
-            <Text style={styles.heroMetricLabel}>Group orders</Text>
-          </View>
-          <View style={styles.heroMetricDivider} />
-          <View style={styles.heroMetric}>
-            <Text style={styles.heroMetricValue}>{formatMoney(Math.round(totalGmv) || 1482000, language)}</Text>
-            <Text style={styles.heroMetricLabel}>Revenue</Text>
-          </View>
-          <View style={styles.heroMetricDivider} />
-          <View style={styles.heroMetric}>
-            <Text style={styles.heroMetricValue}>{avgGroupSize || 11.2}</Text>
-            <Text style={styles.heroMetricLabel}>Avg group</Text>
-          </View>
-          <View style={styles.heroMetricDivider} />
-          <View style={styles.heroMetric}>
-            <Text style={styles.heroMetricValue}>{fulfillmentPct}%</Text>
-            <Text style={styles.heroMetricLabel}>Fulfillment</Text>
+          <View style={styles.topActions}>
+            <DemoButton label="User view" onPress={() => router.push('/user')} tone="light" style={styles.smallBtn} />
+            <DemoButton label="How it works" onPress={() => router.push('/how-it-works')} tone="light" style={styles.smallBtn} />
+            <DemoButton label="Login" onPress={() => router.push('/login')} tone="light" style={styles.smallBtn} />
           </View>
         </View>
-      </View>
 
-      <CelebrationBanner pulse={lastPulse} />
+        <CelebrationBanner pulse={lastPulse} />
 
-      {/* Store filter tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.storeTabRow}>
-        {STORE_FILTERS.map((brand) => {
-          const store = brand !== 'all' ? demoStores[brand] : null;
-          const active = storeFilter === brand;
-          return (
-            <Pressable
+        <View style={styles.storeSwitcher}>
+          {STORE_FILTERS.map((brand) => (
+            <StoreFilterCard
               key={brand}
-              accessibilityRole="button"
+              brand={brand}
+              orders={brand === 'all' ? merchantOrders : merchantOrders.filter((order) => order.brand === brand)}
+              active={storeFilter === brand}
               onPress={() => setStoreFilter(brand)}
-              style={[styles.storeTab, active && styles.storeTabActive]}
-            >
-              <Text style={[styles.storeTabText, active && styles.storeTabTextActive]}>
-                {store ? store.name : 'All'}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-
-      {/* Bar chart */}
-      <View style={styles.chartCard}>
-        <Text style={styles.chartTitle}>Group orders by building</Text>
-        <View style={styles.chartBars}>
-          {BAR_BUILDINGS.map((building, i) => (
-            <View key={building} style={styles.chartBarCol}>
-              <Text style={styles.chartBarValue}>{BAR_VALUES[i]}</Text>
-              <View style={styles.chartBarTrack}>
-                <View style={[styles.chartBarFill, { height: `${Math.round(((BAR_VALUES[i] ?? 0) / BAR_MAX) * 100)}%` }]} />
-              </View>
-              <Text style={styles.chartBarLabel}>{building}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-
-      {/* Stats grid */}
-      <View style={styles.statsGrid}>
-        <View style={[styles.statCard, styles.statCardHighlight]}>
-          <Text style={styles.statValueHighlight}>{readyToProcess}</Text>
-          <Text style={styles.statLabelHighlight}>Needs action</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{activeOrders.length}</Text>
-          <Text style={styles.statLabel}>Open orders</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{itemsToPick}</Text>
-          <Text style={styles.statLabel}>Items to pick</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{formatMoney(totalSavings, language)}</Text>
-          <Text style={styles.statLabel}>Group savings</Text>
-        </View>
-      </View>
-
-      {/* Order queue */}
-      <View style={styles.queueSection}>
-        <Text style={styles.queueTitle}>Active orders</Text>
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Search order, code, or building"
-          placeholderTextColor={colors.mu2}
-          style={styles.searchInput}
-          accessibilityLabel="Search merchant orders"
-        />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-          {FILTERS.map((option) => (
-            <Pressable
-              key={option.value}
-              accessibilityRole="button"
-              onPress={() => setFilter(option.value)}
-              style={[styles.filterChip, filter === option.value && styles.filterChipActive]}
-            >
-              <Text style={[styles.filterChipText, filter === option.value && styles.filterChipTextActive]}>
-                {option.label}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-      </View>
-
-      {merchantOrders.length === 0 ? (
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>No group orders yet</Text>
-          <Text style={styles.emptyBody}>Create a group order from the user side. It will appear here instantly.</Text>
-        </View>
-      ) : filteredOrders.length === 0 ? (
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>No orders match this view</Text>
-          <Text style={styles.emptyBody}>Clear the search or switch filters.</Text>
-        </View>
-      ) : (
-        <View style={styles.orderList}>
-          {filteredOrders.map((order) => (
-            <OrderQueueCard
-              key={order.id}
-              order={order}
-              nowMs={nowMs}
-              onOpen={() => router.push(`/store/orders/${order.id}`)}
-              onTimerEnd={() => setNowMs(Date.now())}
               language={language}
             />
           ))}
         </View>
-      )}
 
-      <SavingsTracker orders={visibleStoreOrders} activeParticipantId={activeParticipantId} />
+        <View style={styles.metricsGrid}>
+          <Metric label="Needs action" value={String(readyToProcess)} highlight />
+          <Metric label="Open orders" value={String(activeOrders.length)} />
+          <Metric label="Items to pick" value={String(itemsToPick)} />
+          <Metric label="Total GMV" value={formatMoney(Math.round(totalGmv), language)} />
+          <Metric label="Group savings" value={formatMoney(totalSavings, language)} />
+        </View>
+
+        <View style={styles.queueHeader}>
+          <SectionTitle title={`${selectedStoreName} order queue`} kicker="Store-specific work queue" />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search order, code, brand, or address"
+            style={styles.searchInput}
+            accessibilityLabel="Search merchant orders"
+          />
+        </View>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+          {FILTERS.map((option) => (
+            <FilterChip
+              key={option.value}
+              label={option.label}
+              active={filter === option.value}
+              onPress={() => setFilter(option.value)}
+            />
+          ))}
+        </ScrollView>
+
+        {merchantOrders.length === 0 ? (
+          <EmptyNotice
+            title="No group orders yet"
+            body="Open the user demo, choose Amazon, H&M, or Zara, and create a group order. It will appear here instantly."
+          />
+        ) : visibleStoreOrders.length === 0 ? (
+          <EmptyNotice
+            title={`No ${selectedStoreName} orders yet`}
+            body="Choose another store, or create a new group order from the user side for this merchant."
+          />
+        ) : filteredOrders.length === 0 ? (
+          <EmptyNotice
+            title="No orders match this view"
+            body="Clear the search or switch filters to see the rest of the merchant queue."
+          />
+        ) : (
+          <View style={styles.orderList}>
+            {filteredOrders.map((order) => (
+              <OrderQueueCard
+                key={order.id}
+                order={order}
+                nowMs={nowMs}
+                onOpen={() => router.push(`/store/orders/${order.id}`)}
+                onTimerEnd={() => setNowMs(Date.now())}
+                language={language}
+              />
+            ))}
+          </View>
+        )}
+
+        <SavingsTracker orders={visibleStoreOrders} activeParticipantId={activeParticipantId} />
+      </DemoPage>
     </ScrollView>
+  );
+}
+
+function StoreFilterCard({
+  brand,
+  orders,
+  active,
+  onPress,
+  language,
+}: {
+  brand: StoreFilter;
+  orders: DemoOrder[];
+  active: boolean;
+  onPress: () => void;
+  language: 'he' | 'en';
+}) {
+  const label = brand === 'all' ? 'All stores' : demoStores[brand].name;
+  const accent = brand === 'all' ? colors.acc : demoStores[brand].accent;
+  const openOrders = orders.filter((order) => order.status !== 'shipped');
+  const totalItems = orders.reduce((total, order) => total + getOrderItemCount(order), 0);
+  const totalValue = orders.reduce((total, order) => total + getOrderTotal(order), 0);
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.storeFilterCard,
+        active && styles.storeFilterCardActive,
+        { borderColor: active ? accent : colors.br },
+        pressed && demoStyles.pressed,
+      ]}
+    >
+      <View style={styles.storeFilterTop}>
+        {brand === 'all' ? <Text style={styles.storeFilterLogo}>ALL</Text> : <BrandPill brand={brand} />}
+        <Text style={[styles.storeFilterStatus, active && { color: accent }]}>
+          {active ? 'Selected' : 'Open'}
+        </Text>
+      </View>
+      <Text style={styles.storeFilterTitle}>{label}</Text>
+      <Text style={styles.muted}>{openOrders.length} open orders</Text>
+      <View style={styles.storeFilterStats}>
+        <Stat label="Items" value={String(totalItems)} />
+        <Stat label="Value" value={formatMoney(Math.round(totalValue), language)} />
+      </View>
+    </Pressable>
   );
 }
 
@@ -312,366 +284,311 @@ function OrderQueueCard({
       onPress={onOpen}
       style={({ pressed }) => [styles.orderCard, pressed && demoStyles.pressed]}
     >
-      <View style={styles.orderCardTop}>
-        <BrandPill brand={order.brand} />
-        <View style={styles.orderCardMeta}>
-          <Text style={styles.orderCardId}>{order.id}</Text>
-          <Text style={styles.orderCardSub}>
-            Code {order.inviteCode} · {minutesLeft > 0 ? `${minutesLeft}m left` : 'ended'}
-          </Text>
+      <View style={styles.orderHeader}>
+        <View style={styles.brandHeader}>
+          <BrandPill brand={order.brand} />
+          <View style={styles.orderIdentity}>
+            <View style={styles.inlineRow}>
+              <Text style={styles.orderId}>{order.id}</Text>
+              <Text style={[styles.priorityBadge, priority.tone === 'hot' && styles.priorityHot]}>
+                {priority.label}
+              </Text>
+            </View>
+            <Text style={styles.muted}>
+              {store.name} | Code {order.inviteCode} | {minutesLeft > 0 ? `${minutesLeft} min left` : 'timer ended'}
+            </Text>
+          </View>
         </View>
-        <View style={[styles.priorityChip, priority.tone === 'hot' && styles.priorityChipHot]}>
-          <Text style={[styles.priorityChipText, priority.tone === 'hot' && styles.priorityChipTextHot]}>
-            {priority.label}
-          </Text>
+        <View style={styles.orderHeaderRight}>
+          <SelfUpdatingTimerRing
+            closesAt={order.closesAt}
+            createdAt={order.createdAt}
+            onTimerEnd={onTimerEnd}
+            label="left"
+          />
+          <Text style={[styles.statusBadge, { borderColor: store.accent }]}>{merchantState}</Text>
         </View>
       </View>
 
-      <View style={styles.orderCardStats}>
-        <View style={styles.orderStat}>
-          <Text style={styles.orderStatValue}>{order.participants.length}</Text>
-          <Text style={styles.orderStatLabel}>Neighbors</Text>
+      <View style={styles.fulfillmentStrip}>
+        <View>
+          <Text style={styles.fulfillmentTitle}>
+            {totalItems > 0 ? `${totalItems} units ready for picking` : 'Waiting for cart items'}
+          </Text>
+          <Text style={styles.muted}>{order.deliveryAddress || 'Delivery address not added yet'}</Text>
         </View>
-        <View style={styles.orderStat}>
-          <Text style={styles.orderStatValue}>{totalItems}</Text>
-          <Text style={styles.orderStatLabel}>Items</Text>
-        </View>
-        <View style={styles.orderStat}>
-          <Text style={styles.orderStatValue}>{formatMoney(getOrderTotal(order), language)}</Text>
-          <Text style={styles.orderStatLabel}>Total</Text>
-        </View>
-        <View style={styles.orderStat}>
-          <Text style={styles.orderStatValue}>{progress}%</Text>
-          <Text style={styles.orderStatLabel}>Goal</Text>
-        </View>
+        <Text style={styles.openText}>Open order</Text>
+      </View>
+
+      <View style={styles.orderStats}>
+        <Stat label="Participants" value={String(order.participants.length)} />
+        <Stat label="Items" value={String(totalItems)} />
+        <Stat label="Total" value={formatMoney(getOrderTotal(order), language)} />
+        <Stat label="Goal" value={`${progress}%`} />
       </View>
 
       <ProgressBar progress={progress} accent={store.accent} />
+      <Text style={styles.muted}>
+        {formatMoney(getOrderTotal(order), language)} / {formatMoney(FREE_SHIPPING_GOAL, language)} toward free shipping. Group saved {formatMoney(getGroupSavings(order), language)}.
+      </Text>
       <StatusRail status={order.status} />
     </Pressable>
   );
 }
 
+function getOrderPriority(order: DemoOrder, nowMs: number) {
+  if (order.status === 'shipped') return { label: 'Done', tone: 'calm' as const };
+  if (order.status === 'ready') return { label: 'Ship next', tone: 'hot' as const };
+  if (order.status === 'packing') return { label: 'Packing', tone: 'hot' as const };
+  if (order.status === 'accepted') return { label: 'Accepted', tone: 'calm' as const };
+  if (order.closesAt <= nowMs) return { label: 'Timer ended', tone: 'hot' as const };
+  if (order.items.length > 0) return { label: 'New items', tone: 'hot' as const };
+  return { label: 'Collecting', tone: 'calm' as const };
+}
+
+function FilterChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [styles.filterChip, active && styles.filterChipActive, pressed && demoStyles.pressed]}
+    >
+      <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function Metric({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <Card style={highlight ? styles.metricHighlighted : styles.metric}>
+      <Text style={[styles.metricValue, highlight && styles.metricValueHighlighted]}>{value}</Text>
+      <Text style={[styles.muted, highlight && styles.metricLabelHighlighted]}>{label}</Text>
+    </Card>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.stat}>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  bg: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingBottom: 60, gap: 16 },
-  heroCard: {
-    backgroundColor: colors.navy,
-    padding: 24,
-    paddingTop: 56,
-    gap: 12,
-  },
-  heroTop: {
+  scroll: { flex: 1, backgroundColor: colors.bg },
+  content: { flexGrow: 1, width: '100%', maxWidth: 430, alignSelf: 'center' },
+  topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 12,
+    flexWrap: 'wrap',
   },
-  storeBadge: {
-    backgroundColor: colors.acc,
-    borderRadius: radii.pill,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-  },
-  storeBadgeText: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 11,
-    letterSpacing: 2,
-    color: colors.white,
-  },
-  switchBtn: {
-    borderWidth: 1,
-    borderColor: 'rgba(250,246,239,0.2)',
-    borderRadius: radii.pill,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-  },
-  switchBtnText: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 12,
-    color: 'rgba(250,246,239,0.72)',
-  },
-  heroHub: {
-    fontFamily: fontFamily.display,
-    fontSize: 26,
-    color: colors.white,
-    lineHeight: 32,
-  },
-  heroSub: {
-    fontFamily: fontFamily.body,
-    fontSize: 13,
-    color: 'rgba(250,246,239,0.6)',
-  },
-  heroMetrics: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 20,
-    padding: 16,
-    marginTop: 8,
-  },
-  heroMetric: { flex: 1, alignItems: 'center', gap: 4 },
-  heroMetricDivider: {
-    width: 1,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    marginHorizontal: 2,
-  },
-  heroMetricValue: {
-    fontFamily: fontFamily.display,
-    fontSize: 18,
-    color: colors.white,
-  },
-  heroMetricLabel: {
-    fontFamily: fontFamily.body,
-    fontSize: 10,
-    color: 'rgba(250,246,239,0.6)',
-    textAlign: 'center',
-  },
-  storeTabRow: {
-    paddingHorizontal: 18,
-    gap: 8,
-  },
-  storeTab: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.br,
-    backgroundColor: colors.white,
-  },
-  storeTabActive: {
-    backgroundColor: colors.tx,
-    borderColor: colors.tx,
-  },
-  storeTabText: {
+  topActions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  smallBtn: { flexGrow: 1, flexBasis: 132, minHeight: 40 },
+  logo: {
+    color: colors.acc,
     fontFamily: fontFamily.bodyBold,
     fontSize: 13,
-    color: colors.mu,
+    letterSpacing: 0.4,
   },
-  storeTabTextActive: { color: colors.white },
-  chartCard: {
-    marginHorizontal: 18,
-    backgroundColor: colors.white,
-    borderRadius: 26,
-    borderWidth: 1,
-    borderColor: colors.br,
-    padding: 20,
-    ...shadow.card,
-  },
-  chartTitle: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 11,
-    letterSpacing: 1.6,
-    color: colors.mu,
-    textTransform: 'uppercase',
-    marginBottom: 16,
-  },
-  chartBars: {
-    flexDirection: 'row',
-    gap: 8,
-    height: 100,
-    alignItems: 'flex-end',
-  },
-  chartBarCol: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-    height: '100%',
-    justifyContent: 'flex-end',
-  },
-  chartBarValue: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 11,
+  title: {
     color: colors.tx,
+    fontFamily: fontFamily.display,
+    fontSize: 28,
+    lineHeight: 31,
   },
-  chartBarTrack: {
-    width: '100%',
-    height: 64,
-    backgroundColor: colors.s2,
-    borderRadius: 8,
-    justifyContent: 'flex-end',
-    overflow: 'hidden',
-  },
-  chartBarFill: {
-    width: '100%',
-    backgroundColor: colors.acc,
-    borderRadius: 8,
-  },
-  chartBarLabel: {
-    fontFamily: fontFamily.body,
-    fontSize: 9,
-    color: colors.mu2,
-    textAlign: 'center',
-  },
-  statsGrid: {
+  storeSwitcher: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
-    paddingHorizontal: 18,
-  },
-  statCard: {
-    flexGrow: 1,
-    flexBasis: '45%',
-    backgroundColor: colors.white,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: colors.br,
-    padding: 16,
-    gap: 4,
-    ...shadow.card,
-  },
-  statCardHighlight: {
-    backgroundColor: colors.acc,
-    borderColor: colors.acc,
-  },
-  statValue: {
-    fontFamily: fontFamily.display,
-    fontSize: 26,
-    color: colors.tx,
-  },
-  statLabel: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 10,
-    letterSpacing: 1,
-    color: colors.mu,
-    textTransform: 'uppercase',
-  },
-  statValueHighlight: {
-    fontFamily: fontFamily.display,
-    fontSize: 26,
-    color: colors.white,
-  },
-  statLabelHighlight: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 10,
-    letterSpacing: 1,
-    color: 'rgba(250,246,239,0.8)',
-    textTransform: 'uppercase',
-  },
-  queueSection: {
-    paddingHorizontal: 18,
     gap: 12,
   },
-  queueTitle: {
-    fontFamily: fontFamily.display,
-    fontSize: 22,
+  storeFilterCard: {
+    flexGrow: 1,
+    flexBasis: 185,
+    gap: 10,
+    borderRadius: 18,
+    borderWidth: 1,
+    backgroundColor: colors.card,
+    padding: 16,
+  },
+  storeFilterCardActive: {
+    backgroundColor: colors.goldLight,
+  },
+  storeFilterTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  storeFilterLogo: {
+    overflow: 'hidden',
+    borderRadius: 12,
+    backgroundColor: colors.ink,
+    color: colors.white,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  storeFilterStatus: {
+    color: colors.mu,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+  },
+  storeFilterTitle: {
     color: colors.tx,
+    fontFamily: fontFamily.display,
+    fontSize: 24,
+  },
+  storeFilterStats: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  metricsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  metric: {
+    flexGrow: 1,
+    flexBasis: 155,
+    minHeight: 96,
+    justifyContent: 'center',
+  },
+  metricHighlighted: {
+    flexGrow: 1,
+    flexBasis: 155,
+    minHeight: 96,
+    justifyContent: 'center',
+    backgroundColor: colors.ink,
+    borderColor: colors.ink,
+  },
+  metricValue: {
+    color: colors.tx,
+    fontFamily: fontFamily.display,
+    fontSize: 26,
+  },
+  metricValueHighlighted: {
+    color: colors.white,
+    fontSize: 32,
+  },
+  metricLabelHighlighted: {
+    color: 'rgba(255,255,255,0.72)',
+  },
+  queueHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: 12,
+    flexWrap: 'wrap',
   },
   searchInput: {
-    height: 46,
+    flexGrow: 1,
+    flexBasis: 240,
+    maxWidth: 520,
+    minHeight: 46,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.br,
-    backgroundColor: colors.white,
+    borderColor: colors.brBr,
+    backgroundColor: colors.s1,
     color: colors.tx,
     fontFamily: fontFamily.bodySemi,
     fontSize: 14,
     paddingHorizontal: 14,
   },
-  filterRow: { gap: 8, paddingVertical: 2 },
+  filterRow: { gap: 8, paddingVertical: 4 },
   filterChip: {
-    borderRadius: radii.pill,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.br,
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
-  filterChipActive: { backgroundColor: colors.navy, borderColor: colors.navy },
+  filterChipActive: {
+    backgroundColor: colors.ink,
+    borderColor: colors.ink,
+  },
   filterChipText: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 12,
     color: colors.mu,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
   },
   filterChipTextActive: { color: colors.white },
-  emptyCard: {
-    marginHorizontal: 18,
-    backgroundColor: colors.white,
+  orderList: { gap: 12 },
+  orderCard: {
+    gap: 14,
+    padding: 16,
     borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.br,
-    padding: 24,
-    alignItems: 'center',
-    gap: 8,
+    backgroundColor: colors.s1,
+    shadowColor: '#6B4B35',
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
   },
-  emptyTitle: {
-    fontFamily: fontFamily.display,
-    fontSize: 18,
-    color: colors.tx,
-    textAlign: 'center',
-  },
-  emptyBody: {
-    fontFamily: fontFamily.body,
-    fontSize: 13,
-    color: colors.mu,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  orderList: {
-    paddingHorizontal: 18,
-    gap: 12,
-  },
-  orderCard: {
-    backgroundColor: colors.white,
-    borderRadius: 26,
-    borderWidth: 1,
-    borderColor: colors.br,
-    padding: 18,
-    gap: 14,
-    ...shadow.card,
-  },
-  orderCardTop: {
+  orderHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 12,
+    flexWrap: 'wrap',
   },
-  orderCardMeta: { flex: 1 },
-  orderCardId: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 16,
+  brandHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap', flex: 1 },
+  orderIdentity: { flex: 1, minWidth: 210 },
+  inlineRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  orderHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
+  orderId: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 18 },
+  statusBadge: {
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     color: colors.tx,
-  },
-  orderCardSub: {
-    fontFamily: fontFamily.body,
+    fontFamily: fontFamily.bodyBold,
     fontSize: 12,
-    color: colors.mu,
-    marginTop: 2,
   },
-  priorityChip: {
+  priorityBadge: {
+    overflow: 'hidden',
+    borderRadius: 10,
     backgroundColor: colors.s2,
-    borderRadius: radii.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  priorityChipHot: {
-    backgroundColor: colors.accLight,
-  },
-  priorityChipText: {
+    color: colors.mu,
     fontFamily: fontFamily.bodyBold,
     fontSize: 11,
-    color: colors.mu,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
   },
-  priorityChipTextHot: {
+  priorityHot: {
+    backgroundColor: colors.goldLight,
     color: colors.acc,
   },
-  orderCardStats: {
+  fulfillmentStrip: {
     flexDirection: 'row',
-    gap: 8,
-  },
-  orderStat: {
-    flex: 1,
-    backgroundColor: colors.s1,
-    borderRadius: 14,
-    padding: 10,
     alignItems: 'center',
-    gap: 2,
+    justifyContent: 'space-between',
+    gap: 10,
+    flexWrap: 'wrap',
+    borderRadius: 16,
+    backgroundColor: colors.s2,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
-  orderStatValue: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 16,
-    color: colors.tx,
+  fulfillmentTitle: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 14 },
+  openText: { color: colors.acc, fontFamily: fontFamily.bodyBold, fontSize: 13 },
+  orderStats: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  stat: {
+    flexGrow: 1,
+    flexBasis: 100,
+    borderRadius: 16,
+    backgroundColor: colors.s2,
+    padding: 12,
   },
-  orderStatLabel: {
-    fontFamily: fontFamily.body,
-    fontSize: 10,
-    color: colors.mu,
-  },
+  statValue: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 20 },
+  statLabel: { color: colors.mu, fontFamily: fontFamily.body, fontSize: 12 },
+  muted: { color: colors.mu, fontFamily: fontFamily.body, fontSize: 14, lineHeight: 21 },
 });
