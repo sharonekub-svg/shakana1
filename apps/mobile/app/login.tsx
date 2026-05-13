@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import Svg, { Path, Rect } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 
 import { useGoogleSignIn } from '@/api/auth';
 import { initDemoCommerceSync, useDemoCommerceStore } from '@/stores/demoCommerceStore';
@@ -10,6 +10,7 @@ import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { useLocale } from '@/i18n/locale';
 import { env } from '@/lib/env';
+import { ShakanaLogoHero, ShakanaLogoCompact } from '@/components/ShakanaLogo';
 
 const D = {
   bg: '#1B1612',
@@ -22,25 +23,6 @@ const D = {
   gold: '#D29A4A',
 } as const;
 
-function BuildingGlyph() {
-  return (
-    <Svg viewBox="0 0 320 300" width="100%" height="100%" fill="none">
-      <Rect x="60" y="30" width="200" height="240" stroke={D.borderStrong} strokeWidth="1.2" />
-      <Rect x="140" y="240" width="40" height="30" fill="rgba(255,255,255,0.08)" />
-      <Path d="M40 30 L160 5 L280 30" stroke={D.borderStrong} strokeWidth="1.2" />
-      <Path d="M20 283 Q 160 230 300 283" stroke={D.gold} strokeWidth="1.2" strokeDasharray="2 5" />
-      {([75, 115, 155, 195] as const).map((y, ri) =>
-        ([80, 130, 175, 220] as const).map((x, ci) => {
-          const lit = (ri + ci) % 3 !== 0;
-          return (
-            <Rect key={`${x}-${y}`} x={x} y={y} width="20" height="26"
-              fill={lit ? D.acc : 'rgba(255,255,255,0.05)'} opacity={lit ? 0.75 : 1} />
-          );
-        })
-      )}
-    </Svg>
-  );
-}
 
 function GoogleIcon() {
   return (
@@ -83,7 +65,7 @@ export default function LoginScreen() {
     <ScrollView style={s.bg} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
 
       <View style={s.header}>
-        <Text style={s.wordmark}>shakana</Text>
+        <ShakanaLogoCompact light size={26} />
         <View style={s.langRow}>
           <Pressable onPress={() => void setLanguage('en')} accessibilityRole="button"
             style={[s.langBtn, language === 'en' && s.langBtnActive]}>
@@ -96,12 +78,12 @@ export default function LoginScreen() {
         </View>
       </View>
 
-      <View style={s.glyphWrap}>
-        <BuildingGlyph />
+      <View style={s.logoHeroWrap}>
+        <ShakanaLogoHero width={300} />
       </View>
 
       <View style={s.heroText}>
-        <Text style={s.kicker}>SHAKANA · שכנה</Text>
+        <Text style={s.kicker}>שכנה · neighbors</Text>
         <Text style={s.headline}>
           {isHebrew ? 'קנייה קבוצתית\nלשכנים בבניין' : 'Group buying\nfor building neighbors'}
         </Text>
@@ -172,7 +154,7 @@ const s = StyleSheet.create({
     paddingTop: 56,
     paddingBottom: 8,
   },
-  wordmark: { fontFamily: fontFamily.display, fontSize: 24, color: D.paper, letterSpacing: 0.5 },
+  wordmark: { fontFamily: fontFamily.display, fontSize: 22, color: D.paper, letterSpacing: 0.5 },
   langRow: {
     flexDirection: 'row', gap: 4, backgroundColor: D.surface, borderRadius: radii.pill,
     padding: 3, borderWidth: 1, borderColor: D.border,
@@ -181,7 +163,7 @@ const s = StyleSheet.create({
   langBtnActive: { backgroundColor: colors.acc },
   langBtnText: { fontFamily: fontFamily.bodyBold, fontSize: 12, color: D.paperMu },
   langBtnTextActive: { color: D.paper },
-  glyphWrap: { height: 240, marginTop: 16, marginBottom: 8 },
+  logoHeroWrap: { alignItems: 'center', marginTop: 20, marginBottom: 16 },
   heroText: { gap: 10, marginBottom: 32 },
   kicker: { fontFamily: fontFamily.bodyBold, fontSize: 11, letterSpacing: 2.4, color: D.acc },
   headline: { fontFamily: fontFamily.display, fontSize: 38, lineHeight: 44, color: D.paper },

@@ -1,5 +1,6 @@
 import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Card } from '@/components/demo/DemoPrimitives';
+import { ShakanaLogoCompact } from '@/components/ShakanaLogo';
 import { demoStores } from '@/demo/catalog';
 import { fontFamily } from '@/theme/fonts';
 import { colors, radii, shadow } from '@/theme/tokens';
@@ -84,11 +85,7 @@ export function BuildingSections({
     <View style={styles.wrap}>
       <View style={styles.topBar}>
         <View style={styles.brandBlock}>
-          <HomeMark />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.brandTag}>SHAKANA</Text>
-            <Text style={styles.brandTitle}>Smart order flow</Text>
-          </View>
+          <ShakanaLogoCompact size={30} />
         </View>
         <Pressable style={styles.topAction} onPress={onOpenLogin}>
           <Text style={styles.topActionText}>Login</Text>
