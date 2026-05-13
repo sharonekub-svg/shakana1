@@ -141,7 +141,7 @@ export default function StoreOrderDetailScreen() {
             <Metric label="Status" value={merchantState} />
             <Metric label="Participants" value={String(order.participants.length)} />
             <Metric label="Total items" value={String(getOrderItemCount(order))} />
-            <Metric label="Total price" value={`₪${getOrderTotal(order)}`} />
+            <Metric label="Total price" value={`ILS ${getOrderTotal(order)}`} />
             <Metric label="Delivery" value={deliveryAddressReady ? 'Exact address ready' : 'Needs number'} />
           </View>
 
@@ -224,7 +224,7 @@ export default function StoreOrderDetailScreen() {
                             <View style={{ flex: 1 }}>
                               <Text style={styles.itemName}>{line.displayName}</Text>
                               <Text style={styles.muted}>
-                                {item.quantity}x | Size {item.size} | {item.color} | ₪{line.lineTotal}
+                                {item.quantity}x | Size {item.size} | {item.color} | ILS {line.lineTotal}
                                 {item.private ? ' | Private for friends' : ''}
                               </Text>
                             </View>

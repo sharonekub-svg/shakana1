@@ -23,19 +23,19 @@ export default function InviteSheet() {
   const copy = isHebrew
     ? {
         createError: 'לא הצלחנו ליצור קישור הזמנה.',
-        shareMessage: 'פתח את Shakana כדי להצטרף להזמנה ולראות את כל הפרטים.',
+        shareMessage: '�ILS תח את Shakana כדי להצטרף להזמנה ולראות את כל ה�ILS רטים.',
         shareError: 'השיתוף נכשל.',
         copied: 'קישור ההזמנה הועתק.',
         title: 'הזמן שכנים',
         lead:
-          'שלח את הקישור לחשבון אחר. אחרי התחברות והשלמת כתובת, החבר יצטרף לאותה הזמנה, יראה את הסל המלא ויוכל להוסיף מוצר לפני שהטיימר נסגר.',
+          'שלח את הקישור לחשבון אחר. אחרי התחברות והשלמת כתובת, החבר יצטרף לאותה הזמנה, יראה את הסל המלא ויוכל להוסיף מוצר ל�ILS ני שהטיימר נסגר.',
         stepsTitle: 'איך השיתוף עובד',
-        step1: '1. מעתיקים או משתפים את קישור ההזמנה.',
-        step2: '2. החבר פותח את הקישור ומתחבר עם החשבון שלו.',
-        step3: '3. Shakana מצרפת אותו להזמנה המדויקת הזאת.',
-        step4: '4. בדמו הזה התשלום מדולג, אז אפשר מיד להוסיף מוצר לסל.',
+        step1: '1. מעתיקים או משת�ILS ים את קישור ההזמנה.',
+        step2: '2. החבר �ILS ותח את הקישור ומתחבר עם החשבון שלו.',
+        step3: '3. Shakana מצר�ILS ת אותו להזמנה המדויקת הזאת.',
+        step4: '4. בדמו הזה התשלום מדולג, אז א�ILS שר מיד להוסיף מוצר לסל.',
         tapCopy: 'לחץ להעתקה',
-        directLink: 'קישור ישיר לאפליקציה',
+        directLink: 'קישור ישיר לא�ILS ליקציה',
         creating: 'יוצר...',
         shareButton: 'שתף קישור עם חבר',
         back: 'חזרה להזמנה',
@@ -47,7 +47,7 @@ export default function InviteSheet() {
         copied: 'Invite link copied.',
         title: 'Invite neighbors',
         lead:
-          'Send this link to another account. After they sign in and finish their address, they will join the same order, see the full cart, and add their own product before the timer closes.',
+          'Send this link to another account. After they sign in and fiILSh their address, they will join the same order, see the full cart, and add their own product before the timer closes.',
         stepsTitle: 'How the share flow works',
         step1: '1. Copy or share this invite link.',
         step2: '2. Your friend opens it and logs in with their own account.',
@@ -89,7 +89,7 @@ export default function InviteSheet() {
     : (isHebrew ? 'ההזמנה שלי' : 'my order');
   let smartShareMessage: string;
   if (isHebrew) {
-    const parts: string[] = ['פתחתי הזמנה קבוצתית ב-Shakana'];
+    const parts: string[] = ['�ILS תחתי הזמנה קבוצתית ב-Shakana'];
     if (productTitle && productTitle !== 'ההזמנה שלי') parts.push(`מוצר: ${productTitle}`);
     if (order?.store_label && order.store_label !== 'Manual store') parts.push(`חנות: ${order.store_label}`);
     const closesAt = order?.closes_at ? new Date(order.closes_at) : null;
@@ -100,9 +100,9 @@ export default function InviteSheet() {
       const timeStr = hLeft > 0 ? `${hLeft} שעות ו-${mLeft} דקות` : `${mLeft} דקות`;
       parts.push(`נסגר בעוד: ${timeStr}`);
     }
-    if (deliveryFee > 0) parts.push(`דמי משלוח נוכחיים: ₪${Math.ceil(deliveryFee / (participantCount * 100))}`);
-    if (freeShippingGap > 0) parts.push(`חסר למשלוח חינם: ₪${Math.ceil(freeShippingGap / 100)}`);
-    if (participantCount > 1) parts.push(`הצטרפו: ${participantCount} שכנים`);
+    if (deliveryFee > 0) parts.push(`דמי משלוח נוכחיים: ILS ${Math.ceil(deliveryFee / (participantCount * 100))}`);
+    if (freeShippingGap > 0) parts.push(`חסר למשלוח חינם: ILS ${Math.ceil(freeShippingGap / 100)}`);
+    if (participantCount > 1) parts.push(`הצטר�ILS ו: ${participantCount} שכנים`);
     smartShareMessage = parts.join('\n');
   } else {
     const parts: string[] = ['I opened a group order on Shakana'];
@@ -116,8 +116,8 @@ export default function InviteSheet() {
       const timeStr = hLeft > 0 ? `${hLeft}h ${mLeft}m` : `${mLeft}m`;
       parts.push(`Closes in: ${timeStr}`);
     }
-    if (deliveryFee > 0) parts.push(`Current delivery per person: ₪${Math.ceil(deliveryFee / (participantCount * 100))}`);
-    if (freeShippingGap > 0) parts.push(`Missing for free shipping: ₪${Math.ceil(freeShippingGap / 100)}`);
+    if (deliveryFee > 0) parts.push(`Current delivery per person: ILS ${Math.ceil(deliveryFee / (participantCount * 100))}`);
+    if (freeShippingGap > 0) parts.push(`Missing for free shipping: ILS ${Math.ceil(freeShippingGap / 100)}`);
     if (participantCount > 1) parts.push(`Joined: ${participantCount} neighbors`);
     smartShareMessage = parts.join('\n');
   }
@@ -165,7 +165,7 @@ export default function InviteSheet() {
           </Text>
           <Text style={styles.oneLinkBody}>
             {isHebrew
-              ? 'החבר פותח, מתחבר עם החשבון שלו, ונכנס לאותה הזמנה עם אותו סל.'
+              ? 'החבר �ILS ותח, מתחבר עם החשבון שלו, ונכנס לאותה הזמנה עם אותו סל.'
               : 'Your friend opens it, signs in with their own account, and lands inside the same shared order.'}
           </Text>
           {gen.isPending || !token ? (

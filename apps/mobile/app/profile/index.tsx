@@ -3,37 +3,37 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import * as Clipboard from 'expo-clipboard';
 import { type Href, useRouter } from 'expo-router';
 
+import { useGoogleSignIn, useSignOut } from '@/api/auth';
 import { ScreenBase } from '@/components/primitives/ScreenBase';
-import { useAuthStore } from '@/stores/authStore';
-import { useSignOut } from '@/api/auth';
-import { resetAnalytics } from '@/lib/posthog';
 import { stashPendingInvite } from '@/lib/deeplinks';
-import { colors, radii, shadow } from '@/theme/tokens';
-import { fontFamily } from '@/theme/fonts';
+import { resetAnalytics } from '@/lib/posthog';
 import { useLocale } from '@/i18n/locale';
-import { usePaymentSettingsStore, type PaymentMethodKey } from '@/stores/paymentSettingsStore';
-import { useNotificationSettingsStore } from '@/stores/notificationSettingsStore';
+import { useAuthStore } from '@/stores/authStore';
 import {
   getDemoOrderStats,
   getParticipantSuccessCount,
   getVisibleOrdersForParticipant,
   useDemoCommerceStore,
 } from '@/stores/demoCommerceStore';
+import { useNotificationSettingsStore } from '@/stores/notificationSettingsStore';
+import { usePaymentSettingsStore, type PaymentMethodKey } from '@/stores/paymentSettingsStore';
+import { fontFamily } from '@/theme/fonts';
+import { colors, radii, shadow } from '@/theme/tokens';
 
-const PAYMENT_METHODS: Array<{ key: PaymentMethodKey; label: string; placeholder: string }> = [
-  { key: 'bit', label: 'Bit', placeholder: '050... or Bit link' },
-  { key: 'paybox', label: 'PayBox', placeholder: 'PayBox link' },
-  { key: 'paypal', label: 'PayPal', placeholder: 'paypal.me/name or email' },
-  { key: 'cash', label: 'Cash / other', placeholder: 'Cash on pickup, bank transfer...' },
+const PAYMENT_METHODS: Array<{ key: PaymentMethodKey; label: string; placeholder: string; icon: string }> = [
+  { key: 'bit', label: 'Bit', placeholder: '050... or Bit link', icon: 'BT' },
+  { key: 'paybox', label: 'PayBox', placeholder: 'PayBox link', icon: 'PB' },
+  { key: 'paypal', label: 'PayPal', placeholder: 'paypal.me/name or email', icon: 'PP' },
+  { key: 'cash', label: 'Cash / other', placeholder: 'Cash on pickup, bank transfer...', icon: 'CA' },
 ];
 
-const LEGAL_LINKS: Array<{ href: Href; label: string; note: string }> = [
-  { href: '/profile/privacy', label: 'Privacy Policy', note: 'Data, orders, and account use' },
-  { href: '/profile/terms', label: 'Terms & Conditions', note: 'Rules for using Shakana' },
-  { href: '/profile/cookies', label: 'Cookie Consent', note: 'EU GDPR consent controls' },
-  { href: '/profile/security', label: 'Auth & security', note: 'Login, reset, OAuth, rate limits' },
-  { href: '/profile/support', label: 'Contact support', note: 'Support email' },
-  { href: '/profile/bug-report', label: 'Bug report', note: 'Send a reproducible issue' },
+const HELP_LINKS: Array<{ href: Href; label: string; note: string; icon: string }> = [
+  { href: '/profile/security', label: 'Auth & security', note: 'Login, reset, OAuth, rate limits', icon: 'SC' },
+  { href: '/profile/support', label: 'Contact support', note: 'Support email', icon: 'SP' },
+  { href: '/profile/bug-report', label: 'Bug report', note: 'Send a reproducible issue', icon: 'BR' },
+  { href: '/profile/privacy', label: 'Privacy Policy', note: 'Data, orders, and account use', icon: 'PR' },
+  { href: '/profile/terms', label: 'Terms & Conditions', note: 'Rules for using Shakana', icon: 'TC' },
+  { href: '/profile/cookies', label: 'Cookie Consent', note: 'EU GDPR consent controls', icon: 'CK' },
 ];
 
 export default function ProfileScreen() {
@@ -41,6 +41,7 @@ export default function ProfileScreen() {
   const { language } = useLocale();
   const isHebrew = language === 'he';
   const signOut = useSignOut();
+  const googleSignIn = useGoogleSignIn();
   const session = useAuthStore((s) => s.session);
   const profile = useAuthStore((s) => s.profile);
   const resetAuth = useAuthStore((s) => s.reset);
@@ -79,20 +80,22 @@ export default function ProfileScreen() {
   );
   const stats = getDemoOrderStats(visibleDemoOrders);
   const personalSaves = getParticipantSuccessCount(visibleDemoOrders, accountParticipantId);
-  const readyPayments = Object.values(paymentSettings).filter(
-    (method) => method.enabled && method.link.trim().length > 0,
-  ).length;
+  const readyPayments = Object.values(paymentSettings).filter((method) => method.enabled && method.link.trim()).length;
   const openOrders = visibleDemoOrders.filter((order) => order.status !== 'shipped').length;
   const latestOrder = visibleDemoOrders[0] ?? null;
   const savingsThisYear = Math.round(stats.totalSavings);
-  const verifiedBadge = session ? 'Verified member' : 'Guest mode';
   const initial = displayName.charAt(0).toUpperCase() || 'S';
   const email = session?.user.email ?? 'Sign in to attach orders to your account';
+
+  const savePulse = (message: string) => {
+    setSavedPulse(message);
+    globalThis.setTimeout(() => setSavedPulse(''), 1800);
+  };
 
   const joinByCode = async () => {
     const code = joinCode.replace(/\D/g, '').slice(0, 4);
     if (code.length !== 4) {
-      setSavedPulse('Enter a 4-digit invite code first.');
+      savePulse('Enter a 4-digit invite code first.');
       return;
     }
     if (!session) {
@@ -101,6 +104,15 @@ export default function ProfileScreen() {
       return;
     }
     router.push(`/user?join=${code}` as Href);
+  };
+
+  const copyLatestInvite = async () => {
+    if (!latestOrder) {
+      savePulse('Create an order first, then copy its invite.');
+      return;
+    }
+    await Clipboard.setStringAsync(`https://shakana1.vercel.app/join/${latestOrder.inviteCode}`);
+    savePulse(`Invite ${latestOrder.inviteCode} copied`);
   };
 
   const onSignOut = async () => {
@@ -113,31 +125,17 @@ export default function ProfileScreen() {
     }
   };
 
-  const savePulse = (message: string) => {
-    setSavedPulse(message);
-    globalThis.setTimeout(() => setSavedPulse(''), 1800);
-  };
-
-  const copyLatestInvite = async () => {
-    if (!latestOrder) {
-      savePulse('Create an order first, then copy its invite.');
-      return;
-    }
-    await Clipboard.setStringAsync(`https://shakana1.vercel.app/join/${latestOrder.inviteCode}`);
-    savePulse(`Invite ${latestOrder.inviteCode} copied`);
-  };
-
   return (
     <ScreenBase padded={false}>
       <ScrollView contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <View style={styles.headerCopy}>
-            <Text style={styles.brand}>SHAKANA</Text>
-            <Text style={styles.title}>{isHebrew ? 'Profile' : 'Profile'}</Text>
-            <Text style={styles.subtitle}>
-              Account, wallet settings, joins, legal, and support in one clean place.
-            </Text>
-          </View>
+          <Text style={styles.brand}>SHAKANA</Text>
+          <Text style={styles.title}>{isHebrew ? 'הפרופיל שלי' : 'My profile'}</Text>
+          <Text style={styles.subtitle}>
+            {isHebrew
+              ? 'הזמנות, תשלומים, התראות ותמיכה במקום אחד ברור.'
+              : 'Orders, payments, alerts, and support in one simple account hub.'}
+          </Text>
         </View>
 
         <View style={styles.identityCard}>
@@ -147,15 +145,17 @@ export default function ProfileScreen() {
           <View style={styles.identityCopy}>
             <Text style={styles.name} numberOfLines={1}>{displayName}</Text>
             <Text style={styles.email} numberOfLines={1}>{email}</Text>
-            <Text style={styles.verifiedBadge}>{verifiedBadge}</Text>
+            <Text style={styles.verifiedBadge}>{session ? 'Verified member' : 'Guest mode'}</Text>
           </View>
           <Pressable
             accessibilityRole="button"
-            onPress={session ? onSignOut : () => router.push('/login')}
-            disabled={signOut.isPending}
-            style={[styles.authPill, signOut.isPending && { opacity: 0.55 }]}
+            onPress={session ? onSignOut : () => googleSignIn.mutate()}
+            disabled={signOut.isPending || googleSignIn.isPending}
+            style={({ pressed }) => [styles.authPill, pressed && styles.pressed]}
           >
-            <Text style={styles.authPillText}>{signOut.isPending ? 'Signing out...' : session ? 'Sign out' : 'Sign in'}</Text>
+            <Text style={styles.authPillText}>
+              {signOut.isPending ? 'Signing out...' : googleSignIn.isPending ? 'Opening...' : session ? 'Sign out' : 'Sign in'}
+            </Text>
           </Pressable>
         </View>
 
@@ -165,16 +165,24 @@ export default function ProfileScreen() {
           </View>
         ) : null}
 
-        <View style={styles.quickGrid}>
-          <QuickAction title="New Order" body="Choose Amazon, H&M, or Zara and open a new cart." badge="+" primary onPress={() => router.push('/new-order' as Href)} />
-          <QuickAction title="Open orders" body="Live carts you are tracking now." badge={String(openOrders)} onPress={() => router.push('/user')} />
-          <QuickAction title="Store mode" body="Merchant dashboard for active orders." badge="M" onPress={() => router.push('/store')} />
-          <QuickAction title="Copy invite" body="Copy the latest short WhatsApp link." badge="Go" onPress={copyLatestInvite} />
+        <View style={styles.actionHub}>
+          <View style={styles.hubHeader}>
+            <View>
+              <Text style={styles.sectionEyebrow}>Start here</Text>
+              <Text style={styles.hubTitle}>Main actions</Text>
+            </View>
+            <Text style={styles.hubMeta}>{openOrders} open</Text>
+          </View>
+          <View style={styles.quickGrid}>
+            <QuickAction title="New order" body="Store, timer, address." badge="NO" primary onPress={() => router.push('/new-order' as Href)} />
+            <QuickAction title="My orders" body="Open carts and history." badge="MO" onPress={() => router.push('/user')} />
+            <QuickAction title="Copy invite" body="Share latest cart link." badge="SH" onPress={copyLatestInvite} />
+            <QuickAction title="Store view" body="Merchant dashboard." badge="ST" onPress={() => router.push('/store')} />
+          </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Join an order</Text>
-          <Text style={styles.sectionBody}>Paste the 4-digit code from WhatsApp. Invite links still open directly.</Text>
+          <SectionHeader icon="JO" title="Join an order" body="Enter the WhatsApp code. Invite links still open directly." />
           <View style={styles.joinRow}>
             <TextInput
               value={joinCode}
@@ -185,35 +193,38 @@ export default function ProfileScreen() {
               style={styles.joinInput}
               accessibilityLabel="Join code"
             />
-            <Pressable
-              accessibilityRole="button"
-              onPress={joinByCode}
-              style={({ pressed }) => [styles.joinButton, pressed && styles.pressed]}
-            >
+            <Pressable accessibilityRole="button" onPress={joinByCode} style={({ pressed }) => [styles.joinButton, pressed && styles.pressed]}>
               <Text style={styles.joinButtonText}>Join</Text>
             </Pressable>
           </View>
         </View>
 
         <View style={styles.statsGrid}>
-          <Stat label="Open" value={String(openOrders)} />
-          <Stat label="Completed" value={String(stats.shippedOrders)} />
-          <Stat label="My saves" value={String(personalSaves)} />
-          <Stat label="Saved this year" value={`NIS ${savingsThisYear}`} />
-          <Stat label="Wallets" value={String(readyPayments)} />
+          <Stat icon="OP" label="Open" value={String(openOrders)} />
+          <Stat icon="CP" label="Completed" value={String(stats.shippedOrders)} />
+          <Stat icon="SV" label="My saves" value={String(personalSaves)} />
+          <Stat icon="IL" label="Saved this year" value={`ILS ${savingsThisYear}`} />
+          <Stat icon="WL" label="Wallets" value={String(readyPayments)} />
         </View>
 
         <View style={styles.savingsHero}>
-          <Text style={styles.savingsHeroValue}>NIS {savingsThisYear}</Text>
-          <Text style={styles.savingsHeroTitle}>Personal savings tracker</Text>
-          <Text style={styles.sectionBody}>
-            Your completed group orders feed this total. It gives returning users a clear reason to keep using Shakana.
-          </Text>
+          <IconBadge label="IL" large />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.savingsHeroValue}>ILS {savingsThisYear}</Text>
+            <Text style={styles.savingsHeroTitle}>Personal savings tracker</Text>
+            <Text style={styles.sectionBody}>Your completed group orders feed this number automatically.</Text>
+          </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Wallets & payment</Text>
-          <Text style={styles.sectionBody}>Turn on the methods people can use to pay you before joining a shared order.</Text>
+          <SectionHeader icon="AL" title="Notifications" body="Each alert has a clear badge so users know what they are changing." />
+          <ToggleRow icon="OU" label="Order updates" desc="Packing, ready, shipped, and merchant changes." value={notificationSettings.orderUpdates} onPress={() => void setNotification('orderUpdates', !notificationSettings.orderUpdates)} />
+          <ToggleRow icon="PR" label="Payment reminders" desc="Remind participants before the timer closes." value={notificationSettings.paymentReminders} onPress={() => void setNotification('paymentReminders', !notificationSettings.paymentReminders)} />
+          <ToggleRow icon="BO" label="Building orders" desc="Alerts when someone in your building opens an order." value={notificationSettings.buildingOrderAlerts} onPress={() => void setNotification('buildingOrderAlerts', !notificationSettings.buildingOrderAlerts)} />
+        </View>
+
+        <View style={styles.section}>
+          <SectionHeader icon="WL" title="Wallets & payment" body="Choose which payment methods people can use with you." />
           <View style={styles.paymentList}>
             {PAYMENT_METHODS.map((method) => {
               const setting = paymentSettings[method.key];
@@ -228,6 +239,7 @@ export default function ProfileScreen() {
                     }}
                     style={styles.paymentTop}
                   >
+                    <IconBadge label={method.icon} />
                     <Text style={styles.paymentTitle}>{method.label}</Text>
                     <View style={[styles.switch, setting.enabled && styles.switchOn]}>
                       <Text style={[styles.switchText, setting.enabled && styles.switchTextOn]}>{setting.enabled ? 'ON' : 'OFF'}</Text>
@@ -251,37 +263,11 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Alerts</Text>
-          <ToggleRow
-            label="Order updates"
-            desc="Status changes, packing, ready, and shipped."
-            value={notificationSettings.orderUpdates}
-            onPress={() => void setNotification('orderUpdates', !notificationSettings.orderUpdates)}
-          />
-          <ToggleRow
-            label="Payment reminders"
-            desc="Remind participants before the timer closes."
-            value={notificationSettings.paymentReminders}
-            onPress={() => void setNotification('paymentReminders', !notificationSettings.paymentReminders)}
-          />
-          <ToggleRow
-            label="Building orders"
-            desc="Optional alerts when someone in your building opens an order."
-            value={notificationSettings.buildingOrderAlerts}
-            onPress={() => void setNotification('buildingOrderAlerts', !notificationSettings.buildingOrderAlerts)}
-          />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Legal, security & support</Text>
+          <SectionHeader icon="HL" title="Help, legal & security" body="Support and legal pages are grouped together and easy to scan." />
           <View style={styles.linkList}>
-            {LEGAL_LINKS.map((item) => (
-              <Pressable
-                key={String(item.href)}
-                accessibilityRole="button"
-                onPress={() => router.push(item.href)}
-                style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
-              >
+            {HELP_LINKS.map((item) => (
+              <Pressable key={String(item.href)} accessibilityRole="button" onPress={() => router.push(item.href)} style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}>
+                <IconBadge label={item.icon} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.linkText}>{item.label}</Text>
                   <Text style={styles.linkNote}>{item.note}</Text>
@@ -312,60 +298,59 @@ export default function ProfileScreen() {
   );
 }
 
-function QuickAction({
-  title,
-  body,
-  badge,
-  primary,
-  onPress,
-}: {
-  title: string;
-  body: string;
-  badge: string;
-  primary?: boolean;
-  onPress: () => void;
-}) {
+function IconBadge({ label, small = false, large = false }: { label: string; small?: boolean; large?: boolean }) {
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.quickCard,
-        primary && styles.quickCardPrimary,
-        pressed && styles.pressed,
-      ]}
-    >
-      <View style={[styles.quickBadge, primary && styles.quickBadgePrimary]}>
-        <Text style={styles.quickBadgeText}>{badge}</Text>
-      </View>
-      <Text style={styles.quickTitle}>{title}</Text>
-      <Text style={styles.quickBody}>{body}</Text>
-    </Pressable>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.statCard}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+    <View style={[styles.iconBadge, small && styles.iconBadgeSmall, large && styles.iconBadgeLarge]}>
+      <Text style={[styles.iconBadgeText, small && styles.iconBadgeTextSmall, large && styles.iconBadgeTextLarge]}>{label}</Text>
     </View>
   );
 }
 
-function ToggleRow({
-  label,
-  desc,
-  value,
-  onPress,
-}: {
-  label: string;
-  desc: string;
-  value: boolean;
-  onPress: () => void;
-}) {
+function SectionHeader({ icon, title, body }: { icon: string; title: string; body: string }) {
+  return (
+    <View style={styles.sectionHeader}>
+      <IconBadge label={icon} />
+      <View style={{ flex: 1 }}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <Text style={styles.sectionBody}>{body}</Text>
+      </View>
+    </View>
+  );
+}
+
+function QuickAction({ title, body, badge, primary, onPress }: { title: string; body: string; badge: string; primary?: boolean; onPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.quickCard, primary && styles.quickCardPrimary, pressed && styles.pressed]}>
+      <View style={styles.quickTop}>
+        <View style={[styles.quickBadge, primary && styles.quickBadgePrimary]}>
+          <Text style={[styles.quickBadgeText, primary && styles.quickBadgeTextPrimary]}>{badge}</Text>
+        </View>
+        <Text style={[styles.quickArrow, primary && styles.quickArrowPrimary]}>{'>'}</Text>
+      </View>
+      <View>
+        <Text style={[styles.quickTitle, primary && styles.quickTitlePrimary]}>{title}</Text>
+        <Text style={[styles.quickBody, primary && styles.quickBodyPrimary]}>{body}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+function Stat({ icon, label, value }: { icon: string; label: string; value: string }) {
+  return (
+    <View style={styles.statCard}>
+      <IconBadge label={icon} small />
+      <View style={{ flex: 1 }}>
+        <Text style={styles.statValue}>{value}</Text>
+        <Text style={styles.statLabel}>{label}</Text>
+      </View>
+    </View>
+  );
+}
+
+function ToggleRow({ icon, label, desc, value, onPress }: { icon: string; label: string; desc: string; value: boolean; onPress: () => void }) {
   return (
     <Pressable accessibilityRole="switch" accessibilityState={{ checked: value }} onPress={onPress} style={styles.toggleRow}>
+      <IconBadge label={icon} />
       <View style={{ flex: 1, gap: 4 }}>
         <Text style={styles.toggleTitle}>{label}</Text>
         <Text style={styles.toggleDesc}>{desc}</Text>
@@ -378,18 +363,17 @@ function ToggleRow({
 }
 
 const styles = StyleSheet.create({
-  screen: { flexGrow: 1, width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: 14, paddingTop: 14, paddingBottom: 104, gap: 14 },
-  header: { gap: 8 },
-  headerCopy: { flex: 1, gap: 4 },
-  brand: { color: colors.gold, fontFamily: fontFamily.bodyBold, fontSize: 11, letterSpacing: 2 },
-  title: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 34, lineHeight: 38 },
-  subtitle: { color: colors.mu, fontFamily: fontFamily.body, fontSize: 14, lineHeight: 21 },
+  screen: { flexGrow: 1, width: '100%', maxWidth: 780, alignSelf: 'center', paddingHorizontal: 14, paddingTop: 14, paddingBottom: 104, gap: 14 },
+  header: { gap: 5, paddingTop: 4 },
+  brand: { color: colors.acc, fontFamily: fontFamily.bodyBold, fontSize: 11, letterSpacing: 2 },
+  title: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 36, lineHeight: 40 },
+  subtitle: { color: colors.mu, fontFamily: fontFamily.body, fontSize: 14, lineHeight: 21, maxWidth: 520 },
   identityCard: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
     gap: 12,
-    padding: 14,
+    padding: 16,
     borderRadius: radii.xl,
     backgroundColor: colors.s1,
     borderWidth: 1,
@@ -397,16 +381,16 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   avatar: {
-    width: 58,
-    height: 58,
-    borderRadius: radii.pill,
+    width: 62,
+    height: 62,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.goldLight,
+    backgroundColor: colors.accLight,
     borderWidth: 1,
     borderColor: colors.br,
   },
-  avatarText: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 23 },
+  avatarText: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 24 },
   identityCopy: { flex: 1, minWidth: 0 },
   name: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 18 },
   email: { marginTop: 3, color: colors.mu, fontFamily: fontFamily.body, fontSize: 13 },
@@ -423,9 +407,9 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   authPill: {
-    minHeight: 40,
-    borderRadius: radii.pill,
-    paddingHorizontal: 14,
+    minHeight: 42,
+    borderRadius: radii.lg,
+    paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.acc,
@@ -440,34 +424,52 @@ const styles = StyleSheet.create({
     borderColor: colors.br,
   },
   toastText: { color: colors.acc, fontFamily: fontFamily.bodyBold, fontSize: 13 },
+  actionHub: {
+    gap: 12,
+    padding: 15,
+    borderRadius: radii.xl,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.br,
+    ...shadow.card,
+  },
+  hubHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 },
+  sectionEyebrow: { color: colors.acc, fontFamily: fontFamily.bodyBold, fontSize: 10, letterSpacing: 1.6, textTransform: 'uppercase' },
+  hubTitle: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 18 },
+  hubMeta: { color: colors.mu, fontFamily: fontFamily.bodyBold, fontSize: 12 },
   quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   quickCard: {
     flexGrow: 1,
-    flexBasis: 148,
-    minHeight: 144,
-    borderRadius: radii.xl,
-    padding: 15,
-    backgroundColor: colors.s1,
+    flexBasis: 150,
+    minHeight: 132,
+    borderRadius: radii.lg,
+    padding: 14,
+    backgroundColor: colors.s2,
     borderWidth: 1,
     borderColor: colors.br,
     justifyContent: 'space-between',
-    ...shadow.card,
   },
   quickCardPrimary: { backgroundColor: colors.acc, borderColor: colors.acc },
+  quickTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   quickBadge: {
     width: 42,
     height: 42,
-    borderRadius: radii.pill,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.bg,
+    backgroundColor: colors.s1,
     borderWidth: 1,
     borderColor: colors.br,
   },
-  quickBadgePrimary: { backgroundColor: 'rgba(255,255,255,0.34)', borderColor: 'rgba(255,255,255,0.38)' },
-  quickBadgeText: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 19 },
-  quickTitle: { marginTop: 10, color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 17 },
-  quickBody: { marginTop: 5, color: colors.mu, fontFamily: fontFamily.body, fontSize: 13, lineHeight: 19 },
+  quickBadgePrimary: { backgroundColor: 'rgba(250,246,239,0.18)', borderColor: 'rgba(250,246,239,0.32)' },
+  quickBadgeText: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 12 },
+  quickBadgeTextPrimary: { color: colors.white },
+  quickArrow: { color: colors.mu, fontFamily: fontFamily.bodyBold, fontSize: 18 },
+  quickArrowPrimary: { color: colors.white },
+  quickTitle: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 16 },
+  quickTitlePrimary: { color: colors.white },
+  quickBody: { marginTop: 5, color: colors.mu, fontFamily: fontFamily.body, fontSize: 13, lineHeight: 18 },
+  quickBodyPrimary: { color: 'rgba(250,246,239,0.82)' },
   section: {
     gap: 12,
     padding: 15,
@@ -477,16 +479,32 @@ const styles = StyleSheet.create({
     borderColor: colors.br,
     ...shadow.card,
   },
+  sectionHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   sectionTitle: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 17 },
   sectionBody: { color: colors.mu, fontFamily: fontFamily.body, fontSize: 13, lineHeight: 20 },
+  iconBadge: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.goldLight,
+    borderWidth: 1,
+    borderColor: colors.br,
+  },
+  iconBadgeSmall: { width: 34, height: 34, borderRadius: 12 },
+  iconBadgeLarge: { width: 58, height: 58, borderRadius: 20 },
+  iconBadgeText: { color: colors.acc, fontFamily: fontFamily.bodyBold, fontSize: 12 },
+  iconBadgeTextSmall: { fontSize: 10 },
+  iconBadgeTextLarge: { fontSize: 15 },
   joinRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, alignItems: 'center' },
   joinInput: {
     flex: 1,
-    minHeight: 50,
+    minHeight: 52,
     borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.br,
-    backgroundColor: colors.bg,
+    backgroundColor: colors.s2,
     color: colors.tx,
     fontFamily: fontFamily.bodyBold,
     fontSize: 18,
@@ -494,8 +512,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   joinButton: {
-    minHeight: 50,
-    minWidth: 92,
+    minHeight: 52,
+    minWidth: 96,
     borderRadius: radii.lg,
     backgroundColor: colors.acc,
     alignItems: 'center',
@@ -505,46 +523,33 @@ const styles = StyleSheet.create({
   joinButtonText: { color: colors.white, fontFamily: fontFamily.bodyBold, fontSize: 14 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
   statCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
     flexGrow: 1,
-    flexBasis: 118,
+    flexBasis: 150,
     minHeight: 78,
     borderRadius: radii.lg,
     padding: 12,
     backgroundColor: colors.s1,
     borderWidth: 1,
     borderColor: colors.br,
-    justifyContent: 'center',
     ...shadow.card,
   },
-  statValue: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 22, lineHeight: 25 },
-  statLabel: {
-    marginTop: 5,
-    color: colors.mu,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 10,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
+  statValue: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 21, lineHeight: 24 },
+  statLabel: { marginTop: 3, color: colors.mu, fontFamily: fontFamily.bodyBold, fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' },
   savingsHero: {
-    gap: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
     padding: 16,
-    borderRadius: radii.lg,
+    borderRadius: radii.xl,
     backgroundColor: colors.goldLight,
     borderWidth: 1,
     borderColor: colors.br,
   },
-  savingsHeroValue: {
-    color: colors.tx,
-    fontFamily: fontFamily.display,
-    fontSize: 34,
-    lineHeight: 38,
-  },
-  savingsHeroTitle: {
-    color: colors.acc,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 13,
-    textTransform: 'uppercase',
-  },
+  savingsHeroValue: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 34, lineHeight: 38 },
+  savingsHeroTitle: { color: colors.acc, fontFamily: fontFamily.bodyBold, fontSize: 13, textTransform: 'uppercase' },
   paymentList: { gap: 10 },
   paymentCard: {
     gap: 10,
@@ -594,8 +599,8 @@ const styles = StyleSheet.create({
   switchTextOn: { color: colors.white },
   linkList: { gap: 8 },
   linkRow: {
-    minHeight: 58,
-    paddingHorizontal: 14,
+    minHeight: 62,
+    paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: radii.lg,
     backgroundColor: colors.s2,
@@ -603,7 +608,6 @@ const styles = StyleSheet.create({
     borderColor: colors.br,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: 10,
   },
   linkText: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 14 },
@@ -611,7 +615,7 @@ const styles = StyleSheet.create({
   linkArrow: { color: colors.mu, fontFamily: fontFamily.display, fontSize: 24, lineHeight: 26 },
   deleteButton: {
     minHeight: 50,
-    borderRadius: radii.pill,
+    borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.err,
     alignItems: 'center',

@@ -740,8 +740,8 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
         const eventMsg = allPaid
           ? `All payments received — order ready for ${demoStores[order.brand].name} 🎉`
           : savingsILS > 0
-            ? `${name} paid ₪${totalCharged} (items ₪${myItemsTotal} + Shakana fee ₪${commissionILS}) — saved ₪${savingsILS}`
-            : `${name} paid ₪${totalCharged} — payment secured in escrow`;
+            ? `${name} paid ILS ${totalCharged} (items ILS ${myItemsTotal} + Shakana fee ILS ${commissionILS}) — saved ILS ${savingsILS}`
+            : `${name} paid ILS ${totalCharged} — payment secured in escrow`;
         return {
           ...order,
           paidParticipants,

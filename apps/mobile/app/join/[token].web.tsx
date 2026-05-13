@@ -206,7 +206,7 @@ export default function JoinPreviewWeb() {
         <Text style={styles.wordmark}>shakana</Text>
         <Text style={styles.closedTitle}>ההזמנה הזאת נסגרה או לא קיימת</Text>
         <Pressable style={styles.secondaryBtn} onPress={() => router.replace('/')}>
-          <Text style={styles.secondaryBtnText}>פתח הזמנה חדשה</Text>
+          <Text style={styles.secondaryBtnText}>�ILS תח הזמנה חדשה</Text>
         </Pressable>
       </View>
     );
@@ -268,7 +268,7 @@ export default function JoinPreviewWeb() {
             </View>
             <View style={styles.shippingRow}>
               <Text style={styles.shippingLabel}>Combined total</Text>
-              <Text style={styles.shippingValue}>₪{getOrderTotal(demoOrder)}</Text>
+              <Text style={styles.shippingValue}>ILS {getOrderTotal(demoOrder)}</Text>
             </View>
           </View>
         </ScrollView>
@@ -288,7 +288,7 @@ export default function JoinPreviewWeb() {
         <Text style={styles.wordmark}>shakana</Text>
         <Text style={styles.closedTitle}>ההזמנה הזאת נסגרה או לא קיימת</Text>
         <Pressable style={styles.secondaryBtn} onPress={() => router.replace('/')}>
-          <Text style={styles.secondaryBtnText}>פתח הזמנה חדשה</Text>
+          <Text style={styles.secondaryBtnText}>�ILS תח הזמנה חדשה</Text>
         </Pressable>
       </View>
     );
@@ -300,7 +300,7 @@ export default function JoinPreviewWeb() {
         <Text style={styles.wordmark}>shakana</Text>
         <Text style={styles.closedTitle}>ההזמנה הזאת נסגרה או לא קיימת</Text>
         <Pressable style={styles.secondaryBtn} onPress={() => router.replace('/')}>
-          <Text style={styles.secondaryBtnText}>פתח הזמנה חדשה</Text>
+          <Text style={styles.secondaryBtnText}>�ILS תח הזמנה חדשה</Text>
         </Pressable>
       </View>
     );
@@ -350,7 +350,7 @@ export default function JoinPreviewWeb() {
           <Text style={styles.storeSignKicker}>החנות של ההזמנה</Text>
           <Text style={styles.storeSignName}>{order.store_label || 'Store'}</Text>
           <Text style={styles.storeSignBody}>
-            כדי להצטרף נכון, הדבק כאן רק לינק מוצר מאותה חנות. Shakana תבדוק את המחיר, המשלוח והאפשרויות לפי הלינק.
+            כדי להצטרף נכון, הדבק כאן רק לינק מוצר מאותה חנות. Shakana תבדוק את המחיר, המשלוח והא�ILS שרויות ל�ILS י הלינק.
           </Text>
         </View>
 
@@ -369,7 +369,7 @@ export default function JoinPreviewWeb() {
             {order.product_title ? (
               <Text style={styles.productTitle}>{order.product_title}</Text>
             ) : null}
-            <Text style={styles.productPrice}>₪{formatShekels(order.product_price_agorot)}</Text>
+            <Text style={styles.productPrice}>ILS {formatShekels(order.product_price_agorot)}</Text>
           </View>
         </View>
 
@@ -399,7 +399,7 @@ export default function JoinPreviewWeb() {
         <View style={styles.groupSection}>
           <View style={styles.shippingRow}>
             <Text style={styles.shippingLabel}>משלוח לאדם</Text>
-            <Text style={styles.shippingValue}>₪{formatShekels(shippingPerPerson)}</Text>
+            <Text style={styles.shippingValue}>ILS {formatShekels(shippingPerPerson)}</Text>
           </View>
 
           {/* Progress bar */}
@@ -409,10 +409,10 @@ export default function JoinPreviewWeb() {
 
           {/* Milestone */}
           {freeShippingReached ? (
-            <Text style={[styles.milestoneText, { color: C.acc }]}>משלוח חינם הופעל</Text>
+            <Text style={[styles.milestoneText, { color: C.acc }]}>משלוח חינם הו�ILS על</Text>
           ) : (
             <Text style={styles.milestoneText}>
-              עוד ₪{formatShekels(freeShippingGap)} למשלוח חינם
+              עוד ILS {formatShekels(freeShippingGap)} למשלוח חינם
             </Text>
           )}
         </View>
@@ -421,7 +421,7 @@ export default function JoinPreviewWeb() {
         {participant_names.length > 0 ? (
           <View style={styles.participantsSection}>
             <Text style={styles.participantsSectionLabel}>
-              הצטרפו ({participants_count})
+              הצטר�ILS ו ({participants_count})
             </Text>
             {participant_names.map((name, i) => (
               <Text key={i} style={styles.participantName}>
@@ -437,7 +437,7 @@ export default function JoinPreviewWeb() {
         <Pressable style={styles.ctaBtn} onPress={handleJoin} accessibilityRole="button">
           <Text style={styles.ctaBtnText}>הצטרף להזמנה</Text>
         </Pressable>
-        <Text style={styles.ctaCaption}>ניתן להוסיף פריטים אחרי ההצטרפות</Text>
+        <Text style={styles.ctaCaption}>ניתן להוסיף �ILS ריטים אחרי ההצטר�ILS ות</Text>
       </View>
     </View>
   );

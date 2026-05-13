@@ -281,7 +281,7 @@ export function SavingsTracker({
       <View style={styles.rowBetween}>
         <View>
           <Text style={styles.kicker}>Trust & savings</Text>
-          <Text style={styles.h3}>You have saved ₪{yearlySavings} this year</Text>
+          <Text style={styles.h3}>You have saved ILS {yearlySavings} this year</Text>
         </View>
         <View style={styles.badgeStack}>
           <View style={styles.socialBadge}>
@@ -312,25 +312,25 @@ export function SavingsPanel({ order, compact = false }: { order: DemoOrder; com
       <View style={styles.rowBetween}>
         <View>
           <Text style={styles.kicker}>Group savings</Text>
-          <Text style={styles.savingsBig}>Saved ₪{Math.round(group)} total</Text>
+          <Text style={styles.savingsBig}>Saved ILS {Math.round(group)} total</Text>
         </View>
         <View style={styles.savingsBadge}>
-          <Text style={styles.savingsBadgeText}>₪{Math.round(personal)} saved each</Text>
+          <Text style={styles.savingsBadgeText}>ILS {Math.round(personal)} saved each</Text>
         </View>
       </View>
       <Text style={styles.muted}>
-        Your delivery share dropped from ₪25 to ₪{shared.toFixed(0)}.
+        Your delivery share dropped from ILS 25 to ILS {shared.toFixed(0)}.
       </Text>
       <View style={styles.progressBlock}>
         <View style={styles.rowBetween}>
-          <Text style={styles.muted}>₪{getOrderTotal(order)} / ₪{FREE_SHIPPING_GOAL}</Text>
+          <Text style={styles.muted}>ILS {getOrderTotal(order)} / ILS {FREE_SHIPPING_GOAL}</Text>
           <Text style={styles.muted}>{progress}%</Text>
         </View>
         <ProgressBar progress={progress} />
         <Text style={styles.muted}>
           {remaining === 0
             ? 'Free shipping unlocked for this group.'
-            : `Only ₪${remaining} left to unlock free shipping.`}
+            : `Only ILS ${remaining} left to unlock free shipping.`}
         </Text>
       </View>
     </Card>

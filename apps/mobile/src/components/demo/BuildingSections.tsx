@@ -148,7 +148,7 @@ export function BuildingSections({
               title={`Order ${order.id}`}
               subtitle={`${order.brand.toUpperCase()} · ${getOrderItemCount(order)} items`}
               status={order.status.toUpperCase()}
-              meta={`${getOrderTotal(order)} ₪ · ${order.participants.length} seats`}
+              meta={`${getOrderTotal(order)} ILS  · ${order.participants.length} seats`}
               actionLabel="OPEN"
               onPress={onOpenStore}
             />
