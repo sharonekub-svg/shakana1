@@ -33,6 +33,7 @@ import {
 import { fontFamily } from '@/theme/fonts';
 import { colors } from '@/theme/tokens';
 import { BuildingSections } from '@/components/demo/BuildingSections';
+import { DemoVideoPreview } from '@/components/demo/DemoVideoPreview';
 import { useLocale } from '@/i18n/locale';
 import { useAuthStore } from '@/stores/authStore';
 import { stashPendingInvite } from '@/lib/deeplinks';
@@ -153,10 +154,10 @@ const TOUR_STEPS = [
   },
   {
     step: '06',
-    title: 'Shakana earns ₪43.50 from this one order',
-    body: 'Half the shipping savings = Shakana\'s commission. Users pay nothing extra. The more buildings group together, the more everyone earns.',
-    stat: '₪43.50',
-    statLabel: 'Shakana commission',
+    title: 'Families save hundreds of shekels a year',
+    body: 'A building that joins one shared order a week can save around NIS 2,400 a year on delivery. Shakana keeps the flow simple, private, and easy to repeat.',
+    stat: 'NIS 2.4K',
+    statLabel: 'avg yearly savings',
     image: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=600&q=80',
   },
 ];
@@ -739,15 +740,15 @@ export default function DemoUserScreen() {
               </View>
             </View>
             <Text style={styles.savingsHeroBody}>
-              Sharone, Noa, and Lior each order ~₪100 from H&M. Their ₪307 combined order ships free — each saves ₪29 on delivery. Shakana earns ₪14.50 commission per person.
+              Sharone, Noa, and Lior each order around NIS 100 from H&M. Their NIS 307 combined order ships free, each neighbor saves NIS 29 on delivery, and an active building can save about NIS 2,400 a year.
             </Text>
+            <DemoVideoPreview />
             <View style={styles.heroBtnRow}>
               <Pressable
                 accessibilityRole="button"
                 onPress={() => setTourOpen(true)}
                 style={({ pressed }) => [styles.tourBtn, styles.tourBtnHalf, pressed && { opacity: 0.8 }]}
               >
-                <Text style={styles.tourBtnIcon}>📖</Text>
                 <Text style={styles.tourBtnLabel}>Step-by-step tour</Text>
               </Pressable>
               {Platform.OS === 'web' ? (
@@ -756,8 +757,7 @@ export default function DemoUserScreen() {
                   onPress={openDemoVideo}
                   style={({ pressed }) => [styles.tourBtn, styles.demoVidBtn, pressed && { opacity: 0.85 }]}
                 >
-                  <Text style={styles.tourBtnIcon}>▶</Text>
-                  <Text style={styles.tourBtnLabel}>Watch demo video</Text>
+                  <Text style={styles.tourBtnLabel}>Open full demo</Text>
                 </Pressable>
               ) : null}
             </View>
