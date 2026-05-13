@@ -1,4 +1,4 @@
-import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
 import { useState } from 'react';
@@ -214,26 +214,28 @@ export default function BuildingTab() {
           </View>
           </View>
 
+          {/* Dark savings hero */}
           <View style={styles.heroCard}>
-            <ImageBackground
-              source={{
-                uri: 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=1600&q=80',
-              }}
-              style={styles.heroImage}
-              imageStyle={styles.heroImageRadius}
-            >
-              <View style={styles.heroOverlay} />
-              <View style={styles.heroContent}>
-                <Text style={styles.heroKicker}>{t('tabs.home.promoted')}</Text>
-                <Text style={styles.heroTitle}>{t('tabs.home.heroTitle')}</Text>
-                <Text style={styles.heroBody}>
-                  {profile ? t('tabs.home.heroSigned', { first: first ? `, ${first}` : '' }) : t('tabs.home.heroGuest')}
-                </Text>
-                <Pressable style={styles.heroButton} onPress={() => router.push('/order/new')}>
-                  <Text style={styles.heroButtonText}>{t('tabs.home.createOrder')}</Text>
-                </Pressable>
+            <View style={styles.heroMeta}>
+              <Text style={styles.heroKicker}>{isHebrew ? 'אתה + שכניך חסכתם' : 'You + your neighbors saved'}</Text>
+            </View>
+            <View style={styles.heroAmountRow}>
+              <Text style={styles.heroAmount}>₪{Math.max(0, Math.round(completedOrders * 42)).toLocaleString()}</Text>
+              <Text style={styles.heroAmountSub}>{isHebrew ? 'השנה' : 'this year'}</Text>
+            </View>
+            <View style={styles.heroFooter}>
+              <View style={styles.heroAvatarRow}>
+                {['AL','YE','NO'].map((initials, i) => (
+                  <View key={initials} style={[styles.heroAvatar, { marginLeft: i ? -8 : 0, backgroundColor: ['#D29A4A','#E3D6BE','#C5654B'][i] }]}>
+                    <Text style={styles.heroAvatarText}>{initials}</Text>
+                  </View>
+                ))}
               </View>
-            </ImageBackground>
+              <Text style={styles.heroNeighbors}>{openOrders.length} {isHebrew ? 'שכנים פעילים' : 'active neighbors'}</Text>
+              <Pressable style={styles.heroButton} onPress={() => router.push('/order/new')}>
+                <Text style={styles.heroButtonText}>{t('tabs.home.createOrder')}</Text>
+              </Pressable>
+            </View>
           </View>
 
           <View style={styles.statsRow}>
@@ -411,58 +413,83 @@ const styles = StyleSheet.create({
   heroCard: {
     borderRadius: radii.xxl,
     overflow: 'hidden',
-    backgroundColor: '#D4C5A9',
-    ...shadow.card,
+    backgroundColor: colors.ink,
+    padding: 22,
+    gap: 8,
+    position: 'relative',
+    ...shadow.cta,
   },
-  heroImage: {
-    minHeight: 260,
-    justifyContent: 'flex-end',
-  },
-  heroImageRadius: {
-    borderRadius: radii.xxl,
-  },
-  heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(28, 25, 23, 0.52)',
-  },
-  heroContent: {
-    padding: 16,
-    gap: 10,
+  heroMeta: {
+    marginBottom: 2,
   },
   heroKicker: {
     fontFamily: fontFamily.bodyBold,
-    fontSize: 11,
-    letterSpacing: 2.4,
-    color: 'rgba(255,255,255,0.75)',
+    fontSize: 10,
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+    color: 'rgba(255,255,255,0.55)',
   },
-  heroTitle: {
+  heroAmountRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  heroAmount: {
     fontFamily: fontFamily.display,
-    fontSize: 29,
-    lineHeight: 33,
+    fontSize: 56,
+    lineHeight: 56,
+    letterSpacing: -2,
     color: colors.white,
-    maxWidth: 260,
+    fontStyle: 'italic',
   },
-  heroBody: {
+  heroAmountSub: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 11,
+    letterSpacing: 1,
+    color: 'rgba(255,255,255,0.45)',
+    marginBottom: 8,
+  },
+  heroFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 6,
+  },
+  heroAvatarRow: {
+    flexDirection: 'row',
+  },
+  heroAvatar: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.ink,
+  },
+  heroAvatarText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 7,
+    color: colors.ink,
+  },
+  heroNeighbors: {
+    flex: 1,
     fontFamily: fontFamily.body,
-    fontSize: 14,
-    lineHeight: 22,
-    color: 'rgba(255,255,255,0.85)',
-    maxWidth: 320,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.6)',
   },
   heroButton: {
-    alignSelf: 'flex-start',
-    marginTop: 6,
-    height: 46,
-    paddingHorizontal: 18,
+    height: 36,
+    paddingHorizontal: 14,
     borderRadius: radii.pill,
-    backgroundColor: colors.navy,
+    backgroundColor: colors.acc,
     alignItems: 'center',
     justifyContent: 'center',
   },
   heroButtonText: {
     fontFamily: fontFamily.bodyBold,
-    fontSize: 12,
-    letterSpacing: 1.4,
+    fontSize: 11,
+    letterSpacing: 1,
     color: colors.white,
   },
   categoryRow: {

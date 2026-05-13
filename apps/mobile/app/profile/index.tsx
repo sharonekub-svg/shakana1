@@ -321,21 +321,13 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <View style={styles.statsGrid}>
-          <Stat icon="OP" label={copy.open} value={String(openOrders)} />
-          <Stat icon="CP" label={copy.completed} value={String(stats.shippedOrders)} />
-          <Stat icon="SV" label={copy.mySaves} value={String(personalSaves)} />
-          <Stat icon="IL" label={copy.savedYear} value={formatMoney(savingsThisYear, language)} />
-          <Stat icon="WL" label={copy.wallets} value={String(readyPayments)} />
-        </View>
-
-        <View style={styles.savingsHero}>
-          <IconBadge label="IL" large />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.savingsHeroValue}>{formatMoney(savingsThisYear, language)}</Text>
-            <Text style={styles.savingsHeroTitle}>{copy.savingsTracker}</Text>
-            <Text style={styles.sectionBody}>{copy.savingsBody}</Text>
-          </View>
+        {/* Dark stats strip */}
+        <View style={styles.statsStrip}>
+          <StatBig value={String(openOrders)} label={copy.open} />
+          <View style={styles.statsDivider} />
+          <StatBig value={formatMoney(savingsThisYear, language)} label={copy.savedYear} />
+          <View style={styles.statsDivider} />
+          <StatBig value={String(personalSaves)} label={copy.mySaves} />
         </View>
 
         <View style={styles.section}>
@@ -475,6 +467,15 @@ function Stat({ icon, label, value }: { icon: string; label: string; value: stri
         <Text style={styles.statValue}>{value}</Text>
         <Text style={styles.statLabel}>{label}</Text>
       </View>
+    </View>
+  );
+}
+
+function StatBig({ value, label }: { value: string; label: string }) {
+  return (
+    <View style={styles.statBig}>
+      <Text style={styles.statBigValue}>{value}</Text>
+      <Text style={styles.statBigLabel}>{label}</Text>
     </View>
   );
 }
@@ -713,6 +714,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   joinButtonText: { color: colors.white, fontFamily: fontFamily.bodyBold, fontSize: 14 },
+  statsStrip: {
+    flexDirection: 'row',
+    backgroundColor: colors.ink,
+    borderRadius: radii.xl,
+    paddingVertical: 20,
+    paddingHorizontal: 4,
+    overflow: 'hidden',
+    ...shadow.cta,
+  },
+  statBig: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 6,
+  },
+  statBigValue: {
+    fontFamily: fontFamily.display,
+    fontSize: 34,
+    lineHeight: 34,
+    letterSpacing: -1,
+    color: colors.white,
+    fontStyle: 'italic',
+  },
+  statBigLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 9,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    color: 'rgba(255,255,255,0.5)',
+  },
+  statsDivider: {
+    width: 1,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    marginVertical: 4,
+  },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
   statCard: {
     flexDirection: 'row',
