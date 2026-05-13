@@ -146,7 +146,7 @@ export default function Welcome() {
         {/* Wordmark */}
         <View style={s.wordmarkRow}>
           <Text style={s.wordmark}>
-            {t('landing.appName') ?? 'shakana'}
+            Shakana
             <Text style={s.wordmarkDot}>.</Text>
           </Text>
           <Text style={s.tagline}>{copy.tagline}</Text>

@@ -841,7 +841,7 @@ export default function DemoUserScreen() {
             </View>
           </Card>
           ) : null}
-          <SectionTitle title="Choose your store" kicker="User flow" />
+          <SectionTitle title="Start a new order" kicker="Address, store, name, then invite" />
           {newOrderMode ? (
             <Card style={styles.setupCard}>
               <Text style={styles.setupTitle}>Set up the order first</Text>
@@ -888,16 +888,11 @@ export default function DemoUserScreen() {
                   key={brandId}
                   accessibilityRole="button"
                   onPress={() => {
-                    if (newOrderMode) {
-                      setSetupBrand(brandId);
-                    } else {
-                      selectBrand(brandId);
-                    }
+                    openNewOrderSetup(brandId);
                     setCategory('Best Sellers');
                   }}
                   style={({ pressed }) => [
                     styles.storeChoice,
-                    newOrderMode && setupBrand === brandId && styles.storeChoiceSelected,
                     pressed && demoStyles.pressed,
                   ]}
                 >
@@ -912,6 +907,29 @@ export default function DemoUserScreen() {
               );
             })}
           </View>
+          <Card style={styles.homeStepperCard}>
+            <View style={styles.homeStepperHeader}>
+              <Text style={styles.homeStepperTitle}>One clean setup flow</Text>
+              <Text style={styles.muted}>Choose any store above and Shakana opens the guided order page.</Text>
+            </View>
+            <View style={styles.homeStepperSteps}>
+              {[
+                ['1', 'Address first', 'Street, number, city'],
+                ['2', 'Store locked', 'Amazon, Zara, or H&M'],
+                ['3', 'Your name', 'Shown to friends and store'],
+                ['4', 'Copy invite', 'Share link or code'],
+              ].map(([num, title, body]) => (
+                <View key={num} style={styles.homeStepperStep}>
+                  <Text style={styles.homeStepperNum}>{num}</Text>
+                  <View style={styles.homeStepperCopy}>
+                    <Text style={styles.homeStepperStepTitle}>{title}</Text>
+                    <Text style={styles.homeStepperStepBody}>{body}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+            <DemoButton label="Open full setup" onPress={() => openNewOrderSetup()} tone="accent" />
+          </Card>
           {newOrderMode ? (
             <Card style={styles.setupCard}>
               <Text style={styles.timerTitle}>3. Delivery address</Text>
@@ -2120,6 +2138,67 @@ const styles = StyleSheet.create({
   },
   smallBtn: { flexGrow: 1, flexBasis: 136, minHeight: 40 },
   storeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
+  homeStepperCard: {
+    gap: 16,
+    backgroundColor: colors.s1,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: colors.br,
+  },
+  homeStepperHeader: {
+    gap: 4,
+  },
+  homeStepperTitle: {
+    color: colors.tx,
+    fontFamily: fontFamily.display,
+    fontSize: 28,
+    lineHeight: 32,
+  },
+  homeStepperSteps: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  homeStepperStep: {
+    flexGrow: 1,
+    flexBasis: 190,
+    minHeight: 82,
+    borderRadius: 20,
+    backgroundColor: colors.s2,
+    borderWidth: 1,
+    borderColor: colors.br,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  homeStepperNum: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    overflow: 'hidden',
+    backgroundColor: colors.ink,
+    color: colors.white,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
+    lineHeight: 34,
+    textAlign: 'center',
+  },
+  homeStepperCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  homeStepperStepTitle: {
+    color: colors.tx,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+  },
+  homeStepperStepBody: {
+    color: colors.mu,
+    fontFamily: fontFamily.body,
+    fontSize: 12,
+    lineHeight: 17,
+  },
   whatsappCard: {
     gap: 8,
     marginTop: 4,
