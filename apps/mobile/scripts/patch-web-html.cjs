@@ -93,15 +93,3 @@ const storyOutputPath = path.join(__dirname, '..', 'dist', 'shakana-story.html')
 if (fs.existsSync(storySourcePath)) {
   fs.copyFileSync(storySourcePath, storyOutputPath);
 }
-
-const demoJsSourcePath = path.join(__dirname, '..', 'web', 'demo.js');
-const demoJsOutputPath = path.join(__dirname, '..', 'dist', 'demo.js');
-if (fs.existsSync(demoJsSourcePath)) {
-  fs.copyFileSync(demoJsSourcePath, demoJsOutputPath);
-}
-
-const demoVideoSourcePath = path.join(__dirname, '..', 'web', 'shakana-menu-demo.mp4');
-const demoVideoOutputPath = path.join(__dirname, '..', 'dist', 'shakana-menu-demo.mp4');
-if (fs.existsSync(demoVideoSourcePath)) {
-  fs.copyFileSync(demoVideoSourcePath, demoVideoOutputPath);
-}

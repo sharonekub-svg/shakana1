@@ -33,7 +33,6 @@ import {
 import { fontFamily } from '@/theme/fonts';
 import { colors } from '@/theme/tokens';
 import { BuildingSections } from '@/components/demo/BuildingSections';
-import { DemoVideoPreview } from '@/components/demo/DemoVideoPreview';
 import { useLocale } from '@/i18n/locale';
 import { useAuthStore } from '@/stores/authStore';
 import { stashPendingInvite } from '@/lib/deeplinks';
@@ -95,7 +94,7 @@ function normalizeTimerMinutes(value: string) {
 }
 
 function hasAddressNumber(value: string) {
-  return /\d+[א-תA-Za-z]?/.test(value);
+  return /\d+[׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ-׳³ֲ³ײ²ֲ³׳²ֲ³׳’ג‚¬ג€A-Za-z]?/.test(value);
 }
 
 function isCompleteDeliveryAddress(value: string) {
@@ -115,15 +114,15 @@ const TOUR_STEPS = [
   {
     step: '01',
     title: 'A neighbor finds something she loves',
-    body: 'Sharone spots an H&M linen shirt. Solo delivery costs ₪29. But there\'s a smarter way — one that costs nothing.',
-    stat: '₪29',
+    body: 'Sharone spots an H&M linen shirt. Solo delivery costs ׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€29. But there\'s a smarter way ׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג‚¬ֲײ²ֲ¬׳³ג€™׳’ג€ֲ¬ײ²ֲ one that costs nothing.',
+    stat: '׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€29',
     statLabel: 'solo shipping',
     image: 'https://images.unsplash.com/photo-1603252109303-2751441dd157?auto=format&fit=crop&w=600&q=80',
   },
   {
     step: '02',
     title: 'Group order live in 30 seconds',
-    body: 'Sharone opens Shakana, picks H&M, sets a 45-minute timer. A shared cart is created instantly — no app needed for neighbors.',
+    body: 'Sharone opens Shakana, picks H&M, sets a 45-minute timer. A shared cart is created instantly ׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג‚¬ֲײ²ֲ¬׳³ג€™׳’ג€ֲ¬ײ²ֲ no app needed for neighbors.',
     stat: '30s',
     statLabel: 'to go live',
     image: 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=600&q=80',
@@ -131,7 +130,7 @@ const TOUR_STEPS = [
   {
     step: '03',
     title: 'One WhatsApp message to the building',
-    body: '"Hey neighbors — I\'m ordering from H&M, join my cart and we all get free shipping!" Shakana writes the message. One tap to send.',
+    body: '"Hey neighbors ׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג‚¬ֲײ²ֲ¬׳³ג€™׳’ג€ֲ¬ײ²ֲ I\'m ordering from H&M, join my cart and we all get free shipping!" Shakana writes the message. One tap to send.',
     stat: '1 tap',
     statLabel: 'to share',
     image: 'https://images.unsplash.com/photo-1611746872915-64382b5c76da?auto=format&fit=crop&w=600&q=80',
@@ -139,14 +138,14 @@ const TOUR_STEPS = [
   {
     step: '04',
     title: 'Noa + Lior join. Free shipping unlocked.',
-    body: 'Each neighbor adds their items privately. ₪119 + ₪99 + ₪89 = ₪307. That\'s over the ₪299 threshold. H&M ships free to the building.',
-    stat: '₪0',
+    body: 'Each neighbor adds their items privately. ׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€119 + ׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€99 + ׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€89 = ׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€307. That\'s over the ׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€299 threshold. H&M ships free to the building.',
+    stat: '׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€0',
     statLabel: 'shipping cost',
     image: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?auto=format&fit=crop&w=600&q=80',
   },
   {
     step: '05',
-    title: 'Everyone pays their share — securely',
+    title: 'Everyone pays their share ׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג‚¬ֲײ²ֲ¬׳³ג€™׳’ג€ֲ¬ײ²ֲ securely',
     body: 'Shakana holds all payments in Stripe escrow. Sharone buys the full order. Money only releases after every neighbor confirms delivery.',
     stat: '100%',
     statLabel: 'escrow protected',
@@ -161,6 +160,18 @@ const TOUR_STEPS = [
     image: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=600&q=80',
   },
 ];
+
+type PendingCheckoutItem = {
+  localId: string;
+  orderId: string;
+  productId: string;
+  participantId: string;
+  participant: DemoParticipant;
+  size: string;
+  color: string;
+  quantity: number;
+  private: boolean;
+};
 
 function DemoTour({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState(0);
@@ -197,7 +208,7 @@ function DemoTour({ onClose }: { onClose: () => void }) {
           <View style={tourStyles.topRow}>
             <Text style={tourStyles.stepLabel}>{current?.step} / {String(total).padStart(2, '0')}</Text>
             <Pressable onPress={onClose} accessibilityRole="button" style={tourStyles.closeBtn}>
-              <Text style={tourStyles.closeBtnText}>✕</Text>
+              <Text style={tourStyles.closeBtnText}>׳³ֲ³׳’ג‚¬ג„¢׳²ֲ²ײ²ֲ׳³ג€™׳’ג€ֲ¬ײ²ֲ¢</Text>
             </Pressable>
           </View>
           <View style={tourStyles.statRow}>
@@ -220,17 +231,17 @@ function DemoTour({ onClose }: { onClose: () => void }) {
               accessibilityRole="button"
               style={[tourStyles.navBtn, step === 0 && tourStyles.navBtnDisabled]}
             >
-              <Text style={tourStyles.navBtnText}>← Back</Text>
+              <Text style={tourStyles.navBtnText}>׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ ׳²ֲ²ײ²ֲ Back</Text>
             </Pressable>
             <Pressable
               onPress={() => setPlaying((p) => !p)}
               accessibilityRole="button"
               style={tourStyles.playBtn}
             >
-              <Text style={tourStyles.playBtnText}>{playing ? '⏸' : '▶'}</Text>
+              <Text style={tourStyles.playBtnText}>{playing ? '׳³ֲ³׳’ג‚¬ג„¢׳²ֲ²ײ²ֲ׳²ֲ²ײ²ֲ¸' : '׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬׳’ג‚¬ֲ׳²ֲ²ײ²ֲ¶'}</Text>
             </Pressable>
             <Pressable onPress={goNext} accessibilityRole="button" style={tourStyles.navBtnAccent}>
-              <Text style={tourStyles.navBtnAccentText}>{step < total - 1 ? 'Next →' : 'Done ✓'}</Text>
+              <Text style={tourStyles.navBtnAccentText}>{step < total - 1 ? 'Next ׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ ׳³ג€™׳’ג€ֲ¬׳’ג€ֲ¢' : 'Done ׳³ֲ³׳’ג‚¬ג„¢׳²ֲ²ײ²ֲ׳³ג€™׳’ג€ֲ¬ײ²ֲ'}</Text>
             </Pressable>
           </View>
         </View>
@@ -408,6 +419,7 @@ export default function DemoUserScreen() {
   const resetDemo = useDemoCommerceStore((state) => state.resetDemo);
   const updateTimer = useDemoCommerceStore((state) => state.updateTimer);
   const updateDeliveryAddress = useDemoCommerceStore((state) => state.updateDeliveryAddress);
+  const addItem = useDemoCommerceStore((state) => state.addItem);
   const simulatePayment = useDemoCommerceStore((state) => state.simulatePayment);
 
   const [category, setCategory] = useState<(typeof demoCategories)[number]>('Best Sellers');
@@ -426,6 +438,8 @@ export default function DemoUserScreen() {
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [payStep, setPayStep] = useState<'form' | 'processing' | 'success'>('form');
   const [tourOpen, setTourOpen] = useState(false);
+  const [pendingCheckoutItems, setPendingCheckoutItems] = useState<PendingCheckoutItem[]>([]);
+  const [checkoutItems, setCheckoutItems] = useState<PendingCheckoutItem[]>([]);
   const consumedNewParamRef = useRef(false);
 
   useEffect(() => {
@@ -506,7 +520,7 @@ export default function DemoUserScreen() {
         if (order) {
           restoreSharedOrder(order);
         } else {
-          setJoinError('Order not found — the founder may need to open the app once to sync it. Tap "Try again" after they do.');
+          setJoinError('Order not found ׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג‚¬ֲײ²ֲ¬׳³ג€™׳’ג€ֲ¬ײ²ֲ the founder may need to open the app once to sync it. Tap "Try again" after they do.');
         }
       })
       .catch(() => {
@@ -550,6 +564,10 @@ export default function DemoUserScreen() {
   }, [category, productSearch, products]);
   const activeParticipant =
     order?.participants.find((participant) => participant.id === activeParticipantId) ?? accountParticipant;
+  const activePendingItems = useMemo(
+    () => pendingCheckoutItems.filter((item) => item.orderId === order?.id && item.participantId === activeParticipantId),
+    [activeParticipantId, order?.id, pendingCheckoutItems],
+  );
   const orderLocked = order ? order.closesAt <= nowMs || order.status !== 'collecting' : false;
   const addressMissing = order ? !isCompleteDeliveryAddress(order.deliveryAddress) : false;
   const isFounder = order?.createdBy === activeParticipantId;
@@ -677,12 +695,6 @@ export default function DemoUserScreen() {
     router.replace('/user');
   };
 
-  const openDemoVideo = () => {
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      window.location.assign('/demo.html');
-    }
-  };
-
   const openStoryVideo = () => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.location.assign('/shakana-story.html');
@@ -725,17 +737,17 @@ export default function DemoUserScreen() {
           <Card style={styles.savingsHero}>
             <View style={styles.savingsHeroTop}>
               <View style={styles.savingsHeroAmountBlock}>
-                <Text style={styles.savingsHeroAmount}>₪47</Text>
+                <Text style={styles.savingsHeroAmount}>׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€47</Text>
                 <Text style={styles.savingsHeroAmountLabel}>avg saved{'\n'}per neighbor</Text>
               </View>
               <View style={styles.savingsHeroStats}>
                 <View style={styles.savingsHeroStat}>
-                  <Text style={styles.savingsHeroStatValue}>₪0</Text>
+                  <Text style={styles.savingsHeroStatValue}>׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€0</Text>
                   <Text style={styles.savingsHeroStatLabel}>shipping{'\n'}when grouped</Text>
                 </View>
                 <View style={styles.savingsHeroDivider} />
                 <View style={styles.savingsHeroStat}>
-                  <Text style={styles.savingsHeroStatValue}>₪299</Text>
+                  <Text style={styles.savingsHeroStatValue}>׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€299</Text>
                   <Text style={styles.savingsHeroStatLabel}>H&M free{'\n'}ship goal</Text>
                 </View>
                 <View style={styles.savingsHeroDivider} />
@@ -748,7 +760,6 @@ export default function DemoUserScreen() {
             <Text style={styles.savingsHeroBody}>
               Sharone, Noa, and Lior each order around NIS 100 from H&M. Their NIS 307 combined order ships free, each neighbor saves NIS 29 on delivery, and an active building can save about NIS 2,400 a year.
             </Text>
-            <DemoVideoPreview />
             <View style={styles.heroBtnRow}>
               <Pressable
                 accessibilityRole="button"
@@ -758,22 +769,13 @@ export default function DemoUserScreen() {
                 <Text style={styles.tourBtnLabel}>Step-by-step tour</Text>
               </Pressable>
               {Platform.OS === 'web' ? (
-                <>
-                  <Pressable
-                    accessibilityRole="button"
-                    onPress={openDemoVideo}
-                    style={({ pressed }) => [styles.tourBtn, styles.demoVidBtn, pressed && { opacity: 0.85 }]}
-                  >
-                    <Text style={styles.tourBtnLabel}>Open recording</Text>
-                  </Pressable>
-                  <Pressable
-                    accessibilityRole="button"
-                    onPress={openStoryVideo}
-                    style={({ pressed }) => [styles.tourBtn, styles.storyVidBtn, pressed && { opacity: 0.85 }]}
-                  >
-                    <Text style={styles.tourBtnLabel}>Open story video</Text>
-                  </Pressable>
-                </>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={openStoryVideo}
+                  style={({ pressed }) => [styles.tourBtn, styles.storyVidBtn, pressed && { opacity: 0.85 }]}
+                >
+                  <Text style={styles.tourBtnLabel}>Open story video</Text>
+                </Pressable>
               ) : null}
             </View>
           </Card>
@@ -791,10 +793,10 @@ export default function DemoUserScreen() {
             }}
           />
           <Card style={styles.whatsappCard}>
-            <Text style={styles.whatsappTitle}>{language === 'he' ? 'הצטרפות מ-WhatsApp' : 'Join from WhatsApp'}</Text>
+            <Text style={styles.whatsappTitle}>{language === 'he' ? '׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ¦׳³ֲ³ײ²ֲ³׳²ֲ»ײ²ֲ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ¨׳³ֲ³ײ²ֲ³׳³ג€™׳’ג‚¬ֲײ³ג€”׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ¢׳³ֲ³ײ²ֲ³׳²ֲ³׳’ג‚¬ג€ ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ-WhatsApp' : 'Join from WhatsApp'}</Text>
             <Text style={styles.muted}>
               {language === 'he'
-                ? 'פותחים את קישור ההזמנה מ-WhatsApp והעגלה המשותפת נטענת ישר, בלי קוד ובלי הדבקה.'
+                ? '׳³ֲ³ײ²ֲ³׳³ג€™׳’ג‚¬ֲײ³ג€”׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ¢׳³ֲ³ײ²ֲ³׳²ֲ³׳’ג‚¬ג€׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬׳’ג‚¬ֲ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג‚¬ֲײ²ֲ¢׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ׳³ֲ³ײ²ֲ³׳²ֲ³׳’ג‚¬ג€ ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ§׳³ֲ³ײ²ֲ³׳³ג€™׳’ג‚¬ֲײ²ֲ¢׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ©׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ¢׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ¨ ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬׳’ג‚¬ֲ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ-WhatsApp ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ¢׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ¢׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬׳’ג€ֲ¢׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ©׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ¢׳³ֲ³ײ²ֲ³׳²ֲ³׳’ג‚¬ג€׳³ֲ³ײ²ֲ³׳³ג€™׳’ג‚¬ֲײ³ג€”׳³ֲ³ײ²ֲ³׳²ֲ³׳’ג‚¬ג€ ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ ׳³ֲ³ײ²ֲ³׳²ֲ»ײ²ֲ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ¢׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ ׳³ֲ³ײ²ֲ³׳²ֲ³׳’ג‚¬ג€ ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג‚¬ֲײ²ֲ¢׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ©׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ¨, ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ»ֲ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג‚¬ֲײ²ֲ¢ ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ§׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ¢׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ¢׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ»ֲ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג‚¬ֲײ²ֲ¢ ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ»ֲ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ§׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ.'
                 : 'Open the invite link from WhatsApp and the shared cart loads directly, with no code and no paste field.'}
             </Text>
           </Card>
@@ -997,7 +999,7 @@ export default function DemoUserScreen() {
         ) : null}
 
         <View style={styles.mainGrid}>
-          <View style={styles.catalogColumn}>
+          <View style={[styles.catalogColumn, order && styles.catalogColumnBelow, order && Platform.OS === 'web' && ({ order: 2 } as any)]}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
               {demoCategories.map((name) => (
                 <Pressable
@@ -1042,6 +1044,9 @@ export default function DemoUserScreen() {
                     activeParticipant={activeParticipant}
                     isAuthenticated={isAuthenticated}
                     orderLocked={orderLocked}
+                    onAddPending={(item) => {
+                      setPendingCheckoutItems((current) => [item, ...current]);
+                    }}
                     onRequireLogin={async () => {
                       if (order) await stashPendingInvite(order.inviteCode);
                       router.push('/login');
@@ -1053,7 +1058,7 @@ export default function DemoUserScreen() {
             )}
           </View>
 
-          <View style={styles.cartColumn}>
+          <View style={[styles.cartColumn, order && styles.cartColumnWide, order && Platform.OS === 'web' && ({ order: 1 } as any)]}>
             {!order ? (
               <EmptyNotice
                 title="Create your first group order"
@@ -1084,7 +1089,7 @@ export default function DemoUserScreen() {
                       <Text style={styles.cartTitle}>Group cart</Text>
                       <Text style={styles.muted}>{order.id} | Code {order.inviteCode}</Text>
                     </View>
-                    <Text style={styles.total}>₪{getOrderTotal(order)}</Text>
+                    <Text style={styles.total}>׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€{getOrderTotal(order)}</Text>
                   </View>
                   <StatusRail status={order.status} />
                   {orderLocked ? (
@@ -1252,11 +1257,48 @@ export default function DemoUserScreen() {
 
                 <Card style={styles.cartCard}>
                   <View style={styles.rowBetween}>
-                    <Text style={styles.cartTitle}>Items</Text>
+                    <Text style={styles.cartTitle}>Paid order items</Text>
                     <Text style={styles.muted}>{getOrderItemCount(order)} units</Text>
                   </View>
+                  {activePendingItems.length > 0 ? (
+                    <View style={styles.pendingCheckoutBox}>
+                      <View style={styles.rowBetween}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.pendingTitle}>Ready for checkout</Text>
+                          <Text style={styles.muted}>
+                            These items are private drafts. The group and merchant see them only after payment.
+                          </Text>
+                        </View>
+                        <Text style={styles.pendingCount}>{activePendingItems.length}</Text>
+                      </View>
+                      <View style={styles.itemList}>
+                        {activePendingItems.map((item) => {
+                          const product = findProduct(item.productId);
+                          const lineTotal = (product?.price ?? 0) * item.quantity;
+                          return (
+                            <View key={item.localId} style={styles.cartItem}>
+                              {product ? (
+                                <Image source={{ uri: getProductImage(product, item.color) }} style={styles.cartItemImage} resizeMode="cover" />
+                              ) : (
+                                <View style={styles.cartItemImagePlaceholder}>
+                                  <Text style={styles.cartItemImageText}>Item</Text>
+                                </View>
+                              )}
+                              <View style={{ flex: 1 }}>
+                                <Text style={styles.itemName}>{item.private ? 'Private item' : product?.name ?? 'Item'}</Text>
+                                <Text style={styles.muted}>{item.size}, {item.color} | Qty {item.quantity}</Text>
+                              </View>
+                              <Text style={styles.itemPrice}>׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€{lineTotal}</Text>
+                            </View>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  ) : null}
                   {order.items.length === 0 ? (
-                    <Text style={styles.muted}>No items yet. Select size and color, then add the first piece.</Text>
+                    <Text style={styles.muted}>
+                      No paid items yet. Select variants, add them to checkout, then pay to place them in the group order.
+                    </Text>
                   ) : (
                     <View style={styles.itemList}>
                       {order.items.map((item) => {
@@ -1284,7 +1326,7 @@ export default function DemoUserScreen() {
                                 {owner?.name ?? 'Guest'} | {privateForViewer ? 'Contribution hidden' : `${item.size}, ${item.color}`} | Qty {item.quantity}
                               </Text>
                             </View>
-                            <Text style={styles.itemPrice}>₪{line.lineTotal}</Text>
+                            <Text style={styles.itemPrice}>׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€{line.lineTotal}</Text>
                           </View>
                         );
                       })}
@@ -1293,7 +1335,9 @@ export default function DemoUserScreen() {
                   <PayButton
                     order={order}
                     activeParticipantId={activeParticipantId}
+                    pendingItems={activePendingItems}
                     onPay={() => {
+                      setCheckoutItems(activePendingItems);
                       setPayStep('form');
                       setPayModalOpen(true);
                     }}
@@ -1309,15 +1353,35 @@ export default function DemoUserScreen() {
           order={order}
           activeParticipantId={activeParticipantId}
           activeParticipantName={activeParticipant.name}
+          pendingItems={checkoutItems}
           step={payStep}
           onConfirm={() => {
+            const itemsToCommit = checkoutItems;
+            if (itemsToCommit.length === 0) return;
             setPayStep('processing');
             globalThis.setTimeout(() => {
+              itemsToCommit.forEach((item) => {
+                addItem(order.id, {
+                  productId: item.productId,
+                  participantId: item.participantId,
+                  participant: item.participant,
+                  size: item.size,
+                  color: item.color,
+                  quantity: item.quantity,
+                  private: item.private,
+                });
+              });
               simulatePayment(order.id, activeParticipantId);
+              setPendingCheckoutItems((current) =>
+                current.filter((item) => !itemsToCommit.some((paidItem) => paidItem.localId === item.localId)),
+              );
               setPayStep('success');
             }, 2200);
           }}
-          onClose={() => setPayModalOpen(false)}
+          onClose={() => {
+            setPayModalOpen(false);
+            if (payStep === 'success') setCheckoutItems([]);
+          }}
         />
       ) : null}
     </ScrollView>
@@ -1331,6 +1395,7 @@ function ProductCard({
   activeParticipant,
   isAuthenticated,
   orderLocked,
+  onAddPending,
   onRequireLogin,
   onCreateOrder,
 }: {
@@ -1340,10 +1405,10 @@ function ProductCard({
   activeParticipant: DemoParticipant;
   isAuthenticated: boolean;
   orderLocked: boolean;
+  onAddPending: (item: PendingCheckoutItem) => void;
   onRequireLogin: () => void;
   onCreateOrder: () => void;
 }) {
-  const addItem = useDemoCommerceStore((state) => state.addItem);
   const [size, setSize] = useState('');
   const [color, setColor] = useState('');
   const [quantity, setQuantity] = useState(1);
@@ -1359,10 +1424,10 @@ function ProductCard({
       <View style={styles.productInfo}>
         <View style={styles.rowBetween}>
           <Text style={styles.productName}>{product.name}</Text>
-          <Text style={styles.price}>₪{product.price}</Text>
+          <Text style={styles.price}>׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€{product.price}</Text>
         </View>
         <Text style={styles.muted}>{product.description}</Text>
-        <Text style={styles.sku}>{product.sku} | {product.stockStatus} | Save ₪{productSaving}</Text>
+        <Text style={styles.sku}>{product.sku} | {product.stockStatus} | Save ׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€{productSaving}</Text>
         <Text style={styles.selectorLabel}>Size</Text>
         <View style={styles.optionRow}>
           {product.sizes.map((option) => (
@@ -1413,11 +1478,13 @@ function ProductCard({
         ) : (
           <DemoButton
             testID={`add-${product.id}`}
-            label={isAdded ? 'Added! ✓' : ready ? 'Add to group cart' : 'Select size and color'}
+            label={isAdded ? 'Added to checkout' : ready ? 'Add to checkout' : 'Select size and color'}
             disabled={!ready || isAdded}
             onPress={() => {
               if (!orderId) return;
-              addItem(orderId, {
+              onAddPending({
+                localId: `${product.id}-${activeParticipantId}-${Date.now()}`,
+                orderId,
                 productId: product.id,
                 participantId: activeParticipantId,
                 participant: activeParticipant,
@@ -1439,26 +1506,26 @@ function ProductCard({
 
 function PayButton({
   order,
-  activeParticipantId,
+  pendingItems,
   onPay,
 }: {
   order: DemoOrder;
   activeParticipantId: string;
+  pendingItems: PendingCheckoutItem[];
   onPay: () => void;
 }) {
-  const myItems = order.items.filter((item) => item.participantId === activeParticipantId);
-  if (myItems.length === 0) return null;
-  const alreadyPaid = order.paidParticipants.includes(activeParticipantId);
+  if (pendingItems.length === 0) return null;
 
-  const myItemsTotal = myItems.reduce((sum, item) => {
+  const myItemsTotal = pendingItems.reduce((sum, item) => {
     const product = findProduct(item.productId);
     return sum + (product?.price ?? 0) * item.quantity;
   }, 0);
-  const groupTotal = order.items.reduce((sum, item) => {
+  const existingGroupTotal = order.items.reduce((sum, item) => {
     const product = findProduct(item.productId);
     return sum + (product?.price ?? 0) * item.quantity;
   }, 0);
-  const { commissionILS, totalILS, savingsILS, soloShippingILS } = calcCommission(myItemsTotal, groupTotal, order.brand);
+  const groupTotal = existingGroupTotal + myItemsTotal;
+  const { totalILS, savingsILS, soloShippingILS } = calcCommission(myItemsTotal, groupTotal, order.brand);
   const fmtILS = (v: number) => Number.isInteger(v) ? String(v) : v.toFixed(2);
   const total = fmtILS(Math.round(totalILS * 100) / 100);
   const withoutShakana = fmtILS(Math.round((myItemsTotal + soloShippingILS) * 100) / 100);
@@ -1468,37 +1535,29 @@ function PayButton({
       {savingsILS > 0 && (
         <View style={payStyles.savingsRow}>
           <Text style={payStyles.savingsText}>
-            🎉 Saving ₪{fmtILS(savingsILS)} vs buying alone
+            Saving NIS {fmtILS(savingsILS)} vs buying alone
           </Text>
         </View>
       )}
       <View style={payStyles.payRow}>
         <View>
-          <Text style={payStyles.payLabel}>You pay today</Text>
-          <Text style={payStyles.payAmount}>₪{total}</Text>
+          <Text style={payStyles.payLabel}>Checkout drafts</Text>
+          <Text style={payStyles.payAmount}>NIS {total}</Text>
           {savingsILS > 0 && (
-            <Text style={payStyles.payAmountSub}>instead of ₪{withoutShakana}</Text>
+            <Text style={payStyles.payAmountSub}>instead of NIS {withoutShakana}</Text>
           )}
         </View>
-        {alreadyPaid ? (
-          <View style={payStyles.paidBadge}>
-            <Text style={payStyles.paidBadgeText}>Payment confirmed ✓</Text>
-          </View>
-        ) : (
-          <DemoButton label={`Pay ₪${total} securely`} onPress={onPay} tone="accent" style={payStyles.payBtn} />
-        )}
+        <DemoButton label={`Add all to cart and pay NIS ${total} now`} onPress={onPay} tone="accent" style={payStyles.payBtn} />
       </View>
-      {!alreadyPaid ? (
-        <Text style={payStyles.payMuted}>Held in escrow until the merchant ships your order.</Text>
-      ) : null}
+      <Text style={payStyles.payMuted}>Draft items become visible in the group order only after this payment.</Text>
     </View>
   );
 }
-
 function MockPaymentModal({
   order,
   activeParticipantId,
   activeParticipantName,
+  pendingItems,
   step,
   onConfirm,
   onClose,
@@ -1506,20 +1565,22 @@ function MockPaymentModal({
   order: DemoOrder;
   activeParticipantId: string;
   activeParticipantName: string;
+  pendingItems: PendingCheckoutItem[];
   step: 'form' | 'processing' | 'success';
   onConfirm: () => void;
   onClose: () => void;
 }) {
-  const myItems = order.items.filter((item) => item.participantId === activeParticipantId);
+  const myItems = pendingItems;
   const myItemsTotal = myItems.reduce((sum, item) => {
     const product = findProduct(item.productId);
     return sum + (product?.price ?? 0) * item.quantity;
   }, 0);
-  const groupTotal = order.items.reduce((sum, item) => {
+  const existingGroupTotal = order.items.reduce((sum, item) => {
     const product = findProduct(item.productId);
     return sum + (product?.price ?? 0) * item.quantity;
   }, 0);
-  const { commissionILS, totalILS, savingsILS, soloShippingILS } = calcCommission(myItemsTotal, groupTotal, order.brand);
+  const groupTotal = existingGroupTotal + myItemsTotal;
+  const { totalILS, savingsILS, soloShippingILS } = calcCommission(myItemsTotal, groupTotal, order.brand);
   const fmtILS = (v: number) => Number.isInteger(v) ? String(v) : v.toFixed(2);
   const myTotal = fmtILS(Math.round(totalILS * 100) / 100);
   const storeName = demoStores[order.brand].name;
@@ -1531,12 +1592,12 @@ function MockPaymentModal({
         <View style={payStyles.modal}>
           <View style={payStyles.modalHeader}>
             <View style={payStyles.stripeLockRow}>
-              <Text style={payStyles.stripeLock}>🔒</Text>
+              <Text style={payStyles.stripeLock}>׳³ֲ³ײ²ֲ ׳²ֲ²ײ²ֲ׳³ג€™׳’ג€ֲ¬ײ²ֲ׳³ג€™׳’ג€ֲ¬׳’ג€ֲ¢</Text>
               <Text style={payStyles.stripeLabel}>Secure checkout</Text>
             </View>
             {step !== 'processing' ? (
               <Pressable onPress={onClose} accessibilityRole="button" style={payStyles.closeBtn}>
-                <Text style={payStyles.closeBtnText}>✕</Text>
+                <Text style={payStyles.closeBtnText}>׳³ֲ³׳’ג‚¬ג„¢׳²ֲ²ײ²ֲ׳³ג€™׳’ג€ֲ¬ײ²ֲ¢</Text>
               </Pressable>
             ) : null}
           </View>
@@ -1546,17 +1607,17 @@ function MockPaymentModal({
               {savingsILS > 0 ? (
                 <View style={payStyles.modalSavingsBanner}>
                   <Text style={payStyles.modalSavingsBannerText}>
-                    🎉  You're saving ₪{fmtILS(savingsILS)}
+                    You're saving NIS {fmtILS(savingsILS)}
                   </Text>
                 </View>
               ) : null}
-              <Text style={payStyles.modalTitle}>Pay ₪{myTotal}</Text>
+              <Text style={payStyles.modalTitle}>Add all to cart and pay NIS {myTotal}</Text>
               <Text style={payStyles.modalMuted}>
-                {activeParticipantName} · {myItems.length} item{myItems.length !== 1 ? 's' : ''} from {storeName}
+                {activeParticipantName} - {myItems.length} item{myItems.length !== 1 ? 's' : ''} from {storeName}
               </Text>
 
               <View style={payStyles.demoNotice}>
-                <Text style={payStyles.demoNoticeText}>Demo card — no real charge</Text>
+                <Text style={payStyles.demoNoticeText}>Demo card - no real charge</Text>
               </View>
 
               <Text style={payStyles.fieldLabel}>Card number</Text>
@@ -1585,41 +1646,41 @@ function MockPaymentModal({
                   const product = findProduct(item.productId);
                   const lineTotal = (product?.price ?? 0) * item.quantity;
                   return (
-                    <View key={item.id} style={payStyles.orderLine}>
+                    <View key={item.localId} style={payStyles.orderLine}>
                       <Text style={payStyles.orderLineName} numberOfLines={1}>
-                        {item.private ? 'Private item' : (product?.name ?? 'Item')} ×{item.quantity}
+                        {item.private ? 'Private item' : (product?.name ?? 'Item')} x{item.quantity}
                       </Text>
-                      <Text style={payStyles.orderLinePrice}>₪{lineTotal}</Text>
+                      <Text style={payStyles.orderLinePrice}>NIS {lineTotal}</Text>
                     </View>
                   );
                 })}
                 <View style={payStyles.orderDivider} />
                 <View style={payStyles.orderLine}>
                   <Text style={payStyles.orderLineMuted}>Subtotal</Text>
-                  <Text style={payStyles.orderLineMuted}>₪{myItemsTotal}</Text>
+                  <Text style={payStyles.orderLineMuted}>NIS {myItemsTotal}</Text>
                 </View>
                 {savingsILS > 0 ? (
                   <>
                     <View style={payStyles.orderLine}>
                       <Text style={payStyles.orderLineMuted}>Shipping if buying alone</Text>
                       <Text style={[payStyles.orderLineMuted, payStyles.strikethrough]}>
-                        ₪{fmtILS(soloShippingILS)}
+                        NIS {fmtILS(soloShippingILS)}
                       </Text>
                     </View>
                     <View style={payStyles.orderLine}>
                       <Text style={payStyles.orderLineSavings}>Your saving</Text>
-                      <Text style={payStyles.orderLineSavings}>-₪{fmtILS(savingsILS)}</Text>
+                      <Text style={payStyles.orderLineSavings}>-NIS {fmtILS(savingsILS)}</Text>
                     </View>
                   </>
                 ) : null}
                 <View style={payStyles.orderDivider} />
                 <View style={payStyles.orderLine}>
                   <Text style={payStyles.orderLineTotal}>You pay today</Text>
-                  <Text style={payStyles.orderLineTotal}>₪{myTotal}</Text>
+                  <Text style={payStyles.orderLineTotal}>NIS {myTotal}</Text>
                 </View>
               </View>
 
-              <DemoButton label={`Pay ₪${myTotal}`} onPress={onConfirm} tone="accent" style={payStyles.confirmBtn} />
+              <DemoButton label={`Add all to cart and pay NIS ${myTotal}`} onPress={onConfirm} tone="accent" style={payStyles.confirmBtn} />
               <Text style={payStyles.escrowNote}>
                 Payment held in escrow until {storeName} ships your order
               </Text>
@@ -1627,21 +1688,21 @@ function MockPaymentModal({
           ) : step === 'processing' ? (
             <View style={payStyles.processingState}>
               <ActivityIndicator size="large" color={colors.acc} />
-              <Text style={payStyles.processingText}>Processing payment…</Text>
-              <Text style={payStyles.processingMuted}>Securing ₪{myTotal} in escrow</Text>
+              <Text style={payStyles.processingText}>Processing payment...</Text>
+              <Text style={payStyles.processingMuted}>Securing NIS {myTotal} in escrow</Text>
             </View>
           ) : (
             <View style={payStyles.successState}>
               <View style={payStyles.successIcon}>
-                <Text style={payStyles.successIconText}>✓</Text>
+                <Text style={payStyles.successIconText}>OK</Text>
               </View>
               <Text style={payStyles.successTitle}>
-                {savingsILS > 0 ? `You saved ₪${fmtILS(savingsILS)}! 🎉` : 'Payment confirmed!'}
+                {savingsILS > 0 ? `You saved NIS ${fmtILS(savingsILS)}` : 'Payment confirmed'}
               </Text>
               <Text style={payStyles.successMuted}>
                 {savingsILS > 0
-                  ? `You paid ₪${myTotal} instead of ₪${fmtILS(Math.round((myItemsTotal + soloShippingILS) * 100) / 100)}. Payment secured until ${storeName} ships.`
-                  : `₪${myTotal} is secured until ${storeName} ships your order.`}
+                  ? `You paid NIS ${myTotal} instead of NIS ${fmtILS(Math.round((myItemsTotal + soloShippingILS) * 100) / 100)}. Your items are now in the group order.`
+                  : `NIS ${myTotal} is secured and your items are now in the group order.`}
               </Text>
               <DemoButton label="Back to cart" onPress={onClose} tone="accent" style={payStyles.confirmBtn} />
             </View>
@@ -2100,7 +2161,9 @@ const styles = StyleSheet.create({
   noticeText: { color: colors.acc, fontFamily: fontFamily.bodyBold, fontSize: 14 },
   mainGrid: { flexDirection: 'row', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 },
   catalogColumn: { flexGrow: 1, flexBasis: 640, gap: 14 },
+  catalogColumnBelow: { flexBasis: '100%' },
   cartColumn: { flexGrow: 1, flexBasis: 330, gap: 14 },
+  cartColumnWide: { flexBasis: '100%' },
   categoryRow: { gap: 8, paddingVertical: 4 },
   categoryPill: {
     borderRadius: 999,
@@ -2156,6 +2219,30 @@ const styles = StyleSheet.create({
   privateTextActive: { color: colors.acc },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   cartCard: { gap: 14 },
+  pendingCheckoutBox: {
+    gap: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.acc,
+    backgroundColor: colors.goldLight,
+    padding: 12,
+  },
+  pendingTitle: {
+    color: colors.tx,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 16,
+  },
+  pendingCount: {
+    minWidth: 34,
+    minHeight: 34,
+    borderRadius: 17,
+    backgroundColor: colors.acc,
+    color: colors.white,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 34,
+  },
   authGate: {
     gap: 10,
     borderColor: 'rgba(201,168,76,0.45)',
@@ -2575,12 +2662,6 @@ const styles = StyleSheet.create({
   tourBtnHalf: {
     flex: 1,
     alignSelf: 'auto',
-  },
-  demoVidBtn: {
-    flex: 1,
-    minWidth: 150,
-    alignSelf: 'auto',
-    backgroundColor: colors.navy,
   },
   storyVidBtn: {
     flex: 1,
