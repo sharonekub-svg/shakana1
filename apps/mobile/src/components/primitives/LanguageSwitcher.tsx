@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderColor: colors.br,
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     borderRadius: radii.xl,
   },
   wrapDark: {

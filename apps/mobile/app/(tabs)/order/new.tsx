@@ -682,7 +682,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.br,
     borderRadius: radii.xl,
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     ...shadow.card,
   },
   kicker: {

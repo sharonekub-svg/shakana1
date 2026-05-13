@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     borderWidth: 1,
     borderColor: colors.br,
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
   },
   title: {
     fontFamily: fontFamily.display,

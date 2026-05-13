@@ -8,7 +8,7 @@ export default function Html({ children }: PropsWithChildren) {
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-        <meta name="theme-color" content="#F7F1E8" />
+        <meta name="theme-color" content="#1B1612" />
         <title>Shakana – הזמנות שכנים</title>
         <meta name="description" content="Shakana – הזמנות קבוצתיות לשכנים. מדביקים קישור למוצר, שכנים מצטרפים ומשלמים, המייסד קונה מהחנות." />
         <meta property="og:type" content="website" />
@@ -26,7 +26,7 @@ export default function Html({ children }: PropsWithChildren) {
             __html: `
               body {
                 margin: 0;
-                background: #F7F1E8;
+                background: #1B1612;
                 font-family: 'Rubik', Arial, sans-serif;
               }
               #root {
@@ -41,7 +41,7 @@ export default function Html({ children }: PropsWithChildren) {
                 align-items: center;
                 justify-content: center;
                 padding: 24px;
-                background: #F7F1E8;
+                background: #1B1612;
                 text-align: center;
                 animation: shakana-fade-out 0.4s ease 8s forwards;
               }
@@ -52,9 +52,9 @@ export default function Html({ children }: PropsWithChildren) {
                 width: min(400px, 100%);
                 border: 1px solid #E3D5C6;
                 border-radius: 20px;
-                background: #FFFCF7;
+                background: #241D18;
                 padding: 32px 28px;
-                box-shadow: 0 2px 16px rgba(43,33,24,0.08);
+                box-shadow: 0 18px 48px rgba(0,0,0,0.24);
               }
               .shakana-fallback-dot {
                 display: inline-block;
@@ -74,7 +74,7 @@ export default function Html({ children }: PropsWithChildren) {
               }
               .shakana-fallback-text {
                 margin: 0;
-                color: #6F6257;
+                color: #CBBEAD;
                 font-size: 14px;
                 line-height: 1.7;
               }

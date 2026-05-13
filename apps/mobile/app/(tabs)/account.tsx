@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.brBr,
     borderRadius: radii.lg,
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     ...shadow.card,
   },
   avatar: {
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.brBr,
     borderRadius: radii.lg,
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
   },
   editCard: {
     gap: 12,
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.brBr,
     borderRadius: radii.lg,
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     ...shadow.card,
   },
   editRow: {
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.brBr,
     borderRadius: radii.lg,
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
   },
   languageButtons: {
     flexDirection: 'row',
@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.brBr,
     borderRadius: radii.lg,
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
   },
   linkPressed: {
     backgroundColor: colors.cardSoft,

@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   wrap: { gap: 8, position: 'relative', zIndex: 20 },
   label: { fontSize: 13, color: colors.mu, fontFamily: fontFamily.bodyBold },
   input: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     borderWidth: 1,
     borderRadius: radii.pill,
     paddingVertical: 15,
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     end: 0,
     zIndex: 100,
     maxHeight: 220,
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     borderRadius: radii.lg,
     borderColor: colors.br,
     borderWidth: 1,

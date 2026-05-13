@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.xl,
     borderWidth: 1,
     borderColor: colors.br,
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     ...shadow.cta,
   },
   title: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 14 },

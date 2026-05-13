@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   itemsCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     borderRadius: 26,
     borderWidth: 1,
     borderColor: colors.br,
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
     color: colors.tx,
   },
   breakdownCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     borderRadius: 26,
     borderWidth: 1,
     borderColor: colors.br,
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   methodsCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.br,

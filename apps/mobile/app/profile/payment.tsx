@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.brBr,
     borderRadius: radii.lg,
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     ...shadow.card,
   },
   cardTitle: {
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.brBr,
     borderRadius: radii.lg,
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
   },
   methodTop: {
     flexDirection: 'row',

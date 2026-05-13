@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
   cityChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     borderColor: colors.br,
     borderWidth: 1,
     borderRadius: radii.pill,
