@@ -585,6 +585,33 @@ export default function DemoUserScreen() {
     () => pendingCheckoutItems.filter((item) => item.orderId === order?.id && item.participantId === activeParticipantId),
     [activeParticipantId, order?.id, pendingCheckoutItems],
   );
+  const homeSetupCopy = language === 'he'
+    ? {
+        title: 'פתיחת הזמנה חדשה',
+        kicker: 'כתובת, חנות, שם ואז הזמנה',
+        cardTitle: 'זרימה אחת ברורה',
+        cardBody: 'בחרו חנות למעלה ושקנה תפתח את עמוד ההזמנה המודרך.',
+        cta: 'פתח הגדרה מלאה',
+        steps: [
+          ['1', 'כתובת קודם', 'רחוב, מספר בית ועיר'],
+          ['2', 'חנות נעולה', 'Amazon, Zara או H&M'],
+          ['3', 'השם שלך', 'יופיע לחברים ולחנות'],
+          ['4', 'פתיחת קטלוג', 'קישור או קוד להצטרפות'],
+        ],
+      }
+    : {
+        title: 'Start a new order',
+        kicker: 'Address, store, name, then invite',
+        cardTitle: 'One clean setup flow',
+        cardBody: 'Choose any store above and Shakana opens the guided order page.',
+        cta: 'Open full setup',
+        steps: [
+          ['1', 'Address first', 'Street, number, city'],
+          ['2', 'Store locked', 'Amazon, Zara, or H&M'],
+          ['3', 'Your name', 'Shown to friends and store'],
+          ['4', 'Open catalog', 'Share link or code'],
+        ],
+      };
   const orderLocked = order ? order.closesAt <= nowMs || order.status !== 'collecting' : false;
   const addressMissing = order ? !isCompleteDeliveryAddress(order.deliveryAddress) : false;
   const isFounder = order?.createdBy === activeParticipantId;
@@ -841,7 +868,7 @@ export default function DemoUserScreen() {
             </View>
           </Card>
           ) : null}
-          <SectionTitle title="Start a new order" kicker="Address, store, name, then invite" />
+          <SectionTitle title={homeSetupCopy.title} kicker={homeSetupCopy.kicker} />
           {newOrderMode ? (
             <Card style={styles.setupCard}>
               <Text style={styles.setupTitle}>Set up the order first</Text>
@@ -909,16 +936,11 @@ export default function DemoUserScreen() {
           </View>
           <Card style={styles.homeStepperCard}>
             <View style={styles.homeStepperHeader}>
-              <Text style={styles.homeStepperTitle}>One clean setup flow</Text>
-              <Text style={styles.muted}>Choose any store above and Shakana opens the guided order page.</Text>
+              <Text style={styles.homeStepperTitle}>{homeSetupCopy.cardTitle}</Text>
+              <Text style={styles.muted}>{homeSetupCopy.cardBody}</Text>
             </View>
             <View style={styles.homeStepperSteps}>
-              {[
-                ['1', 'Address first', 'Street, number, city'],
-                ['2', 'Store locked', 'Amazon, Zara, or H&M'],
-                ['3', 'Your name', 'Shown to friends and store'],
-                ['4', 'Copy invite', 'Share link or code'],
-              ].map(([num, title, body]) => (
+              {homeSetupCopy.steps.map(([num, title, body]) => (
                 <View key={num} style={styles.homeStepperStep}>
                   <Text style={styles.homeStepperNum}>{num}</Text>
                   <View style={styles.homeStepperCopy}>
@@ -928,7 +950,7 @@ export default function DemoUserScreen() {
                 </View>
               ))}
             </View>
-            <DemoButton label="Open full setup" onPress={() => openNewOrderSetup()} tone="accent" />
+            <DemoButton label={homeSetupCopy.cta} onPress={() => openNewOrderSetup()} tone="accent" />
           </Card>
           {newOrderMode ? (
             <Card style={styles.setupCard}>

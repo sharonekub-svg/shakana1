@@ -116,8 +116,8 @@ export function SectionTitle({ title, kicker }: { title: string; kicker?: string
 export function BrandPill({ brand }: { brand: DemoBrandId }) {
   const store = demoStores[brand];
   return (
-    <View style={[styles.brandPill, { borderColor: store.accent }]}>
-      <Text style={[styles.brandPillText, { color: store.accent }]}>{store.logoText}</Text>
+    <View style={styles.brandPill}>
+      <Text style={styles.brandPillText}>{store.logoText}</Text>
     </View>
   );
 }
@@ -512,10 +512,12 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: colors.s1,
+    backgroundColor: 'rgba(250,246,239,0.08)',
+    borderColor: 'rgba(250,246,239,0.42)',
     alignSelf: 'flex-start',
   },
   brandPillText: {
+    color: colors.white,
     fontFamily: fontFamily.display,
     fontSize: 22,
   },

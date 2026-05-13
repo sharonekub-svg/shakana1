@@ -621,6 +621,9 @@ export async function applyLanguageDirection(language: Language): Promise<void> 
   if (Platform.OS === 'web' && typeof document !== 'undefined') {
     document.documentElement.lang = language;
     document.documentElement.dir = shouldBeRtl ? 'rtl' : 'ltr';
+    document.body.lang = language;
+    document.body.dir = shouldBeRtl ? 'rtl' : 'ltr';
+    document.body.style.direction = shouldBeRtl ? 'rtl' : 'ltr';
   }
 
   if (Platform.OS !== 'web' && current !== shouldBeRtl) {

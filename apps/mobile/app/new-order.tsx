@@ -19,7 +19,9 @@ import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 
 const BRAND_ORDER: DemoBrandId[] = ['amazon', 'zara', 'hm'];
-const TIMER_OPTIONS = [30, 45, 60];
+const TIMER_VALUES = Array.from({ length: 60 }, (_, index) => index + 1);
+type TimerUnit = 'minutes' | 'hours' | 'days';
+const TIMER_UNITS: TimerUnit[] = ['minutes', 'hours', 'days'];
 
 const FALLBACK_ADDRESSES = [
   'Herzl 12, Petah Tikva',
@@ -37,10 +39,11 @@ type StepKey = 'address' | 'store' | 'name' | 'copy';
 
 const STEP_KEYS: StepKey[] = ['address', 'store', 'name', 'copy'];
 
-function normalizeTimerMinutes(value: string) {
-  const parsed = Number(value);
+function normalizeTimerMinutes(value: number, unit: TimerUnit) {
+  const multiplier = unit === 'days' ? 24 * 60 : unit === 'hours' ? 60 : 1;
+  const parsed = value * multiplier;
   if (!Number.isFinite(parsed)) return null;
-  return Math.max(1, Math.min(720, Math.round(parsed)));
+  return Math.max(1, Math.min(60 * 24 * 7, Math.round(parsed)));
 }
 
 function hasAddressNumber(value: string) {
@@ -84,9 +87,12 @@ function fallbackAddressSuggestions(value: string) {
   return FALLBACK_ADDRESSES.filter((address) => address.toLowerCase().includes(query)).slice(0, 5);
 }
 
-function buildInviteMessage(name: string, order: DemoOrder) {
+function buildInviteMessage(name: string, order: DemoOrder, language: 'he' | 'en') {
   const storeName = demoStores[order.brand].name;
   const link = buildSharedDemoInviteLink(order);
+  if (language === 'he') {
+    return `${name} פותח הזמנה משותפת מ-${storeName}. מצטרפים לפני שהטיימר נסגר, מוסיפים רק מוצרים מ-${storeName}, וחוסכים במשלוח. קישור: ${link} קוד: ${order.inviteCode}`;
+  }
   return `${name} is opening a shared ${storeName} order. Join before the timer closes, add only ${storeName} items, and save on delivery. Link: ${link} Code: ${order.inviteCode}`;
 }
 
@@ -112,30 +118,31 @@ export default function NewOrderScreen() {
     (typeof metadata?.name === 'string' && metadata.name.trim()) ||
     'Sharone Kubovsky';
 
+
   const copy = isHebrew
     ? {
         eyebrow: 'הזמנה חדשה',
         title: 'פותחים סל משותף',
-        subtitle: 'מתחילים בכתובת, בוחרים חנות אחת, מוסיפים שם, ואז מעתיקים קישור לחברים.',
+        subtitle: 'מתחילים בכתובת, בוחרים חנות אחת, מוסיפים שם, ואז פותחים את הקטלוג הנעול.',
         back: 'בית',
         step: 'שלב',
         next: 'המשך',
-        skip: 'דלג',
-        create: 'פתח הזמנה והעתק קישור',
-        copied: 'הקישור הועתק',
+        create: 'צור הזמנה ופתח קטלוג',
+        ready: 'הקטלוג מוכן',
         openCart: 'פתח קטלוג',
         addressTitle: 'כתובת למשלוח',
         addressBody: 'כתבו רחוב, מספר בית ועיר. החנות לא תוכל לטפל בהזמנה בלי מספר בית.',
         addressPlaceholder: 'לדוגמה: הרצל 12, פתח תקווה',
         addressMissing: 'צריך רחוב, מספר בית ועיר.',
         timer: 'טיימר',
+        timerBody: 'בחרו מספר בגלילה ואז דקות, שעות או ימים.',
         storeTitle: 'בחרו חנות',
         storeBody: 'אחרי פתיחת ההזמנה, החברים יוכלו להוסיף מוצרים רק מהחנות הזאת.',
         nameTitle: 'שם מוביל ההזמנה',
         nameBody: 'השם הזה יופיע בקישור הוואטסאפ ובצד החנות.',
         namePlaceholder: 'השם שלך',
-        copyTitle: 'הכל מוכן לשיתוף',
-        copyBody: 'נפתח סל נעול לחנות אחת. עכשיו אפשר להעתיק קישור או לפתוח את הקטלוג.',
+        copyTitle: 'הכל מוכן לפתיחת הקטלוג',
+        copyBody: 'נפתח סל נעול לחנות אחת. עכשיו עוברים לקטלוג כדי להוסיף מוצרים.',
         locked: 'קטלוג נעול לחנות אחת',
         members: 'חברים מצטרפים דרך הקישור או הקוד',
         code: 'קוד הצטרפות',
@@ -143,33 +150,35 @@ export default function NewOrderScreen() {
         address: 'כתובת',
         store: 'חנות',
         name: 'שם',
-        copyStep: 'העתקה',
+        copyStep: 'קטלוג',
         minutes: 'דקות',
+        hours: 'שעות',
+        days: 'ימים',
         skipped: 'אפשר להשלים אחר כך',
       }
     : {
         eyebrow: 'New order',
         title: 'Open a shared cart',
-        subtitle: 'Start with the address, choose one store, add your name, then copy the invite link.',
+        subtitle: 'Start with the address, choose one store, add your name, then open the locked catalog.',
         back: 'Home',
         step: 'Step',
         next: 'Next',
-        skip: 'Skip',
-        create: 'Create order and copy link',
-        copied: 'Link copied',
+        create: 'Create order and open catalog',
+        ready: 'Catalog ready',
         openCart: 'Open catalog',
         addressTitle: 'Delivery address',
         addressBody: 'Enter street, house number, and city. The store cannot process the order without the house number.',
         addressPlaceholder: 'Example: Herzl 12, Petah Tikva',
         addressMissing: 'Street, house number, and city are required.',
         timer: 'Timer',
+        timerBody: 'Swipe to choose a number, then choose minutes, hours, or days.',
         storeTitle: 'Choose store',
         storeBody: 'After launch, friends can add products only from this locked store.',
         nameTitle: 'Order lead name',
         nameBody: 'This name appears in the WhatsApp invite and merchant dashboard.',
         namePlaceholder: 'Your name',
-        copyTitle: 'Ready to share',
-        copyBody: 'A one-store shared cart is ready. Copy the invite or open the catalog.',
+        copyTitle: 'Ready to open the catalog',
+        copyBody: 'A one-store shared cart is ready. Move into the catalog to add products.',
         locked: 'Catalog locked to one store',
         members: 'Friends join by link or code',
         code: 'Join code',
@@ -177,8 +186,10 @@ export default function NewOrderScreen() {
         address: 'Address',
         store: 'Store',
         name: 'Name',
-        copyStep: 'Copy',
+        copyStep: 'Catalog',
         minutes: 'minutes',
+        hours: 'hours',
+        days: 'days',
         skipped: 'Can be completed later',
       };
 
@@ -186,13 +197,13 @@ export default function NewOrderScreen() {
   const [address, setAddress] = useState('');
   const [brand, setBrand] = useState<DemoBrandId | null>(initialBrand);
   const [leadName, setLeadName] = useState(defaultName);
-  const [timerMinutes, setTimerMinutes] = useState('45');
+  const [timerValue, setTimerValue] = useState(45);
+  const [timerUnit, setTimerUnit] = useState<TimerUnit>('minutes');
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
   const currentStep = STEP_KEYS[stepIndex] ?? 'copy';
-  const safeTimer = normalizeTimerMinutes(timerMinutes) ?? 45;
+  const safeTimer = normalizeTimerMinutes(timerValue, timerUnit) ?? 45;
   const selectedStore = brand ? demoStores[brand] : null;
   const createdOrder = createdOrderId ? orders.find((order) => order.id === createdOrderId) ?? null : null;
   const inviteLink = createdOrder ? buildSharedDemoInviteLink(createdOrder) : '';
@@ -279,21 +290,18 @@ export default function NewOrderScreen() {
       order = useDemoCommerceStore.getState().orders.find((candidate) => candidate.id === orderId) ?? null;
     }
     if (order) {
-      await Clipboard.setStringAsync(buildInviteMessage(cleanName, order));
-      setCopied(true);
-      globalThis.setTimeout(() => setCopied(false), 1800);
+      await Clipboard.setStringAsync(buildInviteMessage(cleanName, order, language));
     }
   };
 
   const goNext = async () => {
     if (currentStep === 'copy') {
       await createOrderIfNeeded();
+      openCatalog();
       return;
     }
     setStepIndex((value) => Math.min(value + 1, STEP_KEYS.length - 1));
   };
-
-  const skipStep = () => setStepIndex((value) => Math.min(value + 1, STEP_KEYS.length - 1));
 
   const openCatalog = () => {
     if (brand) selectBrand(brand);
@@ -366,26 +374,39 @@ export default function NewOrderScreen() {
               <View style={styles.timerBox}>
                 <View>
                   <Text style={styles.timerTitle}>{copy.timer}</Text>
-                  <Text style={styles.cardBody}>{`${safeTimer} ${copy.minutes}`}</Text>
+                  <Text style={styles.cardBody}>{copy.timerBody}</Text>
                 </View>
-                <View style={styles.timerOptions}>
-                  {TIMER_OPTIONS.map((minutes) => (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.timerScroller}>
+                  {TIMER_VALUES.map((value) => (
                     <Pressable
-                      key={minutes}
+                      key={value}
                       accessibilityRole="button"
-                      onPress={() => setTimerMinutes(String(minutes))}
-                      style={[styles.timerChip, safeTimer === minutes && styles.timerChipActive]}
+                      onPress={() => setTimerValue(value)}
+                      style={[styles.timerChip, timerValue === value && styles.timerChipActive]}
                     >
-                      <Text style={[styles.timerChipText, safeTimer === minutes && styles.timerChipTextActive]}>{minutes}</Text>
+                      <Text style={[styles.timerChipText, timerValue === value && styles.timerChipTextActive]}>{value}</Text>
                     </Pressable>
                   ))}
-                  <TextInput
-                    value={timerMinutes}
-                    onChangeText={setTimerMinutes}
-                    keyboardType="number-pad"
-                    style={styles.timerInput}
-                  />
+                </ScrollView>
+                <View style={styles.timerOptions}>
+                  {TIMER_UNITS.map((unit) => (
+                    <Pressable
+                      key={unit}
+                      accessibilityRole="button"
+                      onPress={() => setTimerUnit(unit)}
+                      style={[styles.timerUnitChip, timerUnit === unit && styles.timerChipActive]}
+                    >
+                      <Text style={[styles.timerChipText, timerUnit === unit && styles.timerChipTextActive]}>{copy[unit]}</Text>
+                    </Pressable>
+                  ))}
                 </View>
+                <Text style={styles.timerSummary}>
+                  {timerUnit === 'minutes'
+                    ? `${timerValue} ${copy.minutes}`
+                    : timerUnit === 'hours'
+                      ? `${timerValue} ${copy.hours}`
+                      : `${timerValue} ${copy.days}`}
+                </Text>
               </View>
             </View>
           ) : null}
@@ -478,11 +499,8 @@ export default function NewOrderScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Pressable accessibilityRole="button" onPress={skipStep} style={({ pressed }) => [styles.secondaryButton, pressed && demoStyles.pressed]}>
-            <Text style={styles.secondaryButtonText}>{copy.skip}</Text>
-          </Pressable>
           <Pressable accessibilityRole="button" onPress={goNext} style={({ pressed }) => [styles.primaryButton, pressed && demoStyles.pressed]}>
-            <Text style={styles.primaryButtonText}>{currentStep === 'copy' ? (copied ? copy.copied : copy.create) : copy.next}</Text>
+            <Text style={styles.primaryButtonText}>{currentStep === 'copy' ? copy.create : copy.next}</Text>
           </Pressable>
         </View>
 
@@ -702,6 +720,10 @@ const styles = StyleSheet.create({
     gap: 8,
     alignItems: 'center',
   },
+  timerScroller: {
+    gap: 8,
+    paddingRight: 6,
+  },
   timerChip: {
     width: 54,
     height: 38,
@@ -723,6 +745,23 @@ const styles = StyleSheet.create({
   },
   timerChipTextActive: {
     color: colors.white,
+  },
+  timerUnitChip: {
+    flex: 1,
+    minWidth: 86,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.br,
+    backgroundColor: colors.s2,
+  },
+  timerSummary: {
+    color: colors.tx,
+    fontFamily: fontFamily.display,
+    fontSize: 26,
+    lineHeight: 30,
   },
   timerInput: {
     width: 68,
