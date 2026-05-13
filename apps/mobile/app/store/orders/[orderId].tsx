@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   deliveryBoxWarning: {
-    backgroundColor: colors.goldLight,
+    backgroundColor: colors.accLight,
     borderColor: colors.acc,
   },
   warningText: {

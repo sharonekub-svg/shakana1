@@ -49,7 +49,7 @@ export default function BugReportScreen() {
 const styles = StyleSheet.create({
   screen: { paddingTop: 20, paddingBottom: 36, gap: 18 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  kicker: { fontFamily: fontFamily.bodyBold, fontSize: 10, letterSpacing: 2.4, color: colors.gold, marginBottom: 4 },
+  kicker: { fontFamily: fontFamily.bodyBold, fontSize: 10, letterSpacing: 2.4, color: colors.acc, marginBottom: 4 },
   title: { fontFamily: fontFamily.display, fontSize: 30, color: colors.tx },
   subtitle: { marginTop: 8, fontFamily: fontFamily.body, fontSize: 13, lineHeight: 20, color: colors.mu },
   card: { gap: 14, padding: 16, borderWidth: 1, borderColor: colors.br, borderRadius: radii.xl, backgroundColor: colors.s1, ...shadow.card },

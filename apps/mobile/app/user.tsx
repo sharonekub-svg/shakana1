@@ -334,7 +334,7 @@ const tourStyles = StyleSheet.create({
   statValue: {
     fontFamily: fontFamily.display,
     fontSize: 36,
-    color: colors.gold,
+    color: colors.acc,
     lineHeight: 40,
   },
   statLabel: {
@@ -1805,7 +1805,7 @@ const payStyles = StyleSheet.create({
     marginTop: 1,
   },
   savingsRow: {
-    backgroundColor: colors.goldLight,
+    backgroundColor: colors.accLight,
     borderRadius: 14,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -1826,9 +1826,9 @@ const payStyles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 9,
-    backgroundColor: colors.goldLight,
+    backgroundColor: colors.accLight,
     borderWidth: 1,
-    borderColor: colors.brBr,
+    borderColor: colors.acc,
   },
   paidBadgeText: {
     color: colors.acc,
@@ -1908,7 +1908,7 @@ const payStyles = StyleSheet.create({
     fontSize: 14,
   },
   modalSavingsBanner: {
-    backgroundColor: colors.goldLight,
+    backgroundColor: colors.accLight,
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -1933,7 +1933,7 @@ const payStyles = StyleSheet.create({
   },
   demoNotice: {
     borderRadius: 14,
-    backgroundColor: colors.goldLight,
+    backgroundColor: colors.s2,
     borderWidth: 1,
     borderColor: colors.brBr,
     paddingHorizontal: 12,
@@ -2032,7 +2032,7 @@ const payStyles = StyleSheet.create({
     flex: 1,
   },
   savingsBadge: {
-    backgroundColor: colors.goldLight,
+    backgroundColor: colors.accLight,
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -2078,7 +2078,7 @@ const payStyles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: colors.goldLight,
+    backgroundColor: colors.accLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2124,13 +2124,13 @@ const styles = StyleSheet.create({
     marginTop: 4,
     padding: 16,
     borderRadius: 22,
-    backgroundColor: colors.goldLight,
+    backgroundColor: colors.s2,
     borderWidth: 1,
     borderColor: colors.br,
   },
   joinStateCard: {
     gap: 10,
-    borderColor: colors.gold,
+    borderColor: colors.br,
     backgroundColor: colors.s2,
   },
   joinStateTitle: {
@@ -2285,7 +2285,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.acc,
-    backgroundColor: colors.goldLight,
+    backgroundColor: colors.accLight,
     padding: 12,
   },
   pendingTitle: {
@@ -2306,8 +2306,8 @@ const styles = StyleSheet.create({
   },
   authGate: {
     gap: 10,
-    borderColor: 'rgba(201,168,76,0.45)',
-    backgroundColor: colors.goldLight,
+    borderColor: colors.br,
+    backgroundColor: colors.s2,
   },
   authTitle: {
     color: colors.tx,
@@ -2344,7 +2344,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.br,
-    backgroundColor: colors.goldLight,
+    backgroundColor: colors.s2,
     padding: 12,
   },
   timerTitle: {
@@ -2366,7 +2366,7 @@ const styles = StyleSheet.create({
   preLaunchTimer: {
     flexBasis: '100%',
     gap: 12,
-    backgroundColor: colors.goldLight,
+    backgroundColor: colors.accLight,
     borderColor: colors.acc,
     borderWidth: 1,
     marginBottom: 8,
@@ -2399,7 +2399,7 @@ const styles = StyleSheet.create({
   },
   setupStepDone: {
     borderColor: colors.acc,
-    backgroundColor: colors.goldLight,
+    backgroundColor: colors.accLight,
   },
   setupStepNumber: {
     width: 24,
@@ -2464,7 +2464,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.acc,
-    backgroundColor: colors.goldLight,
+    backgroundColor: colors.accLight,
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 4,
@@ -2493,7 +2493,7 @@ const styles = StyleSheet.create({
   },
   addressInputMissing: {
     borderColor: colors.acc,
-    backgroundColor: colors.goldLight,
+    backgroundColor: colors.accLight,
   },
   addressSuggestionList: {
     gap: 6,
@@ -2528,7 +2528,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: colors.s2,
   },
-  joinedPill: { backgroundColor: colors.goldLight },
+  joinedPill: { backgroundColor: colors.accLight },
   activePill: { backgroundColor: colors.ink },
   participantRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   participantText: { color: colors.mu, fontFamily: fontFamily.bodyBold, fontSize: 12 },
@@ -2549,7 +2549,7 @@ const styles = StyleSheet.create({
   },
   participantBadge: {
     color: colors.acc,
-    backgroundColor: colors.goldLight,
+    backgroundColor: colors.accLight,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 999,
@@ -2562,7 +2562,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     minWidth: 140,
     borderRadius: 16,
-    backgroundColor: colors.goldLight,
+    backgroundColor: colors.s2,
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 2,
@@ -2635,10 +2635,8 @@ const styles = StyleSheet.create({
   savingsHero: {
     gap: 14,
     padding: 20,
-    backgroundColor: colors.card,
+    backgroundColor: colors.ink,
     borderRadius: 24,
-    borderWidth: 1,
-    borderColor: colors.br,
   },
   savingsHeroTop: {
     flexDirection: 'row',
@@ -2658,7 +2656,7 @@ const styles = StyleSheet.create({
   savingsHeroAmountLabel: {
     fontFamily: fontFamily.body,
     fontSize: 11,
-    color: colors.mu,
+    color: 'rgba(255,255,255,0.55)',
     textAlign: 'center',
     lineHeight: 16,
   },
@@ -2675,24 +2673,24 @@ const styles = StyleSheet.create({
   savingsHeroStatValue: {
     fontFamily: fontFamily.bodyBold,
     fontSize: 18,
-    color: colors.tx,
+    color: colors.white,
   },
   savingsHeroStatLabel: {
     fontFamily: fontFamily.body,
     fontSize: 10,
-    color: colors.mu,
+    color: 'rgba(255,255,255,0.55)',
     textAlign: 'center',
     lineHeight: 14,
   },
   savingsHeroDivider: {
     width: 1,
     height: 32,
-    backgroundColor: colors.br,
+    backgroundColor: 'rgba(255,255,255,0.15)',
   },
   savingsHeroBody: {
     fontFamily: fontFamily.body,
     fontSize: 13,
-    color: colors.mu,
+    color: 'rgba(255,255,255,0.65)',
     lineHeight: 20,
   },
   tourBtn: {

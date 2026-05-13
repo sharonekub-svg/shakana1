@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   logo: {
-    color: colors.gold,
+    color: colors.acc,
     fontFamily: fontFamily.bodyBold,
     fontSize: 13,
     letterSpacing: 1.1,
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   stepNumber: {
-    color: colors.gold,
+    color: colors.acc,
     fontFamily: fontFamily.display,
     fontSize: 28,
   },
