@@ -8,6 +8,7 @@ import { ScreenBase } from '@/components/primitives/ScreenBase';
 import { stashPendingInvite } from '@/lib/deeplinks';
 import { resetAnalytics } from '@/lib/posthog';
 import { useLocale } from '@/i18n/locale';
+import { formatMoney } from '@/utils/money';
 import { useAuthStore } from '@/stores/authStore';
 import {
   getDemoOrderStats,
@@ -304,14 +305,14 @@ export default function ProfileScreen() {
           <Stat icon="OP" label={copy.open} value={String(openOrders)} />
           <Stat icon="CP" label={copy.completed} value={String(stats.shippedOrders)} />
           <Stat icon="SV" label={copy.mySaves} value={String(personalSaves)} />
-          <Stat icon="IL" label={copy.savedYear} value={`ILS ${savingsThisYear}`} />
+          <Stat icon="IL" label={copy.savedYear} value={formatMoney(savingsThisYear, language)} />
           <Stat icon="WL" label={copy.wallets} value={String(readyPayments)} />
         </View>
 
         <View style={styles.savingsHero}>
           <IconBadge label="IL" large />
           <View style={{ flex: 1 }}>
-            <Text style={styles.savingsHeroValue}>ILS {savingsThisYear}</Text>
+            <Text style={styles.savingsHeroValue}>{formatMoney(savingsThisYear, language)}</Text>
             <Text style={styles.savingsHeroTitle}>{copy.savingsTracker}</Text>
             <Text style={styles.sectionBody}>{copy.savingsBody}</Text>
           </View>

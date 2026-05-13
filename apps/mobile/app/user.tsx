@@ -34,6 +34,7 @@ import { fontFamily } from '@/theme/fonts';
 import { colors } from '@/theme/tokens';
 import { BuildingSections } from '@/components/demo/BuildingSections';
 import { useLocale } from '@/i18n/locale';
+import { formatMoney } from '@/utils/money';
 import { useAuthStore } from '@/stores/authStore';
 import { stashPendingInvite } from '@/lib/deeplinks';
 import { searchCities, searchStreets } from '@/lib/locationAutocomplete';
@@ -102,12 +103,13 @@ function isCompleteDeliveryAddress(value: string) {
   return trimmed.length >= 8 && hasAddressNumber(trimmed) && trimmed.includes(',');
 }
 
-function addressValidationMessage(value: string) {
+function addressValidationMessage(value: string, language: 'he' | 'en' = 'en') {
   const trimmed = value.trim();
-  if (!trimmed) return 'Required: enter street + house number + city before opening the cart.';
-  if (!hasAddressNumber(trimmed)) return 'House number is required. Example: Herzl 12, Petah Tikva.';
-  if (!trimmed.includes(',')) return 'Add the city after the street and house number. Example: Herzl 12, Petah Tikva.';
-  return 'Required: valid timer, one store, and full address with house number before opening the cart.';
+  const he = language === 'he';
+  if (!trimmed) return he ? 'חובה להזין רחוב + מספר בית + עיר לפני פתיחת הסל.' : 'Required: enter street + house number + city before opening the cart.';
+  if (!hasAddressNumber(trimmed)) return he ? 'חובה להזין מספר בית. לדוגמה: הרצל 12, פתח תקווה.' : 'House number is required. Example: Herzl 12, Petah Tikva.';
+  if (!trimmed.includes(',')) return he ? 'הוסף עיר אחרי הרחוב ומספר הבית. לדוגמה: הרצל 12, פתח תקווה.' : 'Add the city after the street and house number. Example: Herzl 12, Petah Tikva.';
+  return he ? 'חובה לבחור טיימר, חנות וכתובת מלאה עם מספר בית לפני פתיחת הסל.' : 'Required: valid timer, one store, and full address with house number before opening the cart.';
 }
 
 const TOUR_STEPS = [
@@ -174,10 +176,25 @@ type PendingCheckoutItem = {
 };
 
 function DemoTour({ onClose }: { onClose: () => void }) {
+  const { language } = useLocale();
   const [step, setStep] = useState(0);
   const [playing, setPlaying] = useState(true);
   const current = TOUR_STEPS[step] ?? TOUR_STEPS[0];
   const total = TOUR_STEPS.length;
+  const localizeCurrencyText = (value = '') =>
+    language === 'he'
+      ? value
+          .replace(/ILS 2,400/g, formatMoney(2400, language))
+          .replace(/ILS 307/g, formatMoney(307, language))
+          .replace(/ILS 299/g, formatMoney(299, language))
+          .replace(/ILS 119/g, formatMoney(119, language))
+          .replace(/ILS 100/g, formatMoney(100, language))
+          .replace(/ILS 99/g, formatMoney(99, language))
+          .replace(/ILS 89/g, formatMoney(89, language))
+          .replace(/ILS 29/g, formatMoney(29, language))
+          .replace(/ILS 0/g, formatMoney(0, language))
+          .replace(/ILS 2.4K/g, '₪2.4K')
+      : value;
 
   useEffect(() => {
     if (!playing) return;
@@ -212,11 +229,11 @@ function DemoTour({ onClose }: { onClose: () => void }) {
             </Pressable>
           </View>
           <View style={tourStyles.statRow}>
-            <Text style={tourStyles.statValue}>{current?.stat}</Text>
+            <Text style={tourStyles.statValue}>{localizeCurrencyText(current?.stat)}</Text>
             <Text style={tourStyles.statLabel}>{current?.statLabel}</Text>
           </View>
           <Text style={tourStyles.title}>{current?.title}</Text>
-          <Text style={tourStyles.body}>{current?.body}</Text>
+          <Text style={tourStyles.body}>{localizeCurrencyText(current?.body)}</Text>
           <View style={tourStyles.dots}>
             {TOUR_STEPS.map((_, i) => (
               <Pressable key={i} onPress={() => { setStep(i); setPlaying(false); }} accessibilityRole="button">
@@ -737,18 +754,20 @@ export default function DemoUserScreen() {
           <Card style={styles.savingsHero}>
             <View style={styles.savingsHeroTop}>
               <View style={styles.savingsHeroAmountBlock}>
-                <Text style={styles.savingsHeroAmount}>ILS 47</Text>
-                <Text style={styles.savingsHeroAmountLabel}>avg saved{'\n'}per neighbor</Text>
+                <Text style={styles.savingsHeroAmount}>{formatMoney(47, language)}</Text>
+                <Text style={styles.savingsHeroAmountLabel}>
+                  {language === 'he' ? 'חיסכון ממוצע{break}לשכן'.replace('{break}', '\n') : 'avg saved\nper neighbor'}
+                </Text>
               </View>
               <View style={styles.savingsHeroStats}>
                 <View style={styles.savingsHeroStat}>
-                  <Text style={styles.savingsHeroStatValue}>ILS 0</Text>
-                  <Text style={styles.savingsHeroStatLabel}>shipping{'\n'}when grouped</Text>
+                  <Text style={styles.savingsHeroStatValue}>{formatMoney(0, language)}</Text>
+                  <Text style={styles.savingsHeroStatLabel}>{language === 'he' ? 'משלוח\nבהזמנה קבוצתית' : 'shipping\nwhen grouped'}</Text>
                 </View>
                 <View style={styles.savingsHeroDivider} />
                 <View style={styles.savingsHeroStat}>
-                  <Text style={styles.savingsHeroStatValue}>ILS 299</Text>
-                  <Text style={styles.savingsHeroStatLabel}>H&M free{'\n'}ship goal</Text>
+                  <Text style={styles.savingsHeroStatValue}>{formatMoney(299, language)}</Text>
+                  <Text style={styles.savingsHeroStatLabel}>{language === 'he' ? 'יעד משלוח\nחינם ב-H&M' : 'H&M free\nship goal'}</Text>
                 </View>
                 <View style={styles.savingsHeroDivider} />
                 <View style={styles.savingsHeroStat}>
@@ -758,7 +777,9 @@ export default function DemoUserScreen() {
               </View>
             </View>
             <Text style={styles.savingsHeroBody}>
-              Sharone, Noa, and Lior each order around ILS 100 from H&M. Their ILS 307 combined order ships free, each neighbor saves ILS 29 on delivery, and an active building can save about ILS 2,400 a year.
+              {language === 'he'
+                ? `שרון, נועה וליאור מזמינים כל אחד בערך ${formatMoney(100, language)} מ-H&M. ההזמנה המשותפת שלהם של ${formatMoney(307, language)} מקבלת משלוח חינם, כל שכן חוסך ${formatMoney(29, language)}, ובניין פעיל יכול לחסוך בערך ${formatMoney(2400, language)} בשנה.`
+                : `Sharone, Noa, and Lior each order around ${formatMoney(100, language)} from H&M. Their ${formatMoney(307, language)} combined order ships free, each neighbor saves ${formatMoney(29, language)} on delivery, and an active building can save about ${formatMoney(2400, language)} a year.`}
             </Text>
             <View style={styles.heroBtnRow}>
               <Pressable
@@ -937,7 +958,7 @@ export default function DemoUserScreen() {
               />
               {!setupReady ? (
                 <Text style={styles.validationText}>
-                  {addressValidationMessage(setupDeliveryAddress)}
+                  {addressValidationMessage(setupDeliveryAddress, language)}
                 </Text>
               ) : null}
             </Card>
@@ -1089,7 +1110,7 @@ export default function DemoUserScreen() {
                       <Text style={styles.cartTitle}>Group cart</Text>
                       <Text style={styles.muted}>{order.id} | Code {order.inviteCode}</Text>
                     </View>
-                    <Text style={styles.total}>ILS {getOrderTotal(order)}</Text>
+                    <Text style={styles.total}>{formatMoney(getOrderTotal(order), language)}</Text>
                   </View>
                   <StatusRail status={order.status} />
                   {orderLocked ? (
@@ -1288,7 +1309,7 @@ export default function DemoUserScreen() {
                                 <Text style={styles.itemName}>{item.private ? 'Private item' : product?.name ?? 'Item'}</Text>
                                 <Text style={styles.muted}>{item.size}, {item.color} | Qty {item.quantity}</Text>
                               </View>
-                              <Text style={styles.itemPrice}>ILS {lineTotal}</Text>
+                              <Text style={styles.itemPrice}>{formatMoney(lineTotal, language)}</Text>
                             </View>
                           );
                         })}
@@ -1326,7 +1347,7 @@ export default function DemoUserScreen() {
                                 {owner?.name ?? 'Guest'} | {privateForViewer ? 'Contribution hidden' : `${item.size}, ${item.color}`} | Qty {item.quantity}
                               </Text>
                             </View>
-                            <Text style={styles.itemPrice}>ILS {line.lineTotal}</Text>
+                            <Text style={styles.itemPrice}>{formatMoney(line.lineTotal, language)}</Text>
                           </View>
                         );
                       })}
@@ -1409,6 +1430,7 @@ function ProductCard({
   onRequireLogin: () => void;
   onCreateOrder: () => void;
 }) {
+  const { language } = useLocale();
   const [size, setSize] = useState('');
   const [color, setColor] = useState('');
   const [quantity, setQuantity] = useState(1);
@@ -1424,10 +1446,12 @@ function ProductCard({
       <View style={styles.productInfo}>
         <View style={styles.rowBetween}>
           <Text style={styles.productName}>{product.name}</Text>
-          <Text style={styles.price}>ILS {product.price}</Text>
+          <Text style={styles.price}>{formatMoney(product.price, language)}</Text>
         </View>
         <Text style={styles.muted}>{product.description}</Text>
-        <Text style={styles.sku}>{product.sku} | {product.stockStatus} | Save ILS {productSaving}</Text>
+        <Text style={styles.sku}>
+          {product.sku} | {product.stockStatus} | {language === 'he' ? 'חיסכון' : 'Save'} {formatMoney(productSaving, language)}
+        </Text>
         <Text style={styles.selectorLabel}>Size</Text>
         <View style={styles.optionRow}>
           {product.sizes.map((option) => (
@@ -1514,6 +1538,7 @@ function PayButton({
   pendingItems: PendingCheckoutItem[];
   onPay: () => void;
 }) {
+  const { language } = useLocale();
   if (pendingItems.length === 0) return null;
 
   const myItemsTotal = pendingItems.reduce((sum, item) => {
@@ -1535,21 +1560,34 @@ function PayButton({
       {savingsILS > 0 && (
         <View style={payStyles.savingsRow}>
           <Text style={payStyles.savingsText}>
-            Saving ILS {fmtILS(savingsILS)} vs buying alone
+            {language === 'he'
+              ? `חיסכון של ${formatMoney(Number(fmtILS(savingsILS)), language)} לעומת קנייה לבד`
+              : `Saving ${formatMoney(Number(fmtILS(savingsILS)), language)} vs buying alone`}
           </Text>
         </View>
       )}
       <View style={payStyles.payRow}>
         <View>
           <Text style={payStyles.payLabel}>Checkout drafts</Text>
-          <Text style={payStyles.payAmount}>ILS {total}</Text>
+          <Text style={payStyles.payAmount}>{formatMoney(Number(total), language)}</Text>
           {savingsILS > 0 && (
-            <Text style={payStyles.payAmountSub}>instead of ILS {withoutShakana}</Text>
+            <Text style={payStyles.payAmountSub}>
+              {language === 'he' ? `במקום ${formatMoney(Number(withoutShakana), language)}` : `instead of ${formatMoney(Number(withoutShakana), language)}`}
+            </Text>
           )}
         </View>
-        <DemoButton label={`Add all to cart and pay ILS ${total} now`} onPress={onPay} tone="accent" style={payStyles.payBtn} />
+        <DemoButton
+          label={language === 'he' ? `הוסף הכל לסל ושלם ${formatMoney(Number(total), language)}` : `Add all to cart and pay ${formatMoney(Number(total), language)} now`}
+          onPress={onPay}
+          tone="accent"
+          style={payStyles.payBtn}
+        />
       </View>
-      <Text style={payStyles.payMuted}>Draft items become visible in the group order only after this payment.</Text>
+      <Text style={payStyles.payMuted}>
+        {language === 'he'
+          ? 'פריטי טיוטה מופיעים בהזמנה הקבוצתית רק אחרי התשלום.'
+          : 'Draft items become visible in the group order only after this payment.'}
+      </Text>
     </View>
   );
 }
@@ -1570,6 +1608,7 @@ function MockPaymentModal({
   onConfirm: () => void;
   onClose: () => void;
 }) {
+  const { language } = useLocale();
   const myItems = pendingItems;
   const myItemsTotal = myItems.reduce((sum, item) => {
     const product = findProduct(item.productId);
@@ -1607,11 +1646,17 @@ function MockPaymentModal({
               {savingsILS > 0 ? (
                 <View style={payStyles.modalSavingsBanner}>
                   <Text style={payStyles.modalSavingsBannerText}>
-                    You're saving ILS {fmtILS(savingsILS)}
+                    {language === 'he'
+                      ? `אתה חוסך ${formatMoney(Number(fmtILS(savingsILS)), language)}`
+                      : `You're saving ${formatMoney(Number(fmtILS(savingsILS)), language)}`}
                   </Text>
                 </View>
               ) : null}
-              <Text style={payStyles.modalTitle}>Add all to cart and pay ILS {myTotal}</Text>
+              <Text style={payStyles.modalTitle}>
+                {language === 'he'
+                  ? `הוסף הכל לסל ושלם ${formatMoney(Number(myTotal), language)}`
+                  : `Add all to cart and pay ${formatMoney(Number(myTotal), language)}`}
+              </Text>
               <Text style={payStyles.modalMuted}>
                 {activeParticipantName} - {myItems.length} item{myItems.length !== 1 ? 's' : ''} from {storeName}
               </Text>
@@ -1650,37 +1695,42 @@ function MockPaymentModal({
                       <Text style={payStyles.orderLineName} numberOfLines={1}>
                         {item.private ? 'Private item' : (product?.name ?? 'Item')} x{item.quantity}
                       </Text>
-                      <Text style={payStyles.orderLinePrice}>ILS {lineTotal}</Text>
+                      <Text style={payStyles.orderLinePrice}>{formatMoney(lineTotal, language)}</Text>
                     </View>
                   );
                 })}
                 <View style={payStyles.orderDivider} />
                 <View style={payStyles.orderLine}>
                   <Text style={payStyles.orderLineMuted}>Subtotal</Text>
-                  <Text style={payStyles.orderLineMuted}>ILS {myItemsTotal}</Text>
+                  <Text style={payStyles.orderLineMuted}>{formatMoney(myItemsTotal, language)}</Text>
                 </View>
                 {savingsILS > 0 ? (
                   <>
                     <View style={payStyles.orderLine}>
                       <Text style={payStyles.orderLineMuted}>Shipping if buying alone</Text>
                       <Text style={[payStyles.orderLineMuted, payStyles.strikethrough]}>
-                        ILS {fmtILS(soloShippingILS)}
+                        {formatMoney(Number(fmtILS(soloShippingILS)), language)}
                       </Text>
                     </View>
                     <View style={payStyles.orderLine}>
                       <Text style={payStyles.orderLineSavings}>Your saving</Text>
-                      <Text style={payStyles.orderLineSavings}>-ILS {fmtILS(savingsILS)}</Text>
+                      <Text style={payStyles.orderLineSavings}>-{formatMoney(Number(fmtILS(savingsILS)), language)}</Text>
                     </View>
                   </>
                 ) : null}
                 <View style={payStyles.orderDivider} />
                 <View style={payStyles.orderLine}>
                   <Text style={payStyles.orderLineTotal}>You pay today</Text>
-                  <Text style={payStyles.orderLineTotal}>ILS {myTotal}</Text>
+                  <Text style={payStyles.orderLineTotal}>{formatMoney(Number(myTotal), language)}</Text>
                 </View>
               </View>
 
-              <DemoButton label={`Add all to cart and pay ILS ${myTotal}`} onPress={onConfirm} tone="accent" style={payStyles.confirmBtn} />
+              <DemoButton
+                label={language === 'he' ? `הוסף הכל לסל ושלם ${formatMoney(Number(myTotal), language)}` : `Add all to cart and pay ${formatMoney(Number(myTotal), language)}`}
+                onPress={onConfirm}
+                tone="accent"
+                style={payStyles.confirmBtn}
+              />
               <Text style={payStyles.escrowNote}>
                 Payment held in escrow until {storeName} ships your order
               </Text>
@@ -1689,7 +1739,9 @@ function MockPaymentModal({
             <View style={payStyles.processingState}>
               <ActivityIndicator size="large" color={colors.acc} />
               <Text style={payStyles.processingText}>Processing payment...</Text>
-              <Text style={payStyles.processingMuted}>Securing ILS {myTotal} in escrow</Text>
+              <Text style={payStyles.processingMuted}>
+                {language === 'he' ? `שומרים ${formatMoney(Number(myTotal), language)} בנאמנות` : `Securing ${formatMoney(Number(myTotal), language)} in escrow`}
+              </Text>
             </View>
           ) : (
             <View style={payStyles.successState}>
@@ -1697,12 +1749,20 @@ function MockPaymentModal({
                 <Text style={payStyles.successIconText}>OK</Text>
               </View>
               <Text style={payStyles.successTitle}>
-                {savingsILS > 0 ? `You saved ILS ${fmtILS(savingsILS)}` : 'Payment confirmed'}
+                {savingsILS > 0
+                  ? language === 'he'
+                    ? `חסכת ${formatMoney(Number(fmtILS(savingsILS)), language)}`
+                    : `You saved ${formatMoney(Number(fmtILS(savingsILS)), language)}`
+                  : language === 'he' ? 'התשלום אושר' : 'Payment confirmed'}
               </Text>
               <Text style={payStyles.successMuted}>
                 {savingsILS > 0
-                  ? `You paid ILS ${myTotal} instead of ILS ${fmtILS(Math.round((myItemsTotal + soloShippingILS) * 100) / 100)}. Your items are now in the group order.`
-                  : `ILS ${myTotal} is secured and your items are now in the group order.`}
+                  ? language === 'he'
+                    ? `שילמת ${formatMoney(Number(myTotal), language)} במקום ${formatMoney(Number(fmtILS(Math.round((myItemsTotal + soloShippingILS) * 100) / 100)), language)}. הפריטים שלך עכשיו בהזמנה הקבוצתית.`
+                    : `You paid ${formatMoney(Number(myTotal), language)} instead of ${formatMoney(Number(fmtILS(Math.round((myItemsTotal + soloShippingILS) * 100) / 100)), language)}. Your items are now in the group order.`
+                  : language === 'he'
+                    ? `${formatMoney(Number(myTotal), language)} נשמר בנאמנות והפריטים שלך עכשיו בהזמנה הקבוצתית.`
+                    : `${formatMoney(Number(myTotal), language)} is secured and your items are now in the group order.`}
               </Text>
               <DemoButton label="Back to cart" onPress={onClose} tone="accent" style={payStyles.confirmBtn} />
             </View>

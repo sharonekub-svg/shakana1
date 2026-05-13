@@ -29,12 +29,13 @@ import {
 } from '@/stores/demoCommerceStore';
 import { fontFamily } from '@/theme/fonts';
 import { colors } from '@/theme/tokens';
+import { useLocale } from '@/i18n/locale';
+import { formatMoney } from '@/utils/money';
 
 type QueueFilter = 'needsAction' | 'all' | OrderStatus;
 type StoreFilter = 'all' | DemoBrandId;
 
 const STORE_FILTERS: StoreFilter[] = ['all', 'zara', 'amazon', 'hm'];
-const money = (value: number) => `ILS ${Math.round(value)}`;
 
 const FILTERS: { label: string; value: QueueFilter }[] = [
   { label: 'Needs action', value: 'needsAction' },
@@ -60,6 +61,7 @@ function isDisplayableMerchantOrder(order: DemoOrder) {
 
 export default function StoreDashboardScreen() {
   const router = useRouter();
+  const { language } = useLocale();
   const orders = useDemoCommerceStore((state) => state.orders);
   const lastPulse = useDemoCommerceStore((state) => state.lastPulse);
   const demoMode = useDemoCommerceStore((state) => state.demoMode);
@@ -138,6 +140,7 @@ export default function StoreDashboardScreen() {
               orders={brand === 'all' ? merchantOrders : merchantOrders.filter((order) => order.brand === brand)}
               active={storeFilter === brand}
               onPress={() => setStoreFilter(brand)}
+              language={language}
             />
           ))}
         </View>
@@ -146,8 +149,8 @@ export default function StoreDashboardScreen() {
           <Metric label="Needs action" value={String(readyToProcess)} highlight />
           <Metric label="Open orders" value={String(activeOrders.length)} />
           <Metric label="Items to pick" value={String(itemsToPick)} />
-          <Metric label="Total GMV" value={money(totalGmv)} />
-          <Metric label="Group savings" value={money(totalSavings)} />
+          <Metric label="Total GMV" value={formatMoney(Math.round(totalGmv), language)} />
+          <Metric label="Group savings" value={formatMoney(totalSavings, language)} />
         </View>
 
         <View style={styles.queueHeader}>
@@ -196,6 +199,7 @@ export default function StoreDashboardScreen() {
                 nowMs={nowMs}
                 onOpen={() => router.push(`/store/orders/${order.id}`)}
                 onTimerEnd={() => setNowMs(Date.now())}
+                language={language}
               />
             ))}
           </View>
@@ -212,11 +216,13 @@ function StoreFilterCard({
   orders,
   active,
   onPress,
+  language,
 }: {
   brand: StoreFilter;
   orders: DemoOrder[];
   active: boolean;
   onPress: () => void;
+  language: 'he' | 'en';
 }) {
   const label = brand === 'all' ? 'All stores' : demoStores[brand].name;
   const accent = brand === 'all' ? colors.acc : demoStores[brand].accent;
@@ -245,7 +251,7 @@ function StoreFilterCard({
       <Text style={styles.muted}>{openOrders.length} open orders</Text>
       <View style={styles.storeFilterStats}>
         <Stat label="Items" value={String(totalItems)} />
-        <Stat label="Value" value={money(totalValue)} />
+        <Stat label="Value" value={formatMoney(Math.round(totalValue), language)} />
       </View>
     </Pressable>
   );
@@ -256,11 +262,13 @@ function OrderQueueCard({
   nowMs,
   onOpen,
   onTimerEnd,
+  language,
 }: {
   order: DemoOrder;
   nowMs: number;
   onOpen: () => void;
   onTimerEnd?: () => void;
+  language: 'he' | 'en';
 }) {
   const store = demoStores[order.brand];
   if (!store) return null;
@@ -315,13 +323,13 @@ function OrderQueueCard({
       <View style={styles.orderStats}>
         <Stat label="Participants" value={String(order.participants.length)} />
         <Stat label="Items" value={String(totalItems)} />
-        <Stat label="Total" value={money(getOrderTotal(order))} />
+        <Stat label="Total" value={formatMoney(getOrderTotal(order), language)} />
         <Stat label="Goal" value={`${progress}%`} />
       </View>
 
       <ProgressBar progress={progress} accent={store.accent} />
       <Text style={styles.muted}>
-        {money(getOrderTotal(order))} / {money(FREE_SHIPPING_GOAL)} toward free shipping. Group saved {money(getGroupSavings(order))}.
+        {formatMoney(getOrderTotal(order), language)} / {formatMoney(FREE_SHIPPING_GOAL, language)} toward free shipping. Group saved {formatMoney(getGroupSavings(order), language)}.
       </Text>
       <StatusRail status={order.status} />
     </Pressable>

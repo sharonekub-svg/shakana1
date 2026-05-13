@@ -28,6 +28,8 @@ import {
 } from '@/stores/demoCommerceStore';
 import { fontFamily } from '@/theme/fonts';
 import { colors } from '@/theme/tokens';
+import { useLocale } from '@/i18n/locale';
+import { formatMoney } from '@/utils/money';
 
 function isCompleteDeliveryAddress(value: string) {
   const trimmed = value.trim();
@@ -49,6 +51,7 @@ function isDisplayableMerchantOrder(order: DemoOrder | undefined): order is Demo
 
 export default function StoreOrderDetailScreen() {
   const router = useRouter();
+  const { language } = useLocale();
   const params = useLocalSearchParams<{ orderId?: string }>();
   const orders = useDemoCommerceStore((state) => state.orders);
   const updateStatus = useDemoCommerceStore((state) => state.updateStatus);
@@ -141,7 +144,7 @@ export default function StoreOrderDetailScreen() {
             <Metric label="Status" value={merchantState} />
             <Metric label="Participants" value={String(order.participants.length)} />
             <Metric label="Total items" value={String(getOrderItemCount(order))} />
-            <Metric label="Total price" value={`ILS ${getOrderTotal(order)}`} />
+            <Metric label="Total price" value={formatMoney(getOrderTotal(order), language)} />
             <Metric label="Delivery" value={deliveryAddressReady ? 'Exact address ready' : 'Needs number'} />
           </View>
 
@@ -224,7 +227,7 @@ export default function StoreOrderDetailScreen() {
                             <View style={{ flex: 1 }}>
                               <Text style={styles.itemName}>{line.displayName}</Text>
                               <Text style={styles.muted}>
-                                {item.quantity}x | Size {item.size} | {item.color} | ILS {line.lineTotal}
+                                {item.quantity}x | Size {item.size} | {item.color} | {formatMoney(line.lineTotal, language)}
                                 {item.private ? ' | Private for friends' : ''}
                               </Text>
                             </View>

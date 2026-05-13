@@ -3,6 +3,8 @@ import { Card } from '@/components/demo/DemoPrimitives';
 import { demoStores } from '@/demo/catalog';
 import { fontFamily } from '@/theme/fonts';
 import { colors, radii, shadow } from '@/theme/tokens';
+import { useLocale } from '@/i18n/locale';
+import { formatMoney } from '@/utils/money';
 import {
   getOrderItemCount,
   getOrderTotal,
@@ -72,6 +74,7 @@ export function BuildingSections({
   onOpenLogin: () => void;
   onChooseBrand: (brand: 'hm' | 'zara' | 'amazon') => void;
 }) {
+  const { language } = useLocale();
   const openOrders = orders.filter((order) => order.status !== 'shipped');
   const completedOrders = orders.filter((order) => order.status === 'shipped').length;
   const topOrders = orders.slice(0, 3);
@@ -146,9 +149,9 @@ export function BuildingSections({
             <OrderCard
               key={order.id}
               title={`Order ${order.id}`}
-              subtitle={`${order.brand.toUpperCase()} · ${getOrderItemCount(order)} items`}
+              subtitle={`${order.brand.toUpperCase()} ֲ· ${getOrderItemCount(order)} items`}
               status={order.status.toUpperCase()}
-              meta={`${getOrderTotal(order)} ILS  · ${order.participants.length} seats`}
+              meta={`${formatMoney(getOrderTotal(order), language)} · ${order.participants.length} ${language === 'he' ? 'משתתפים' : 'seats'}`}
               actionLabel="OPEN"
               onPress={onOpenStore}
             />

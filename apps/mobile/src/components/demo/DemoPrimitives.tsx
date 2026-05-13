@@ -12,6 +12,8 @@ import {
 import Svg, { Circle } from 'react-native-svg';
 import { colors, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
+import { useLocale } from '@/i18n/locale';
+import { formatMoney } from '@/utils/money';
 import {
   FREE_SHIPPING_GOAL,
   type DemoBrandId,
@@ -257,7 +259,7 @@ export function CelebrationBanner({ pulse }: { pulse: DemoPulse | null }) {
 
   return (
     <Animated.View style={[styles.celebration, { opacity, transform: [{ translateY }] }]}>
-      <Text style={styles.celebrationSpark}>✦</Text>
+      <Text style={styles.celebrationSpark}>NEW</Text>
       <View style={{ flex: 1 }}>
         <Text style={styles.celebrationTitle}>Live update</Text>
         <Text style={styles.celebrationBody}>{pulse.message}</Text>
@@ -273,6 +275,7 @@ export function SavingsTracker({
   orders: DemoOrder[];
   activeParticipantId: string;
 }) {
+  const { language } = useLocale();
   const stats = getDemoOrderStats(orders);
   const personalWins = getParticipantSuccessCount(orders, activeParticipantId);
   const yearlySavings = Math.round(stats.totalSavings);
@@ -280,28 +283,35 @@ export function SavingsTracker({
     <Card style={styles.trackerCard}>
       <View style={styles.rowBetween}>
         <View>
-          <Text style={styles.kicker}>Trust & savings</Text>
-          <Text style={styles.h3}>You have saved ILS {yearlySavings} this year</Text>
+          <Text style={styles.kicker}>{language === 'he' ? 'אמון וחיסכון' : 'Trust & savings'}</Text>
+          <Text style={styles.h3}>
+            {language === 'he'
+              ? `חסכת ${formatMoney(yearlySavings, language)} השנה`
+              : `You have saved ${formatMoney(yearlySavings, language)} this year`}
+          </Text>
         </View>
         <View style={styles.badgeStack}>
           <View style={styles.socialBadge}>
             <Text style={styles.socialBadgeValue}>{personalWins}</Text>
-            <Text style={styles.socialBadgeLabel}>verified saves</Text>
+            <Text style={styles.socialBadgeLabel}>{language === 'he' ? 'חסכונות מאומתים' : 'verified saves'}</Text>
           </View>
           <View style={[styles.socialBadge, styles.neutralBadge]}>
             <Text style={styles.socialBadgeValue}>{stats.totalParticipants || 1}</Text>
-            <Text style={styles.socialBadgeLabel}>trusted neighbors</Text>
+            <Text style={styles.socialBadgeLabel}>{language === 'he' ? 'שכנים מחוברים' : 'trusted neighbors'}</Text>
           </View>
         </View>
       </View>
       <Text style={styles.muted}>
-        WhatsApp invites, exact variants, and privacy mode keep the flow fast without exposing items you want to keep private.
+        {language === 'he'
+          ? 'הזמנות WhatsApp, וריאנטים מדויקים ומצב פרטיות שומרים על זרימה מהירה בלי לחשוף פריטים פרטיים.'
+          : 'WhatsApp invites, exact variants, and privacy mode keep the flow fast without exposing items you want to keep private.'}
       </Text>
     </Card>
   );
 }
 
 export function SavingsPanel({ order, compact = false }: { order: DemoOrder; compact?: boolean }) {
+  const { language } = useLocale();
   const progress = getGoalProgress(order);
   const remaining = getRemainingToGoal(order);
   const personal = getPersonalSavings(order);
@@ -311,26 +321,38 @@ export function SavingsPanel({ order, compact = false }: { order: DemoOrder; com
     <Card style={compact ? styles.compactSavings : undefined}>
       <View style={styles.rowBetween}>
         <View>
-          <Text style={styles.kicker}>Group savings</Text>
-          <Text style={styles.savingsBig}>Saved ILS {Math.round(group)} total</Text>
+          <Text style={styles.kicker}>{language === 'he' ? 'חיסכון קבוצתי' : 'Group savings'}</Text>
+          <Text style={styles.savingsBig}>
+            {language === 'he'
+              ? `נחסכו ${formatMoney(Math.round(group), language)} בסך הכל`
+              : `Saved ${formatMoney(Math.round(group), language)} total`}
+          </Text>
         </View>
         <View style={styles.savingsBadge}>
-          <Text style={styles.savingsBadgeText}>ILS {Math.round(personal)} saved each</Text>
+          <Text style={styles.savingsBadgeText}>
+            {language === 'he'
+              ? `${formatMoney(Math.round(personal), language)} לכל משתתף`
+              : `${formatMoney(Math.round(personal), language)} saved each`}
+          </Text>
         </View>
       </View>
       <Text style={styles.muted}>
-        Your delivery share dropped from ILS 25 to ILS {shared.toFixed(0)}.
+        {language === 'he'
+          ? `החלק שלך במשלוח ירד מ-${formatMoney(25, language)} ל-${formatMoney(Number(shared.toFixed(0)), language)}.`
+          : `Your delivery share dropped from ${formatMoney(25, language)} to ${formatMoney(Number(shared.toFixed(0)), language)}.`}
       </Text>
       <View style={styles.progressBlock}>
         <View style={styles.rowBetween}>
-          <Text style={styles.muted}>ILS {getOrderTotal(order)} / ILS {FREE_SHIPPING_GOAL}</Text>
+          <Text style={styles.muted}>{formatMoney(getOrderTotal(order), language)} / {formatMoney(FREE_SHIPPING_GOAL, language)}</Text>
           <Text style={styles.muted}>{progress}%</Text>
         </View>
         <ProgressBar progress={progress} />
         <Text style={styles.muted}>
           {remaining === 0
-            ? 'Free shipping unlocked for this group.'
-            : `Only ILS ${remaining} left to unlock free shipping.`}
+            ? language === 'he' ? 'משלוח חינם נפתח לקבוצה הזאת.' : 'Free shipping unlocked for this group.'
+            : language === 'he'
+              ? `נשארו רק ${formatMoney(remaining, language)} לפתיחת משלוח חינם.`
+              : `Only ${formatMoney(remaining, language)} left to unlock free shipping.`}
         </Text>
       </View>
     </Card>

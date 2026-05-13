@@ -738,7 +738,7 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
         const { commissionILS, totalILS, savingsILS } = calcCommission(myItemsTotal, groupTotal, order.brand);
         const totalCharged = Math.round(totalILS * 100) / 100;
         const eventMsg = allPaid
-          ? `All payments received — order ready for ${demoStores[order.brand].name} 🎉`
+          ? `All payments received - order ready for ${demoStores[order.brand].name}`
           : savingsILS > 0
             ? `${name} paid ILS ${totalCharged} (items ILS ${myItemsTotal} + Shakana fee ILS ${commissionILS}) — saved ILS ${savingsILS}`
             : `${name} paid ILS ${totalCharged} — payment secured in escrow`;

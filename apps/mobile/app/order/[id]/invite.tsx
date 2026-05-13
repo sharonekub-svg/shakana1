@@ -13,7 +13,18 @@ import { useOrder } from '@/api/orders';
 import { buildAppInviteUrl, buildInviteUrl } from '@/lib/deeplinks';
 import { useUiStore } from '@/stores/uiStore';
 import { useLocale } from '@/i18n/locale';
-import { formatAgorot } from '@/utils/format';
+import { formatAgorotMoney } from '@/utils/money';
+
+function decodeTitle(value: string | null | undefined) {
+  if (!value) return null;
+  return value
+    .replace(/&amp;/g, '&')
+    .replace(/&#x27;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#39;/g, "'");
+}
 
 export default function InviteSheet() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -23,41 +34,45 @@ export default function InviteSheet() {
   const copy = isHebrew
     ? {
         createError: 'לא הצלחנו ליצור קישור הזמנה.',
-        shareMessage: '�ILS תח את Shakana כדי להצטרף להזמנה ולראות את כל ה�ILS רטים.',
         shareError: 'השיתוף נכשל.',
         copied: 'קישור ההזמנה הועתק.',
         title: 'הזמן שכנים',
         lead:
-          'שלח את הקישור לחשבון אחר. אחרי התחברות והשלמת כתובת, החבר יצטרף לאותה הזמנה, יראה את הסל המלא ויוכל להוסיף מוצר ל�ILS ני שהטיימר נסגר.',
+          'שלח את הקישור לחשבון אחר. אחרי התחברות והשלמת כתובת, החבר יצטרף לאותה הזמנה, יראה את הסל המלא ויוכל להוסיף מוצר לפני שהטיימר נסגר.',
         stepsTitle: 'איך השיתוף עובד',
-        step1: '1. מעתיקים או משת�ILS ים את קישור ההזמנה.',
-        step2: '2. החבר �ILS ותח את הקישור ומתחבר עם החשבון שלו.',
-        step3: '3. Shakana מצר�ILS ת אותו להזמנה המדויקת הזאת.',
-        step4: '4. בדמו הזה התשלום מדולג, אז א�ILS שר מיד להוסיף מוצר לסל.',
+        step1: '1. מעתיקים או משתפים את קישור ההזמנה.',
+        step2: '2. החבר פותח את הקישור ומתחבר עם החשבון שלו.',
+        step3: '3. Shakana מצרפת אותו להזמנה המדויקת הזאת.',
+        step4: '4. התשלום בדמו מדומה, ורק אחרי תשלום הפריטים נכנסים לסל הקבוצתי.',
         tapCopy: 'לחץ להעתקה',
-        directLink: 'קישור ישיר לא�ILS ליקציה',
+        directLink: 'קישור ישיר לאפליקציה',
         creating: 'יוצר...',
         shareButton: 'שתף קישור עם חבר',
         back: 'חזרה להזמנה',
+        oneLinkTitle: 'זה הקישור היחיד ששולחים',
+        oneLinkBody: 'החבר פותח, מתחבר עם החשבון שלו, ונכנס לאותה הזמנה עם אותו סל.',
+        myOrder: 'ההזמנה שלי',
       }
     : {
         createError: 'Could not create invite link.',
-        shareMessage: 'Open Shakana to join the order and see the full details.',
         shareError: 'Sharing failed.',
         copied: 'Invite link copied.',
         title: 'Invite neighbors',
         lead:
-          'Send this link to another account. After they sign in and fiILSh their address, they will join the same order, see the full cart, and add their own product before the timer closes.',
+          'Send this link to another account. After they sign in and finish their address, they will join the same order, see the full cart, and add their own product before the timer closes.',
         stepsTitle: 'How the share flow works',
         step1: '1. Copy or share this invite link.',
         step2: '2. Your friend opens it and logs in with their own account.',
         step3: '3. Shakana joins them to this exact order.',
-        step4: '4. Payment is skipped for the demo, so they can immediately add a product to the cart.',
+        step4: '4. Payment is simulated in the demo; paid items then enter the group cart.',
         tapCopy: 'Tap to copy',
         directLink: 'Direct app link',
         creating: 'creating...',
         shareButton: 'Share link with a friend',
         back: 'Back to order',
+        oneLinkTitle: 'This is the one link to send',
+        oneLinkBody: 'Your friend opens it, signs in with their own account, and lands inside the same shared order.',
+        myOrder: 'my order',
       };
   const gen = useGenerateInvite();
   const { data } = useOrder(id);
@@ -77,57 +92,47 @@ export default function InviteSheet() {
   const order = data?.order;
   const participantCount = Math.max(1, data?.participants.length ?? 1);
   const deliveryFee = order?.estimated_shipping_agorot ?? 0;
-  const currentDeliveryShare = Math.ceil(deliveryFee / participantCount);
-  const nextDeliveryShare = Math.ceil(deliveryFee / (participantCount + 1));
-  const saveByJoining = Math.max(0, currentDeliveryShare - nextDeliveryShare);
   const freeShippingGap = order
     ? Math.max(0, (order.free_shipping_threshold_agorot ?? 0) - order.product_price_agorot * participantCount)
     : 0;
-  const rawTitle = order?.product_title ?? null;
-  const productTitle = rawTitle
-    ? rawTitle.replace(/&amp;/g, '&').replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'")
-    : (isHebrew ? 'ההזמנה שלי' : 'my order');
-  let smartShareMessage: string;
-  if (isHebrew) {
-    const parts: string[] = ['�ILS תחתי הזמנה קבוצתית ב-Shakana'];
-    if (productTitle && productTitle !== 'ההזמנה שלי') parts.push(`מוצר: ${productTitle}`);
-    if (order?.store_label && order.store_label !== 'Manual store') parts.push(`חנות: ${order.store_label}`);
-    const closesAt = order?.closes_at ? new Date(order.closes_at) : null;
-    if (closesAt && closesAt > new Date()) {
-      const msLeft = closesAt.getTime() - Date.now();
-      const hLeft = Math.floor(msLeft / 3600000);
-      const mLeft = Math.floor((msLeft % 3600000) / 60000);
-      const timeStr = hLeft > 0 ? `${hLeft} שעות ו-${mLeft} דקות` : `${mLeft} דקות`;
-      parts.push(`נסגר בעוד: ${timeStr}`);
-    }
-    if (deliveryFee > 0) parts.push(`דמי משלוח נוכחיים: ILS ${Math.ceil(deliveryFee / (participantCount * 100))}`);
-    if (freeShippingGap > 0) parts.push(`חסר למשלוח חינם: ILS ${Math.ceil(freeShippingGap / 100)}`);
-    if (participantCount > 1) parts.push(`הצטר�ILS ו: ${participantCount} שכנים`);
-    smartShareMessage = parts.join('\n');
-  } else {
-    const parts: string[] = ['I opened a group order on Shakana'];
-    if (productTitle && productTitle !== 'my order') parts.push(`Product: ${productTitle}`);
-    if (order?.store_label && order.store_label !== 'Manual store') parts.push(`Store: ${order.store_label}`);
-    const closesAt = order?.closes_at ? new Date(order.closes_at) : null;
-    if (closesAt && closesAt > new Date()) {
-      const msLeft = closesAt.getTime() - Date.now();
-      const hLeft = Math.floor(msLeft / 3600000);
-      const mLeft = Math.floor((msLeft % 3600000) / 60000);
-      const timeStr = hLeft > 0 ? `${hLeft}h ${mLeft}m` : `${mLeft}m`;
-      parts.push(`Closes in: ${timeStr}`);
-    }
-    if (deliveryFee > 0) parts.push(`Current delivery per person: ILS ${Math.ceil(deliveryFee / (participantCount * 100))}`);
-    if (freeShippingGap > 0) parts.push(`Missing for free shipping: ILS ${Math.ceil(freeShippingGap / 100)}`);
-    if (participantCount > 1) parts.push(`Joined: ${participantCount} neighbors`);
-    smartShareMessage = parts.join('\n');
+  const productTitle = decodeTitle(order?.product_title) ?? copy.myOrder;
+
+  const shareParts: string[] = isHebrew ? ['פתחתי הזמנה קבוצתית ב-Shakana'] : ['I opened a group order on Shakana'];
+  if (productTitle !== copy.myOrder) shareParts.push(isHebrew ? `מוצר: ${productTitle}` : `Product: ${productTitle}`);
+  if (order?.store_label && order.store_label !== 'Manual store') {
+    shareParts.push(isHebrew ? `חנות: ${order.store_label}` : `Store: ${order.store_label}`);
   }
+  const closesAt = order?.closes_at ? new Date(order.closes_at) : null;
+  if (closesAt && closesAt > new Date()) {
+    const msLeft = closesAt.getTime() - Date.now();
+    const hLeft = Math.floor(msLeft / 3600000);
+    const mLeft = Math.floor((msLeft % 3600000) / 60000);
+    const timeStr = isHebrew
+      ? hLeft > 0 ? `${hLeft} שעות ו-${mLeft} דקות` : `${mLeft} דקות`
+      : hLeft > 0 ? `${hLeft}h ${mLeft}m` : `${mLeft}m`;
+    shareParts.push(isHebrew ? `נסגר בעוד: ${timeStr}` : `Closes in: ${timeStr}`);
+  }
+  if (deliveryFee > 0) {
+    shareParts.push(
+      isHebrew
+        ? `דמי משלוח נוכחיים לאדם: ${formatAgorotMoney(Math.ceil(deliveryFee / participantCount), language)}`
+        : `Current delivery per person: ${formatAgorotMoney(Math.ceil(deliveryFee / participantCount), language)}`,
+    );
+  }
+  if (freeShippingGap > 0) {
+    shareParts.push(
+      isHebrew
+        ? `חסר למשלוח חינם: ${formatAgorotMoney(freeShippingGap, language)}`
+        : `Missing for free shipping: ${formatAgorotMoney(freeShippingGap, language)}`,
+    );
+  }
+  if (participantCount > 1) shareParts.push(isHebrew ? `הצטרפו: ${participantCount} שכנים` : `Joined: ${participantCount} neighbors`);
+  const smartShareMessage = shareParts.join('\n');
 
   const onShare = async () => {
     if (!token || !id) return;
     try {
-      await Share.share({
-        message: `${smartShareMessage}\n\n${universal}`,
-      });
+      await Share.share({ message: `${smartShareMessage}\n\n${universal}` });
       trackInviteSent(String(id));
     } catch (e) {
       pushToast(e instanceof Error ? e.message : copy.shareError, 'error');
@@ -160,14 +165,8 @@ export default function InviteSheet() {
         </View>
 
         <Pressable onPress={onCopy} style={styles.linkCard} accessibilityRole="button">
-          <Text style={styles.oneLinkTitle}>
-            {isHebrew ? 'זה הקישור היחיד ששולחים' : 'This is the one link to send'}
-          </Text>
-          <Text style={styles.oneLinkBody}>
-            {isHebrew
-              ? 'החבר �ILS ותח, מתחבר עם החשבון שלו, ונכנס לאותה הזמנה עם אותו סל.'
-              : 'Your friend opens it, signs in with their own account, and lands inside the same shared order.'}
-          </Text>
+          <Text style={styles.oneLinkTitle}>{copy.oneLinkTitle}</Text>
+          <Text style={styles.oneLinkBody}>{copy.oneLinkBody}</Text>
           {gen.isPending || !token ? (
             <ActivityIndicator color={colors.acc} />
           ) : (
@@ -230,7 +229,7 @@ const styles = StyleSheet.create({
   step: {
     fontFamily: fontFamily.body,
     fontSize: 13,
-    lineHeight: 19,
+    lineHeight: 20,
     color: colors.mu,
   },
 });

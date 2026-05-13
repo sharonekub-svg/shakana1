@@ -19,6 +19,7 @@ import {
   useDemoCommerceStore,
 } from '@/stores/demoCommerceStore';
 import { demoStores } from '@/demo/catalog';
+import { formatAgorotMoney, formatMoney } from '@/utils/money';
 
 const C = {
   bg: '#F7F1E8',
@@ -51,10 +52,6 @@ type OrderPreview = {
   participant_names: string[];
   is_closed: boolean;
 };
-
-function formatShekels(agorot: number): string {
-  return (agorot / 100).toFixed(0);
-}
 
 function decodeHtml(str: string | null): string | null {
   if (!str) return str;
@@ -204,9 +201,9 @@ export default function JoinPreviewWeb() {
     return (
       <View style={[styles.root, styles.centerContent]}>
         <Text style={styles.wordmark}>shakana</Text>
-        <Text style={styles.closedTitle}>ההזמנה הזאת נסגרה או לא קיימת</Text>
+        <Text style={styles.closedTitle}>This order is closed or no longer exists</Text>
         <Pressable style={styles.secondaryBtn} onPress={() => router.replace('/')}>
-          <Text style={styles.secondaryBtnText}>�ILS תח הזמנה חדשה</Text>
+          <Text style={styles.secondaryBtnText}>Open a new order</Text>
         </Pressable>
       </View>
     );
@@ -268,15 +265,15 @@ export default function JoinPreviewWeb() {
             </View>
             <View style={styles.shippingRow}>
               <Text style={styles.shippingLabel}>Combined total</Text>
-              <Text style={styles.shippingValue}>ILS {getOrderTotal(demoOrder)}</Text>
+              <Text style={styles.shippingValue}>{formatMoney(getOrderTotal(demoOrder), 'en')}</Text>
             </View>
           </View>
         </ScrollView>
         <View style={styles.stickyBottom}>
           <Pressable style={styles.ctaBtn} onPress={handleJoin} accessibilityRole="button">
-            <Text style={styles.ctaBtnText}>{session ? 'Open shared cart' : 'Sign in and join cart'}</Text>
+            <Text style={styles.ctaBtnText}>{session ? 'Open shared cart' : 'Sign in and join order'}</Text>
           </Pressable>
-          <Text style={styles.ctaCaption}>You will see the shared cart after login.</Text>
+          <Text style={styles.ctaCaption}>You can add items after joining.</Text>
         </View>
       </View>
     );
@@ -286,9 +283,9 @@ export default function JoinPreviewWeb() {
     return (
       <View style={[styles.root, styles.centerContent]}>
         <Text style={styles.wordmark}>shakana</Text>
-        <Text style={styles.closedTitle}>ההזמנה הזאת נסגרה או לא קיימת</Text>
+        <Text style={styles.closedTitle}>This order is closed or no longer exists</Text>
         <Pressable style={styles.secondaryBtn} onPress={() => router.replace('/')}>
-          <Text style={styles.secondaryBtnText}>�ILS תח הזמנה חדשה</Text>
+          <Text style={styles.secondaryBtnText}>Open a new order</Text>
         </Pressable>
       </View>
     );
@@ -298,9 +295,9 @@ export default function JoinPreviewWeb() {
     return (
       <View style={[styles.root, styles.centerContent]}>
         <Text style={styles.wordmark}>shakana</Text>
-        <Text style={styles.closedTitle}>ההזמנה הזאת נסגרה או לא קיימת</Text>
+        <Text style={styles.closedTitle}>This order is closed or no longer exists</Text>
         <Pressable style={styles.secondaryBtn} onPress={() => router.replace('/')}>
-          <Text style={styles.secondaryBtnText}>�ILS תח הזמנה חדשה</Text>
+          <Text style={styles.secondaryBtnText}>Open a new order</Text>
         </Pressable>
       </View>
     );
@@ -312,7 +309,7 @@ export default function JoinPreviewWeb() {
   // Countdown
   const isExpiredTimer = secondsLeft !== null && secondsLeft <= 0;
   const isUrgent = secondsLeft !== null && secondsLeft < 7200;
-  let countdownDisplay = '––:––:––';
+  let countdownDisplay = '--:--:--';
   if (secondsLeft !== null && secondsLeft > 0) {
     const h = Math.floor(secondsLeft / 3600);
     const m = Math.floor((secondsLeft % 3600) / 60);
@@ -333,9 +330,9 @@ export default function JoinPreviewWeb() {
   // Founder line
   const founderParts: string[] = [];
   if (founder?.first_name) founderParts.push(founder.first_name);
-  if (founder?.apt) founderParts.push(`דירה ${founder.apt}`);
-  if (founder?.floor) founderParts.push(`קומה ${founder.floor}`);
-  const founderLine = founderParts.join(' • ');
+  if (founder?.apt) founderParts.push(`Apt ${founder.apt}`);
+  if (founder?.floor) founderParts.push(`Floor ${founder.floor}`);
+  const founderLine = founderParts.join(' · ');
 
   return (
     <View style={styles.root}>
@@ -347,11 +344,9 @@ export default function JoinPreviewWeb() {
         </View>
 
         <View style={styles.storeSign}>
-          <Text style={styles.storeSignKicker}>החנות של ההזמנה</Text>
+          <Text style={styles.storeSignKicker}>Order store</Text>
           <Text style={styles.storeSignName}>{order.store_label || 'Store'}</Text>
-          <Text style={styles.storeSignBody}>
-            כדי להצטרף נכון, הדבק כאן רק לינק מוצר מאותה חנות. Shakana תבדוק את המחיר, המשלוח והא�ILS שרויות ל�ILS י הלינק.
-          </Text>
+          <Text style={styles.storeSignBody}>Sign in first, then add products from this store only. The shared cart, timer, savings, and participants will be visible after login.</Text>
         </View>
 
         {/* Product card */}
@@ -369,7 +364,7 @@ export default function JoinPreviewWeb() {
             {order.product_title ? (
               <Text style={styles.productTitle}>{order.product_title}</Text>
             ) : null}
-            <Text style={styles.productPrice}>ILS {formatShekels(order.product_price_agorot)}</Text>
+            <Text style={styles.productPrice}>{formatAgorotMoney(order.product_price_agorot, 'en')}</Text>
           </View>
         </View>
 
@@ -380,9 +375,9 @@ export default function JoinPreviewWeb() {
 
         {/* Countdown */}
         <View style={styles.countdownSection}>
-          <Text style={styles.countdownLabel}>נסגר בעוד</Text>
+          <Text style={styles.countdownLabel}>Closes in</Text>
           {isExpiredTimer ? (
-            <Text style={[styles.countdownValue, { color: C.err }]}>ההזמנה נסגרה</Text>
+            <Text style={[styles.countdownValue, { color: C.err }]}>Order closed</Text>
           ) : (
             <Text
               style={[
@@ -398,8 +393,7 @@ export default function JoinPreviewWeb() {
         {/* Group info */}
         <View style={styles.groupSection}>
           <View style={styles.shippingRow}>
-            <Text style={styles.shippingLabel}>משלוח לאדם</Text>
-            <Text style={styles.shippingValue}>ILS {formatShekels(shippingPerPerson)}</Text>
+            <Text style={styles.shippingLabel}>Delivery per person</Text>`n            <Text style={styles.shippingValue}>{formatAgorotMoney(shippingPerPerson, 'en')}</Text>
           </View>
 
           {/* Progress bar */}
@@ -409,20 +403,16 @@ export default function JoinPreviewWeb() {
 
           {/* Milestone */}
           {freeShippingReached ? (
-            <Text style={[styles.milestoneText, { color: C.acc }]}>משלוח חינם הו�ILS על</Text>
+            <Text style={[styles.milestoneText, { color: C.acc }]}>Free shipping unlocked</Text>
           ) : (
-            <Text style={styles.milestoneText}>
-              עוד ILS {formatShekels(freeShippingGap)} למשלוח חינם
-            </Text>
+            <Text style={styles.milestoneText}>Only {formatAgorotMoney(freeShippingGap, 'en')} left for free shipping</Text>
           )}
         </View>
 
         {/* Participants */}
         {participant_names.length > 0 ? (
           <View style={styles.participantsSection}>
-            <Text style={styles.participantsSectionLabel}>
-              הצטר�ILS ו ({participants_count})
-            </Text>
+            <Text style={styles.participantsSectionLabel}>Joined ({participants_count})</Text>
             {participant_names.map((name, i) => (
               <Text key={i} style={styles.participantName}>
                 {name}
@@ -435,9 +425,9 @@ export default function JoinPreviewWeb() {
       {/* Sticky bottom CTA */}
       <View style={styles.stickyBottom}>
         <Pressable style={styles.ctaBtn} onPress={handleJoin} accessibilityRole="button">
-          <Text style={styles.ctaBtnText}>הצטרף להזמנה</Text>
+          <Text style={styles.ctaBtnText}>{session ? 'Open shared cart' : 'Sign in and join order'}</Text>
         </Pressable>
-        <Text style={styles.ctaCaption}>ניתן להוסיף �ILS ריטים אחרי ההצטר�ILS ות</Text>
+        <Text style={styles.ctaCaption}>You can add items after joining.</Text>
       </View>
     </View>
   );
