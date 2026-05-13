@@ -94,7 +94,7 @@ function normalizeTimerMinutes(value: string) {
 }
 
 function hasAddressNumber(value: string) {
-  return /\d+[׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ-׳³ֲ³ײ²ֲ³׳²ֲ³׳’ג‚¬ג€A-Za-z]?/.test(value);
+  return /\d+[A-Za-z]?/.test(value);
 }
 
 function isCompleteDeliveryAddress(value: string) {
@@ -114,15 +114,15 @@ const TOUR_STEPS = [
   {
     step: '01',
     title: 'A neighbor finds something she loves',
-    body: 'Sharone spots an H&M linen shirt. Solo delivery costs ׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€29. But there\'s a smarter way ׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג‚¬ֲײ²ֲ¬׳³ג€™׳’ג€ֲ¬ײ²ֲ one that costs nothing.',
-    stat: '׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€29',
+    body: 'Sharone spots an H&M linen shirt. Solo delivery costs NIS 29. But there is a smarter way - one that costs nothing.',
+    stat: 'NIS 29',
     statLabel: 'solo shipping',
     image: 'https://images.unsplash.com/photo-1603252109303-2751441dd157?auto=format&fit=crop&w=600&q=80',
   },
   {
     step: '02',
     title: 'Group order live in 30 seconds',
-    body: 'Sharone opens Shakana, picks H&M, sets a 45-minute timer. A shared cart is created instantly ׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג‚¬ֲײ²ֲ¬׳³ג€™׳’ג€ֲ¬ײ²ֲ no app needed for neighbors.',
+    body: 'Sharone opens Shakana, picks H&M, sets a 45-minute timer. A shared cart is created instantly - no app needed for neighbors.',
     stat: '30s',
     statLabel: 'to go live',
     image: 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=600&q=80',
@@ -130,7 +130,7 @@ const TOUR_STEPS = [
   {
     step: '03',
     title: 'One WhatsApp message to the building',
-    body: '"Hey neighbors ׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג‚¬ֲײ²ֲ¬׳³ג€™׳’ג€ֲ¬ײ²ֲ I\'m ordering from H&M, join my cart and we all get free shipping!" Shakana writes the message. One tap to send.',
+    body: 'Hey neighbors - I am ordering from H&M, join my cart and we all get free shipping. Shakana writes the message. One tap to send.',
     stat: '1 tap',
     statLabel: 'to share',
     image: 'https://images.unsplash.com/photo-1611746872915-64382b5c76da?auto=format&fit=crop&w=600&q=80',
@@ -138,14 +138,14 @@ const TOUR_STEPS = [
   {
     step: '04',
     title: 'Noa + Lior join. Free shipping unlocked.',
-    body: 'Each neighbor adds their items privately. ׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€119 + ׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€99 + ׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€89 = ׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€307. That\'s over the ׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€299 threshold. H&M ships free to the building.',
-    stat: '׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€0',
+    body: 'Each neighbor adds their items privately. NIS 119 + NIS 99 + NIS 89 = NIS 307. That is over the NIS 299 threshold. H&M ships free to the building.',
+    stat: 'NIS 0',
     statLabel: 'shipping cost',
     image: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?auto=format&fit=crop&w=600&q=80',
   },
   {
     step: '05',
-    title: 'Everyone pays their share ׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג‚¬ֲײ²ֲ¬׳³ג€™׳’ג€ֲ¬ײ²ֲ securely',
+    title: 'Everyone pays their share - securely',
     body: 'Shakana holds all payments in Stripe escrow. Sharone buys the full order. Money only releases after every neighbor confirms delivery.',
     stat: '100%',
     statLabel: 'escrow protected',
@@ -208,7 +208,7 @@ function DemoTour({ onClose }: { onClose: () => void }) {
           <View style={tourStyles.topRow}>
             <Text style={tourStyles.stepLabel}>{current?.step} / {String(total).padStart(2, '0')}</Text>
             <Pressable onPress={onClose} accessibilityRole="button" style={tourStyles.closeBtn}>
-              <Text style={tourStyles.closeBtnText}>׳³ֲ³׳’ג‚¬ג„¢׳²ֲ²ײ²ֲ׳³ג€™׳’ג€ֲ¬ײ²ֲ¢</Text>
+              <Text style={tourStyles.closeBtnText}>X</Text>
             </Pressable>
           </View>
           <View style={tourStyles.statRow}>
@@ -231,17 +231,17 @@ function DemoTour({ onClose }: { onClose: () => void }) {
               accessibilityRole="button"
               style={[tourStyles.navBtn, step === 0 && tourStyles.navBtnDisabled]}
             >
-              <Text style={tourStyles.navBtnText}>׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ ׳²ֲ²ײ²ֲ Back</Text>
+              <Text style={tourStyles.navBtnText}>Back</Text>
             </Pressable>
             <Pressable
               onPress={() => setPlaying((p) => !p)}
               accessibilityRole="button"
               style={tourStyles.playBtn}
             >
-              <Text style={tourStyles.playBtnText}>{playing ? '׳³ֲ³׳’ג‚¬ג„¢׳²ֲ²ײ²ֲ׳²ֲ²ײ²ֲ¸' : '׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬׳’ג‚¬ֲ׳²ֲ²ײ²ֲ¶'}</Text>
+              <Text style={tourStyles.playBtnText}>{playing ? 'Pause' : 'Play'}</Text>
             </Pressable>
             <Pressable onPress={goNext} accessibilityRole="button" style={tourStyles.navBtnAccent}>
-              <Text style={tourStyles.navBtnAccentText}>{step < total - 1 ? 'Next ׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ ׳³ג€™׳’ג€ֲ¬׳’ג€ֲ¢' : 'Done ׳³ֲ³׳’ג‚¬ג„¢׳²ֲ²ײ²ֲ׳³ג€™׳’ג€ֲ¬ײ²ֲ'}</Text>
+              <Text style={tourStyles.navBtnAccentText}>{step < total - 1 ? 'Next' : 'Done'}</Text>
             </Pressable>
           </View>
         </View>
@@ -520,7 +520,7 @@ export default function DemoUserScreen() {
         if (order) {
           restoreSharedOrder(order);
         } else {
-          setJoinError('Order not found ׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג‚¬ֲײ²ֲ¬׳³ג€™׳’ג€ֲ¬ײ²ֲ the founder may need to open the app once to sync it. Tap "Try again" after they do.');
+          setJoinError('Order not found - the founder may need to open the app once to sync it. Tap "Try again" after they do.');
         }
       })
       .catch(() => {
@@ -737,17 +737,17 @@ export default function DemoUserScreen() {
           <Card style={styles.savingsHero}>
             <View style={styles.savingsHeroTop}>
               <View style={styles.savingsHeroAmountBlock}>
-                <Text style={styles.savingsHeroAmount}>׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€47</Text>
+                <Text style={styles.savingsHeroAmount}>NIS 47</Text>
                 <Text style={styles.savingsHeroAmountLabel}>avg saved{'\n'}per neighbor</Text>
               </View>
               <View style={styles.savingsHeroStats}>
                 <View style={styles.savingsHeroStat}>
-                  <Text style={styles.savingsHeroStatValue}>׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€0</Text>
+                  <Text style={styles.savingsHeroStatValue}>NIS 0</Text>
                   <Text style={styles.savingsHeroStatLabel}>shipping{'\n'}when grouped</Text>
                 </View>
                 <View style={styles.savingsHeroDivider} />
                 <View style={styles.savingsHeroStat}>
-                  <Text style={styles.savingsHeroStatValue}>׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€299</Text>
+                  <Text style={styles.savingsHeroStatValue}>NIS 299</Text>
                   <Text style={styles.savingsHeroStatLabel}>H&M free{'\n'}ship goal</Text>
                 </View>
                 <View style={styles.savingsHeroDivider} />
@@ -793,10 +793,10 @@ export default function DemoUserScreen() {
             }}
           />
           <Card style={styles.whatsappCard}>
-            <Text style={styles.whatsappTitle}>{language === 'he' ? '׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ¦׳³ֲ³ײ²ֲ³׳²ֲ»ײ²ֲ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ¨׳³ֲ³ײ²ֲ³׳³ג€™׳’ג‚¬ֲײ³ג€”׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ¢׳³ֲ³ײ²ֲ³׳²ֲ³׳’ג‚¬ג€ ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ-WhatsApp' : 'Join from WhatsApp'}</Text>
+            <Text style={styles.whatsappTitle}>{language === 'he' ? 'Join from WhatsApp' : 'Join from WhatsApp'}</Text>
             <Text style={styles.muted}>
               {language === 'he'
-                ? '׳³ֲ³ײ²ֲ³׳³ג€™׳’ג‚¬ֲײ³ג€”׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ¢׳³ֲ³ײ²ֲ³׳²ֲ³׳’ג‚¬ג€׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬׳’ג‚¬ֲ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג‚¬ֲײ²ֲ¢׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ׳³ֲ³ײ²ֲ³׳²ֲ³׳’ג‚¬ג€ ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ§׳³ֲ³ײ²ֲ³׳³ג€™׳’ג‚¬ֲײ²ֲ¢׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ©׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ¢׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ¨ ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬׳’ג‚¬ֲ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ-WhatsApp ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ¢׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ¢׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬׳’ג€ֲ¢׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ©׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ¢׳³ֲ³ײ²ֲ³׳²ֲ³׳’ג‚¬ג€׳³ֲ³ײ²ֲ³׳³ג€™׳’ג‚¬ֲײ³ג€”׳³ֲ³ײ²ֲ³׳²ֲ³׳’ג‚¬ג€ ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ ׳³ֲ³ײ²ֲ³׳²ֲ»ײ²ֲ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ¢׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ ׳³ֲ³ײ²ֲ³׳²ֲ³׳’ג‚¬ג€ ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג‚¬ֲײ²ֲ¢׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ©׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ¨, ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ»ֲ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג‚¬ֲײ²ֲ¢ ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ§׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ¢׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ¢׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ»ֲ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג‚¬ֲײ²ֲ¢ ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ»ֲ׳³ֲ³ײ²ֲ³׳²ֲ²ײ²ֲ§׳³ֲ³ײ²ֲ³׳³ג€™׳’ג€ֲ¬ײ²ֲ.'
+                ? 'Open the invite link from WhatsApp and the shared cart loads directly, with no code and no paste field.'
                 : 'Open the invite link from WhatsApp and the shared cart loads directly, with no code and no paste field.'}
             </Text>
           </Card>
@@ -1089,7 +1089,7 @@ export default function DemoUserScreen() {
                       <Text style={styles.cartTitle}>Group cart</Text>
                       <Text style={styles.muted}>{order.id} | Code {order.inviteCode}</Text>
                     </View>
-                    <Text style={styles.total}>׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€{getOrderTotal(order)}</Text>
+                    <Text style={styles.total}>NIS {getOrderTotal(order)}</Text>
                   </View>
                   <StatusRail status={order.status} />
                   {orderLocked ? (
@@ -1288,7 +1288,7 @@ export default function DemoUserScreen() {
                                 <Text style={styles.itemName}>{item.private ? 'Private item' : product?.name ?? 'Item'}</Text>
                                 <Text style={styles.muted}>{item.size}, {item.color} | Qty {item.quantity}</Text>
                               </View>
-                              <Text style={styles.itemPrice}>׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€{lineTotal}</Text>
+                              <Text style={styles.itemPrice}>NIS {lineTotal}</Text>
                             </View>
                           );
                         })}
@@ -1326,7 +1326,7 @@ export default function DemoUserScreen() {
                                 {owner?.name ?? 'Guest'} | {privateForViewer ? 'Contribution hidden' : `${item.size}, ${item.color}`} | Qty {item.quantity}
                               </Text>
                             </View>
-                            <Text style={styles.itemPrice}>׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€{line.lineTotal}</Text>
+                            <Text style={styles.itemPrice}>NIS {line.lineTotal}</Text>
                           </View>
                         );
                       })}
@@ -1424,10 +1424,10 @@ function ProductCard({
       <View style={styles.productInfo}>
         <View style={styles.rowBetween}>
           <Text style={styles.productName}>{product.name}</Text>
-          <Text style={styles.price}>׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€{product.price}</Text>
+          <Text style={styles.price}>NIS {product.price}</Text>
         </View>
         <Text style={styles.muted}>{product.description}</Text>
-        <Text style={styles.sku}>{product.sku} | {product.stockStatus} | Save ׳³ֲ³׳’ג‚¬ג„¢׳³ג€™׳’ג€ֲ¬ײ²ֲ׳²ֲ³׳’ג‚¬ג€{productSaving}</Text>
+        <Text style={styles.sku}>{product.sku} | {product.stockStatus} | Save NIS {productSaving}</Text>
         <Text style={styles.selectorLabel}>Size</Text>
         <View style={styles.optionRow}>
           {product.sizes.map((option) => (
@@ -1592,12 +1592,12 @@ function MockPaymentModal({
         <View style={payStyles.modal}>
           <View style={payStyles.modalHeader}>
             <View style={payStyles.stripeLockRow}>
-              <Text style={payStyles.stripeLock}>׳³ֲ³ײ²ֲ ׳²ֲ²ײ²ֲ׳³ג€™׳’ג€ֲ¬ײ²ֲ׳³ג€™׳’ג€ֲ¬׳’ג€ֲ¢</Text>
+              <Text style={payStyles.stripeLock}>Secure</Text>
               <Text style={payStyles.stripeLabel}>Secure checkout</Text>
             </View>
             {step !== 'processing' ? (
               <Pressable onPress={onClose} accessibilityRole="button" style={payStyles.closeBtn}>
-                <Text style={payStyles.closeBtnText}>׳³ֲ³׳’ג‚¬ג„¢׳²ֲ²ײ²ֲ׳³ג€™׳’ג€ֲ¬ײ²ֲ¢</Text>
+                <Text style={payStyles.closeBtnText}>X</Text>
               </Pressable>
             ) : null}
           </View>
