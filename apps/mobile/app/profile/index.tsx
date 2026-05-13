@@ -85,7 +85,112 @@ export default function ProfileScreen() {
   const latestOrder = visibleDemoOrders[0] ?? null;
   const savingsThisYear = Math.round(stats.totalSavings);
   const initial = displayName.charAt(0).toUpperCase() || 'S';
-  const email = session?.user.email ?? 'Sign in to attach orders to your account';
+  const copy = isHebrew
+    ? {
+        title: 'הפרופיל שלי',
+        subtitle: 'הזמנות, תשלומים, התראות ותמיכה במקום אחד ברור.',
+        guestEmail: 'התחברו כדי לשייך הזמנות לחשבון שלכם',
+        verified: 'משתמש מאומת',
+        guestMode: 'מצב אורח',
+        signOut: 'התנתקות',
+        signIn: 'כניסה',
+        signingOut: 'מתנתק...',
+        opening: 'פותח...',
+        startHere: 'התחילו כאן',
+        mainActions: 'פעולות ראשיות',
+        openMeta: 'פתוחות',
+        newOrder: 'הזמנה חדשה',
+        newOrderBody: 'חנות, טיימר וכתובת.',
+        myOrders: 'ההזמנות שלי',
+        myOrdersBody: 'סלים פתוחים והיסטוריה.',
+        copyInvite: 'העתקת קישור',
+        copyInviteBody: 'שתפו את ההזמנה האחרונה.',
+        storeView: 'תצוגת חנות',
+        storeViewBody: 'דשבורד סוחר.',
+        joinTitle: 'הצטרפות להזמנה',
+        joinBody: 'הכניסו את הקוד מוואטסאפ. קישורי הזמנה עדיין נפתחים ישירות.',
+        join: 'הצטרף',
+        enterCode: 'הכניסו קודם קוד בן 4 ספרות.',
+        createFirst: 'צרו הזמנה קודם, ואז העתיקו את הקישור.',
+        inviteCopied: 'קישור הזמנה הועתק',
+        open: 'פתוחות',
+        completed: 'הושלמו',
+        mySaves: 'חסכתי',
+        savedYear: 'חיסכון השנה',
+        wallets: 'ארנקים',
+        savingsTracker: 'מעקב חיסכון אישי',
+        savingsBody: 'הזמנות קבוצתיות שהושלמו מעדכנות את המספר הזה אוטומטית.',
+        notifications: 'התראות',
+        notificationsBody: 'כל התראה מסומנת בבירור כדי לדעת מה משנים.',
+        orderUpdates: 'עדכוני הזמנה',
+        orderUpdatesBody: 'אריזה, מוכנה, נשלחה ושינויי חנות.',
+        paymentReminders: 'תזכורות תשלום',
+        paymentRemindersBody: 'תזכורת למשתתפים לפני שהטיימר נסגר.',
+        buildingOrders: 'הזמנות בבניין',
+        buildingOrdersBody: 'התראות כשמישהו בבניין פותח הזמנה.',
+        walletTitle: 'ארנקים ותשלום',
+        walletBody: 'בחרו איך אנשים יוכלו לשלם לכם.',
+        helpTitle: 'עזרה, משפטי ואבטחה',
+        helpBody: 'תמיכה, אבטחה ועמודים משפטיים במקום מסודר.',
+        deleteAccount: 'מחיקת חשבון',
+        resetDemo: 'איפוס דמו למשקיעים',
+        demoReset: 'הדמו אופס. אפשר להתחיל זרימה חדשה.',
+        on: 'פעיל',
+        off: 'כבוי',
+      }
+    : {
+        title: 'My profile',
+        subtitle: 'Orders, payments, alerts, and support in one simple account hub.',
+        guestEmail: 'Sign in to attach orders to your account',
+        verified: 'Verified member',
+        guestMode: 'Guest mode',
+        signOut: 'Sign out',
+        signIn: 'Sign in',
+        signingOut: 'Signing out...',
+        opening: 'Opening...',
+        startHere: 'Start here',
+        mainActions: 'Main actions',
+        openMeta: 'open',
+        newOrder: 'New order',
+        newOrderBody: 'Store, timer, address.',
+        myOrders: 'My orders',
+        myOrdersBody: 'Open carts and history.',
+        copyInvite: 'Copy invite',
+        copyInviteBody: 'Share latest cart link.',
+        storeView: 'Store view',
+        storeViewBody: 'Merchant dashboard.',
+        joinTitle: 'Join an order',
+        joinBody: 'Enter the WhatsApp code. Invite links still open directly.',
+        join: 'Join',
+        enterCode: 'Enter a 4-digit invite code first.',
+        createFirst: 'Create an order first, then copy its invite.',
+        inviteCopied: 'Invite copied',
+        open: 'Open',
+        completed: 'Completed',
+        mySaves: 'My saves',
+        savedYear: 'Saved this year',
+        wallets: 'Wallets',
+        savingsTracker: 'Personal savings tracker',
+        savingsBody: 'Your completed group orders feed this number automatically.',
+        notifications: 'Notifications',
+        notificationsBody: 'Each alert has a clear badge so users know what they are changing.',
+        orderUpdates: 'Order updates',
+        orderUpdatesBody: 'Packing, ready, shipped, and merchant changes.',
+        paymentReminders: 'Payment reminders',
+        paymentRemindersBody: 'Remind participants before the timer closes.',
+        buildingOrders: 'Building orders',
+        buildingOrdersBody: 'Alerts when someone in your building opens an order.',
+        walletTitle: 'Wallets & payment',
+        walletBody: 'Choose which payment methods people can use with you.',
+        helpTitle: 'Help, legal & security',
+        helpBody: 'Support and legal pages are grouped together and easy to scan.',
+        deleteAccount: 'Delete account',
+        resetDemo: 'Reset investor demo',
+        demoReset: 'Demo reset. You can start a fresh investor flow.',
+        on: 'ON',
+        off: 'OFF',
+      };
+  const email = session?.user.email ?? copy.guestEmail;
 
   const savePulse = (message: string) => {
     setSavedPulse(message);
@@ -95,7 +200,7 @@ export default function ProfileScreen() {
   const joinByCode = async () => {
     const code = joinCode.replace(/\D/g, '').slice(0, 4);
     if (code.length !== 4) {
-      savePulse('Enter a 4-digit invite code first.');
+      savePulse(copy.enterCode);
       return;
     }
     if (!session) {
@@ -108,11 +213,11 @@ export default function ProfileScreen() {
 
   const copyLatestInvite = async () => {
     if (!latestOrder) {
-      savePulse('Create an order first, then copy its invite.');
+      savePulse(copy.createFirst);
       return;
     }
     await Clipboard.setStringAsync(`https://shakana1.vercel.app/join/${latestOrder.inviteCode}`);
-    savePulse(`Invite ${latestOrder.inviteCode} copied`);
+    savePulse(`${copy.inviteCopied} ${latestOrder.inviteCode}`);
   };
 
   const onSignOut = async () => {
@@ -130,12 +235,8 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.brand}>SHAKANA</Text>
-          <Text style={styles.title}>{isHebrew ? 'הפרופיל שלי' : 'My profile'}</Text>
-          <Text style={styles.subtitle}>
-            {isHebrew
-              ? 'הזמנות, תשלומים, התראות ותמיכה במקום אחד ברור.'
-              : 'Orders, payments, alerts, and support in one simple account hub.'}
-          </Text>
+          <Text style={styles.title}>{copy.title}</Text>
+          <Text style={styles.subtitle}>{copy.subtitle}</Text>
         </View>
 
         <View style={styles.identityCard}>
@@ -145,7 +246,7 @@ export default function ProfileScreen() {
           <View style={styles.identityCopy}>
             <Text style={styles.name} numberOfLines={1}>{displayName}</Text>
             <Text style={styles.email} numberOfLines={1}>{email}</Text>
-            <Text style={styles.verifiedBadge}>{session ? 'Verified member' : 'Guest mode'}</Text>
+            <Text style={styles.verifiedBadge}>{session ? copy.verified : copy.guestMode}</Text>
           </View>
           <Pressable
             accessibilityRole="button"
@@ -154,7 +255,7 @@ export default function ProfileScreen() {
             style={({ pressed }) => [styles.authPill, pressed && styles.pressed]}
           >
             <Text style={styles.authPillText}>
-              {signOut.isPending ? 'Signing out...' : googleSignIn.isPending ? 'Opening...' : session ? 'Sign out' : 'Sign in'}
+              {signOut.isPending ? copy.signingOut : googleSignIn.isPending ? copy.opening : session ? copy.signOut : copy.signIn}
             </Text>
           </Pressable>
         </View>
@@ -168,21 +269,21 @@ export default function ProfileScreen() {
         <View style={styles.actionHub}>
           <View style={styles.hubHeader}>
             <View>
-              <Text style={styles.sectionEyebrow}>Start here</Text>
-              <Text style={styles.hubTitle}>Main actions</Text>
+              <Text style={styles.sectionEyebrow}>{copy.startHere}</Text>
+              <Text style={styles.hubTitle}>{copy.mainActions}</Text>
             </View>
-            <Text style={styles.hubMeta}>{openOrders} open</Text>
+            <Text style={styles.hubMeta}>{openOrders} {copy.openMeta}</Text>
           </View>
           <View style={styles.quickGrid}>
-            <QuickAction title="New order" body="Store, timer, address." badge="NO" primary onPress={() => router.push('/new-order' as Href)} />
-            <QuickAction title="My orders" body="Open carts and history." badge="MO" onPress={() => router.push('/user')} />
-            <QuickAction title="Copy invite" body="Share latest cart link." badge="SH" onPress={copyLatestInvite} />
-            <QuickAction title="Store view" body="Merchant dashboard." badge="ST" onPress={() => router.push('/store')} />
+            <QuickAction title={copy.newOrder} body={copy.newOrderBody} badge="NO" primary onPress={() => router.push('/new-order' as Href)} />
+            <QuickAction title={copy.myOrders} body={copy.myOrdersBody} badge="MO" onPress={() => router.push('/user')} />
+            <QuickAction title={copy.copyInvite} body={copy.copyInviteBody} badge="SH" onPress={copyLatestInvite} />
+            <QuickAction title={copy.storeView} body={copy.storeViewBody} badge="ST" onPress={() => router.push('/store')} />
           </View>
         </View>
 
         <View style={styles.section}>
-          <SectionHeader icon="JO" title="Join an order" body="Enter the WhatsApp code. Invite links still open directly." />
+          <SectionHeader icon="JO" title={copy.joinTitle} body={copy.joinBody} />
           <View style={styles.joinRow}>
             <TextInput
               value={joinCode}
@@ -194,37 +295,37 @@ export default function ProfileScreen() {
               accessibilityLabel="Join code"
             />
             <Pressable accessibilityRole="button" onPress={joinByCode} style={({ pressed }) => [styles.joinButton, pressed && styles.pressed]}>
-              <Text style={styles.joinButtonText}>Join</Text>
+              <Text style={styles.joinButtonText}>{copy.join}</Text>
             </Pressable>
           </View>
         </View>
 
         <View style={styles.statsGrid}>
-          <Stat icon="OP" label="Open" value={String(openOrders)} />
-          <Stat icon="CP" label="Completed" value={String(stats.shippedOrders)} />
-          <Stat icon="SV" label="My saves" value={String(personalSaves)} />
-          <Stat icon="IL" label="Saved this year" value={`ILS ${savingsThisYear}`} />
-          <Stat icon="WL" label="Wallets" value={String(readyPayments)} />
+          <Stat icon="OP" label={copy.open} value={String(openOrders)} />
+          <Stat icon="CP" label={copy.completed} value={String(stats.shippedOrders)} />
+          <Stat icon="SV" label={copy.mySaves} value={String(personalSaves)} />
+          <Stat icon="IL" label={copy.savedYear} value={`ILS ${savingsThisYear}`} />
+          <Stat icon="WL" label={copy.wallets} value={String(readyPayments)} />
         </View>
 
         <View style={styles.savingsHero}>
           <IconBadge label="IL" large />
           <View style={{ flex: 1 }}>
             <Text style={styles.savingsHeroValue}>ILS {savingsThisYear}</Text>
-            <Text style={styles.savingsHeroTitle}>Personal savings tracker</Text>
-            <Text style={styles.sectionBody}>Your completed group orders feed this number automatically.</Text>
+            <Text style={styles.savingsHeroTitle}>{copy.savingsTracker}</Text>
+            <Text style={styles.sectionBody}>{copy.savingsBody}</Text>
           </View>
         </View>
 
         <View style={styles.section}>
-          <SectionHeader icon="AL" title="Notifications" body="Each alert has a clear badge so users know what they are changing." />
-          <ToggleRow icon="OU" label="Order updates" desc="Packing, ready, shipped, and merchant changes." value={notificationSettings.orderUpdates} onPress={() => void setNotification('orderUpdates', !notificationSettings.orderUpdates)} />
-          <ToggleRow icon="PR" label="Payment reminders" desc="Remind participants before the timer closes." value={notificationSettings.paymentReminders} onPress={() => void setNotification('paymentReminders', !notificationSettings.paymentReminders)} />
-          <ToggleRow icon="BO" label="Building orders" desc="Alerts when someone in your building opens an order." value={notificationSettings.buildingOrderAlerts} onPress={() => void setNotification('buildingOrderAlerts', !notificationSettings.buildingOrderAlerts)} />
+          <SectionHeader icon="AL" title={copy.notifications} body={copy.notificationsBody} />
+          <ToggleRow icon="OU" label={copy.orderUpdates} desc={copy.orderUpdatesBody} value={notificationSettings.orderUpdates} onPress={() => void setNotification('orderUpdates', !notificationSettings.orderUpdates)} onLabel={copy.on} offLabel={copy.off} />
+          <ToggleRow icon="PR" label={copy.paymentReminders} desc={copy.paymentRemindersBody} value={notificationSettings.paymentReminders} onPress={() => void setNotification('paymentReminders', !notificationSettings.paymentReminders)} onLabel={copy.on} offLabel={copy.off} />
+          <ToggleRow icon="BO" label={copy.buildingOrders} desc={copy.buildingOrdersBody} value={notificationSettings.buildingOrderAlerts} onPress={() => void setNotification('buildingOrderAlerts', !notificationSettings.buildingOrderAlerts)} onLabel={copy.on} offLabel={copy.off} />
         </View>
 
         <View style={styles.section}>
-          <SectionHeader icon="WL" title="Wallets & payment" body="Choose which payment methods people can use with you." />
+          <SectionHeader icon="WL" title={copy.walletTitle} body={copy.walletBody} />
           <View style={styles.paymentList}>
             {PAYMENT_METHODS.map((method) => {
               const setting = paymentSettings[method.key];
@@ -242,7 +343,7 @@ export default function ProfileScreen() {
                     <IconBadge label={method.icon} />
                     <Text style={styles.paymentTitle}>{method.label}</Text>
                     <View style={[styles.switch, setting.enabled && styles.switchOn]}>
-                      <Text style={[styles.switchText, setting.enabled && styles.switchTextOn]}>{setting.enabled ? 'ON' : 'OFF'}</Text>
+                      <Text style={[styles.switchText, setting.enabled && styles.switchTextOn]}>{setting.enabled ? copy.on : copy.off}</Text>
                     </View>
                   </Pressable>
                   {setting.enabled ? (
@@ -263,7 +364,7 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.section}>
-          <SectionHeader icon="HL" title="Help, legal & security" body="Support and legal pages are grouped together and easy to scan." />
+          <SectionHeader icon="HL" title={copy.helpTitle} body={copy.helpBody} />
           <View style={styles.linkList}>
             {HELP_LINKS.map((item) => (
               <Pressable key={String(item.href)} accessibilityRole="button" onPress={() => router.push(item.href)} style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}>
@@ -280,18 +381,18 @@ export default function ProfileScreen() {
 
         {session ? (
           <Pressable accessibilityRole="button" onPress={() => router.push('/profile/delete')} style={styles.deleteButton}>
-            <Text style={styles.deleteText}>Delete account</Text>
+            <Text style={styles.deleteText}>{copy.deleteAccount}</Text>
           </Pressable>
         ) : null}
         <Pressable
           accessibilityRole="button"
           onPress={() => {
             resetDemo();
-            savePulse('Demo reset. You can start a fresh investor flow.');
+            savePulse(copy.demoReset);
           }}
           style={styles.resetButton}
         >
-          <Text style={styles.resetText}>Reset investor demo</Text>
+          <Text style={styles.resetText}>{copy.resetDemo}</Text>
         </Pressable>
       </ScrollView>
     </ScreenBase>
@@ -347,7 +448,23 @@ function Stat({ icon, label, value }: { icon: string; label: string; value: stri
   );
 }
 
-function ToggleRow({ icon, label, desc, value, onPress }: { icon: string; label: string; desc: string; value: boolean; onPress: () => void }) {
+function ToggleRow({
+  icon,
+  label,
+  desc,
+  value,
+  onPress,
+  onLabel,
+  offLabel,
+}: {
+  icon: string;
+  label: string;
+  desc: string;
+  value: boolean;
+  onPress: () => void;
+  onLabel: string;
+  offLabel: string;
+}) {
   return (
     <Pressable accessibilityRole="switch" accessibilityState={{ checked: value }} onPress={onPress} style={styles.toggleRow}>
       <IconBadge label={icon} />
@@ -356,7 +473,7 @@ function ToggleRow({ icon, label, desc, value, onPress }: { icon: string; label:
         <Text style={styles.toggleDesc}>{desc}</Text>
       </View>
       <View style={[styles.switch, value && styles.switchOn]}>
-        <Text style={[styles.switchText, value && styles.switchTextOn]}>{value ? 'ON' : 'OFF'}</Text>
+        <Text style={[styles.switchText, value && styles.switchTextOn]}>{value ? onLabel : offLabel}</Text>
       </View>
     </Pressable>
   );

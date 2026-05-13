@@ -24,6 +24,7 @@ import { useProfileDraftStore } from '@/stores/profileDraftStore';
 import { ToastLayer } from '@/components/primitives/ToastLayer';
 import { FloatingNewOrderButton } from '@/components/demo/FloatingNewOrderButton';
 import { FloatingProfileButton } from '@/components/demo/FloatingProfileButton';
+import { FloatingLanguageButton } from '@/components/demo/FloatingLanguageButton';
 import { CookieConsentBanner } from '@/components/primitives/CookieConsentBanner';
 import { env } from '@/lib/env';
 import { registerPushToken } from '@/lib/pushNotifications';
@@ -346,6 +347,7 @@ function RootLayoutInner() {
         visible={showProfileShortcut}
         onPress={() => routerRef.current.push(session ? '/profile' : '/login')}
       />
+      <FloatingLanguageButton visible={navReady && topSegment !== 'auth-callback'} />
       <FloatingNewOrderButton />
       <CookieConsentBanner />
       <ToastLayer />

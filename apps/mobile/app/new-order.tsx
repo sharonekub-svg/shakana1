@@ -38,12 +38,13 @@ function isCompleteDeliveryAddress(value: string) {
   return trimmed.length >= 8 && hasAddressNumber(trimmed) && trimmed.includes(',');
 }
 
-function addressValidationMessage(value: string) {
+function addressValidationMessage(value: string, language: 'he' | 'en' = 'en') {
   const trimmed = value.trim();
-  if (!trimmed) return 'Required: enter street + house number + city before opening the cart.';
-  if (!hasAddressNumber(trimmed)) return 'House number is required. Example: Herzl 12, Petah Tikva.';
-  if (!trimmed.includes(',')) return 'Add the city after the street and house number. Example: Herzl 12, Petah Tikva.';
-  return 'Required: valid timer, one store, and full address with house number before opening the cart.';
+  const he = language === 'he';
+  if (!trimmed) return he ? 'חובה להזין רחוב + מספר בית + עיר לפני פתיחת הסל.' : 'Required: enter street + house number + city before opening the cart.';
+  if (!hasAddressNumber(trimmed)) return he ? 'חובה להוסיף מספר בית. לדוגמה: הרצל 12, פתח תקווה.' : 'House number is required. Example: Herzl 12, Petah Tikva.';
+  if (!trimmed.includes(',')) return he ? 'הוסיפו עיר אחרי הרחוב ומספר הבית. לדוגמה: הרצל 12, פתח תקווה.' : 'Add the city after the street and house number. Example: Herzl 12, Petah Tikva.';
+  return he ? 'חובה לבחור טיימר, חנות אחת וכתובת מלאה עם מספר בית.' : 'Required: valid timer, one store, and full address with house number before opening the cart.';
 }
 
 function splitAddressQuery(value: string) {
@@ -82,6 +83,61 @@ export default function NewOrderScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ brand?: string }>();
   const { language } = useLocale();
+  const copy = language === 'he'
+    ? {
+        title: 'הזמנה קבוצתית חדשה',
+        subtitle: 'בחרו חנות אחת, טיימר וכתובת משלוח מדויקת לפני פתיחת הסל.',
+        backHome: 'חזרה לבית',
+        profile: 'פרופיל',
+        setupTitle: 'הגדירו את ההזמנה קודם',
+        setupBody: 'ההזמנה עדיין לא נפתחה. היא תיפתח רק אחרי שיש טיימר, חנות וכתובת מלאה.',
+        timer: 'טיימר',
+        store: 'חנות',
+        addressStep: 'רחוב + מספר + עיר',
+        founderControl: 'שליטת פותח ההזמנה',
+        minutes: 'דקות',
+        timerError: 'הכניסו טיימר בין 1 ל-720 דקות.',
+        storeTitle: '2. חנות',
+        lockedCatalog: 'קטלוג נעול',
+        addressTitle: '3. כתובת משלוח',
+        addressKicker: 'חובה לפני פתיחה',
+        addressReqTitle: 'חובה מספר בית',
+        addressReqBody: 'כתבו כתובת מלאה בפורמט: רחוב + מספר בית, עיר. לדוגמה: הרצל 12, פתח תקווה.',
+        addressPlaceholder: 'רחוב + מספר בית, עיר',
+        looking: 'מחפש רחובות וערים מתאימים',
+        readyTitle: 'אפשר לפתוח את הסל הקבוצתי',
+        notReadyTitle: 'סיימו הגדרה כדי לפתוח את הסל',
+        readyBody: 'אחרי הפתיחה, חברים יוכלו להצטרף ולהוסיף מוצרים רק מהחנות הזו.',
+        create: 'צור הזמנה',
+        disabled: 'הוסיפו טיימר, חנות, מספר בית ועיר',
+      }
+    : {
+        title: 'New group order',
+        subtitle: 'Choose one store, set the timer, and add the exact delivery address before opening the cart.',
+        backHome: 'Back home',
+        profile: 'Profile',
+        setupTitle: 'Set up the order first',
+        setupBody: 'The order is not created yet. It opens only after timer, store, and exact address are ready.',
+        timer: 'Timer',
+        store: 'Store',
+        addressStep: 'Street + number + city',
+        founderControl: 'Founder control',
+        minutes: 'minutes',
+        timerError: 'Enter a timer from 1 to 720 minutes.',
+        storeTitle: '2. Store',
+        lockedCatalog: 'Locked catalog',
+        addressTitle: '3. Delivery address',
+        addressKicker: 'Required before launch',
+        addressReqTitle: 'House number required',
+        addressReqBody: 'Type the full address in this format: street + house number, city. Example: Herzl 12, Petah Tikva.',
+        addressPlaceholder: 'Street + house number, city',
+        looking: 'Looking for matching streets and cities',
+        readyTitle: 'Ready to open the group cart',
+        notReadyTitle: 'Finish setup to open the cart',
+        readyBody: 'After opening, friends can join and add products only from this store.',
+        create: 'Create order',
+        disabled: 'Add timer, store, street number, and city',
+      };
   const session = useAuthStore((state) => state.session);
   const demoMode = useDemoCommerceStore((state) => state.demoMode);
   const setDemoRole = useDemoCommerceStore((state) => state.setDemoRole);
@@ -180,37 +236,37 @@ export default function NewOrderScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.logo}>shakana</Text>
-          <Text style={styles.title}>New group order</Text>
-          <Text style={styles.subtitle}>Choose one store, set the timer, and add the exact delivery address before opening the cart.</Text>
+          <Text style={styles.title}>{copy.title}</Text>
+          <Text style={styles.subtitle}>{copy.subtitle}</Text>
         </View>
         <View style={styles.headerActions}>
-          <DemoButton label="Back home" onPress={() => router.replace('/user')} tone="light" style={styles.smallBtn} />
-          <DemoButton label="Profile" onPress={() => router.push('/profile')} tone="light" style={styles.smallBtn} />
+          <DemoButton label={copy.backHome} onPress={() => router.replace('/user')} tone="light" style={styles.smallBtn} />
+          <DemoButton label={copy.profile} onPress={() => router.push('/profile')} tone="light" style={styles.smallBtn} />
         </View>
       </View>
 
       <Card style={styles.setupCard}>
-        <Text style={styles.setupTitle}>Set up the order first</Text>
-        <Text style={styles.muted}>The order is not created yet. It opens only after timer, store, and exact address are ready.</Text>
+        <Text style={styles.setupTitle}>{copy.setupTitle}</Text>
+        <Text style={styles.muted}>{copy.setupBody}</Text>
         <View style={styles.setupSteps}>
           <View style={[styles.setupStep, !!customTimerMinutes && styles.setupStepDone]}>
             <Text style={styles.setupStepNumber}>1</Text>
-            <Text style={styles.setupStepText}>Timer</Text>
+            <Text style={styles.setupStepText}>{copy.timer}</Text>
           </View>
           <View style={[styles.setupStep, !!setupBrand && styles.setupStepDone]}>
             <Text style={styles.setupStepNumber}>2</Text>
-            <Text style={styles.setupStepText}>Store</Text>
+            <Text style={styles.setupStepText}>{copy.store}</Text>
           </View>
           <View style={[styles.setupStep, isCompleteDeliveryAddress(setupDeliveryAddress) && styles.setupStepDone]}>
             <Text style={styles.setupStepNumber}>3</Text>
-            <Text style={styles.setupStepText}>Street + number + city</Text>
+            <Text style={styles.setupStepText}>{copy.addressStep}</Text>
           </View>
         </View>
       </Card>
 
       <View style={styles.grid}>
         <Card style={styles.panel}>
-          <SectionTitle title="1. Timer" kicker="Founder control" />
+          <SectionTitle title={`1. ${copy.timer}`} kicker={copy.founderControl} />
           <View style={styles.timerRow}>
             {['30', '45', '60'].map((minutes) => (
               <DemoButton
@@ -230,15 +286,15 @@ export default function NewOrderScreen() {
               placeholder="45"
               style={styles.customTimerInput}
             />
-            <Text style={styles.timerText}>minutes</Text>
+            <Text style={styles.timerText}>{copy.minutes}</Text>
           </View>
           {customTimer.trim() && !customTimerMinutes ? (
-            <Text style={styles.validationText}>Enter a timer from 1 to 720 minutes.</Text>
+            <Text style={styles.validationText}>{copy.timerError}</Text>
           ) : null}
         </Card>
 
         <Card style={styles.panel}>
-          <SectionTitle title="2. Store" kicker="Locked catalog" />
+          <SectionTitle title={copy.storeTitle} kicker={copy.lockedCatalog} />
           <View style={styles.storeGrid}>
             {(['hm', 'zara', 'amazon'] as DemoBrandId[]).map((brandId) => {
               const store = demoStores[brandId];
@@ -265,17 +321,15 @@ export default function NewOrderScreen() {
         </Card>
 
         <Card style={styles.panel}>
-          <SectionTitle title="3. Delivery address" kicker="Required before launch" />
+          <SectionTitle title={copy.addressTitle} kicker={copy.addressKicker} />
           <View style={styles.addressRequirementBox}>
-            <Text style={styles.addressRequirementTitle}>House number required</Text>
-            <Text style={styles.addressRequirementText}>
-              Type the full address in this format: street + house number, city. Example: Herzl 12, Petah Tikva.
-            </Text>
+            <Text style={styles.addressRequirementTitle}>{copy.addressReqTitle}</Text>
+            <Text style={styles.addressRequirementText}>{copy.addressReqBody}</Text>
           </View>
           <TextInput
             value={setupDeliveryAddress}
             onChangeText={setSetupDeliveryAddress}
-            placeholder="Street + house number, city"
+            placeholder={copy.addressPlaceholder}
             style={[
               styles.addressInput,
               setupDeliveryAddress.trim().length > 0 && !isCompleteDeliveryAddress(setupDeliveryAddress) && styles.addressInputMissing,
@@ -287,7 +341,7 @@ export default function NewOrderScreen() {
           {addressLoading ? (
             <View style={styles.addressLoadingRow}>
               <ActivityIndicator size="small" color={colors.acc} />
-              <Text style={styles.addressLoadingText}>Looking for matching streets and cities</Text>
+              <Text style={styles.addressLoadingText}>{copy.looking}</Text>
             </View>
           ) : null}
           {addressSuggestions.length > 0 ? (
@@ -309,11 +363,11 @@ export default function NewOrderScreen() {
 
       <Card style={styles.launchCard}>
         <View style={styles.launchCopy}>
-          <Text style={styles.launchTitle}>{setupReady ? 'Ready to open the group cart' : 'Finish setup to open the cart'}</Text>
-          <Text style={styles.muted}>{setupReady ? 'After opening, friends can join and add products only from this store.' : addressValidationMessage(setupDeliveryAddress)}</Text>
+          <Text style={styles.launchTitle}>{setupReady ? copy.readyTitle : copy.notReadyTitle}</Text>
+          <Text style={styles.muted}>{setupReady ? copy.readyBody : addressValidationMessage(setupDeliveryAddress, language)}</Text>
         </View>
         <DemoButton
-          label={setupReady ? 'Create order' : 'Add timer, store, street number, and city'}
+          label={setupReady ? copy.create : copy.disabled}
           onPress={createOrder}
           disabled={!setupReady}
           tone="accent"

@@ -2,6 +2,7 @@ import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native
 import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { useAuthStore } from '@/stores/authStore';
+import { useLocale } from '@/i18n/locale';
 
 function getMetadataString(metadata: Record<string, unknown> | undefined, keys: string[]) {
   for (const key of keys) {
@@ -14,6 +15,7 @@ function getMetadataString(metadata: Record<string, unknown> | undefined, keys: 
 export function FloatingProfileButton({ visible, onPress }: { visible: boolean; onPress: () => void }) {
   const session = useAuthStore((state) => state.session);
   const profile = useAuthStore((state) => state.profile);
+  const { language } = useLocale();
 
   if (!visible) return null;
 
@@ -22,13 +24,13 @@ export function FloatingProfileButton({ visible, onPress }: { visible: boolean; 
   const displayName =
     [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim() ||
     getMetadataString(metadata, ['full_name', 'name']) ||
-    (session ? 'Profile' : 'Sign in');
+    (session ? (language === 'he' ? 'פרופיל' : 'Profile') : (language === 'he' ? 'כניסה' : 'Sign in'));
   const initial = displayName.charAt(0).toUpperCase() || 'S';
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={session ? 'Open profile' : 'Sign in'}
+      accessibilityLabel={session ? (language === 'he' ? 'פתח פרופיל' : 'Open profile') : (language === 'he' ? 'כניסה' : 'Sign in')}
       onPress={onPress}
       style={({ pressed }) => [styles.button, pressed && styles.pressed]}
     >
@@ -40,9 +42,9 @@ export function FloatingProfileButton({ visible, onPress }: { visible: boolean; 
         )}
       </View>
       <View style={styles.copy}>
-        <Text style={styles.kicker}>{session ? 'Profile' : 'Account'}</Text>
+        <Text style={styles.kicker}>{session ? (language === 'he' ? 'פרופיל' : 'Profile') : (language === 'he' ? 'חשבון' : 'Account')}</Text>
         <Text numberOfLines={1} style={styles.name}>
-          {session ? displayName : 'Sign in'}
+          {session ? displayName : (language === 'he' ? 'כניסה' : 'Sign in')}
         </Text>
       </View>
     </Pressable>

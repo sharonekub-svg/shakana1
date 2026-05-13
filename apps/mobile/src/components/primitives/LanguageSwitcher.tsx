@@ -10,7 +10,7 @@ const OPTIONS: Array<{ language: Language; label: string }> = [
 ];
 
 export function LanguageSwitcher({ dark = false }: { dark?: boolean }) {
-  const { language, setLanguage, t } = useLocale();
+  const { language, setLanguage } = useLocale();
 
   const selectLanguage = (nextLanguage: Language) => {
     if (nextLanguage === language) return;
@@ -20,8 +20,10 @@ export function LanguageSwitcher({ dark = false }: { dark?: boolean }) {
   return (
     <View style={[styles.wrap, dark && styles.wrapDark]}>
       <View style={styles.textBlock}>
-        <Text style={[styles.label, dark && styles.labelDark]}>{t('language.label')}</Text>
-        <Text style={[styles.subtitle, dark && styles.subtitleDark]}>{t('language.subtitle')}</Text>
+        <Text style={[styles.label, dark && styles.labelDark]}>{language === 'he' ? 'שפה' : 'Language'}</Text>
+        <Text style={[styles.subtitle, dark && styles.subtitleDark]}>
+          {language === 'he' ? 'בחרו איך האפליקציה תוצג.' : 'Choose how the app should appear.'}
+        </Text>
       </View>
       <View style={styles.row}>
         {OPTIONS.map((option) => {
