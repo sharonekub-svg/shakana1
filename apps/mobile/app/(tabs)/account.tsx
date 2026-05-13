@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { ScreenBase } from '@/components/primitives/ScreenBase';
 import { Field } from '@/components/primitives/Field';
 import { PrimaryBtn } from '@/components/primitives/Button';
-import { colors, radii, shadow } from '@/theme/tokens';
+import { colors, radii } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { useLocale } from '@/i18n/locale';
 import { useUserOrders } from '@/api/orders';
@@ -94,37 +94,31 @@ export default function AccountTab() {
   const quickLinks = [
     {
       href: '/profile/payment',
+      icon: '₪',
       title: isHebrew ? 'תשלומים' : 'Payments',
-      body: isHebrew
-        ? 'הוסף Bit, PayBox, PayPal, Venmo או דרך תשלום אחרת'
-        : 'Add Bit, PayBox, PayPal, Venmo, or another payment option',
+      body: copy.paymentReady,
       danger: false,
     },
     {
       href: '/profile/alerts',
+      icon: '🔔',
       title: isHebrew ? 'התראות' : 'Alerts',
-      body: isHebrew
-        ? 'הפעל או כבה עדכוני הזמנות ותזכורות תשלום'
-        : 'Turn order updates and payment reminders on or off',
+      body: copy.notificationsReady,
       danger: false,
     },
     {
       href: '/profile/privacy',
+      icon: '🔒',
       title: isHebrew ? 'פרטיות' : 'Privacy',
       body: isHebrew ? 'איך אנחנו משתמשים בפרטי החשבון והכתובת' : 'How account and address data is handled',
       danger: false,
     },
     {
       href: '/profile/terms',
+      icon: '📄',
       title: isHebrew ? 'תנאים' : 'Terms',
       body: isHebrew ? 'הכללים להזמנות משותפות באפליקציה' : 'Rules for shared orders',
       danger: false,
-    },
-    {
-      href: '/profile/delete',
-      title: isHebrew ? 'מחיקת חשבון' : 'Delete account',
-      body: isHebrew ? 'מחיקה בטוחה של הפרופיל והנתונים שלך' : 'Remove your profile safely',
-      danger: true,
     },
   ] as const;
 
@@ -173,35 +167,79 @@ export default function AccountTab() {
     }
   };
 
+  const stats = [
+    { label: copy.openOrders, value: String(openOrders) },
+    { label: copy.payments, value: String(enabledPaymentCount) },
+    { label: copy.notifications, value: String(enabledNotifications) },
+  ];
+
   return (
     <ScreenBase padded={false}>
       <ScrollView contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
+
+        {/* App bar */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.brand}>SHAKANA</Text>
+          <View style={styles.headerLeft}>
+            <Text style={styles.kicker}>SHAKANA</Text>
             <Text style={styles.title}>{copy.profileTitle}</Text>
           </View>
-          <View style={styles.statusPill}>
-            <Text style={styles.statusText}>{copy.ready}</Text>
+          <View style={styles.langToggle}>
+            <Pressable
+              style={[styles.langPill, language === 'he' && styles.langPillActive]}
+              onPress={() => void setLanguage('he')}
+            >
+              <Text style={[styles.langPillText, language === 'he' && styles.langPillTextActive]}>עברית</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.langPill, language === 'en' && styles.langPillActive]}
+              onPress={() => void setLanguage('en')}
+            >
+              <Text style={[styles.langPillText, language === 'en' && styles.langPillTextActive]}>EN</Text>
+            </Pressable>
           </View>
         </View>
 
-        <View style={styles.heroCard}>
+        {/* Identity card */}
+        <View style={styles.identityCard}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{copy.name.charAt(0).toUpperCase()}</Text>
           </View>
-          <View style={styles.heroText}>
-            <Text style={styles.heroKicker}>{copy.account}</Text>
-            <Text style={styles.heroName} numberOfLines={1}>
-              {copy.name}
-            </Text>
-            <Text style={styles.heroBody}>{copy.profileBody}</Text>
+          <View style={styles.identityText}>
+            <Text style={styles.identityName} numberOfLines={1}>{copy.name}</Text>
+            {address ? <Text style={styles.identityMeta} numberOfLines={1}>{address}</Text> : null}
+            {profile?.phone ? <Text style={styles.identityMeta} numberOfLines={1}>{profile.phone}</Text> : null}
           </View>
         </View>
 
-        <View style={styles.editCard}>
-          <Text style={styles.sectionTitle}>{editCopy.editDetails}</Text>
-          <Text style={styles.addressText}>{editCopy.editDetailsBody}</Text>
+        {/* Dark stats strip */}
+        <View style={styles.statsStrip}>
+          {stats.map((stat, i) => (
+            <View key={stat.label} style={[styles.statCell, i < stats.length - 1 && styles.statCellBorder]}>
+              <Text style={styles.statValue}>{stat.value}</Text>
+              <Text style={styles.statLabel}>{stat.label}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Address card */}
+        <Pressable
+          style={({ pressed }) => [styles.listCard, pressed && { opacity: 0.85 }]}
+          onPress={() => router.push('/(auth)/address')}
+        >
+          <View style={styles.rowBadge}>
+            <Text style={styles.rowBadgeIcon}>📍</Text>
+          </View>
+          <View style={styles.rowBody}>
+            <Text style={styles.rowSectionLabel}>{copy.deliveryAddress}</Text>
+            <Text style={styles.rowBodyText} numberOfLines={1}>{copy.address}</Text>
+          </View>
+          <Text style={styles.chevron}>›</Text>
+        </Pressable>
+
+        {/* Edit details card */}
+        <View style={styles.card}>
+          <Text style={styles.sectionLabel}>{editCopy.editDetails}</Text>
+          <Text style={styles.cardBody}>{editCopy.editDetailsBody}</Text>
           <View style={styles.editRow}>
             <View style={{ flex: 1 }}>
               <Field label={editCopy.firstName} value={firstName} onChange={setFirstName} placeholder="Shakana" />
@@ -217,100 +255,53 @@ export default function AccountTab() {
             loading={upsertProfile.isPending}
             disabled={!user?.id}
           />
-          <Pressable style={styles.addressShortcut} onPress={() => router.push('/(auth)/address')}>
-            <Text style={styles.addressShortcutText}>{editCopy.addressButton}</Text>
+          <Pressable style={styles.ghostBtn} onPress={() => router.push('/(auth)/address')}>
+            <Text style={styles.ghostBtnText}>{editCopy.addressButton}</Text>
           </Pressable>
         </View>
 
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>{copy.phoneLabel}</Text>
-            <Text style={styles.statValue} numberOfLines={1}>
-              {copy.phone}
-            </Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>{copy.openOrders}</Text>
-            <Text style={styles.statValue}>{openOrders}</Text>
-          </View>
-        </View>
-
-        <Pressable style={styles.addressCard} onPress={() => router.push('/(auth)/address')}>
-          <Text style={styles.sectionTitle}>{copy.deliveryAddress}</Text>
-          <Text style={styles.addressText}>{copy.address}</Text>
-        </Pressable>
-
-        <View style={styles.languageCard}>
-          <Text style={styles.sectionTitle}>{copy.language}</Text>
-          <Text style={styles.addressText}>{copy.languageBody}</Text>
-          <View style={styles.languageButtons}>
-            <Pressable
-              style={[styles.languageButton, language === 'en' && styles.languageButtonActive]}
-              onPress={() => void setLanguage('en')}
-            >
-              <Text style={[styles.languageButtonText, language === 'en' && styles.languageButtonTextActive]}>
-                English
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[styles.languageButton, language === 'he' && styles.languageButtonActive]}
-              onPress={() => void setLanguage('he')}
-            >
-              <Text style={[styles.languageButtonText, language === 'he' && styles.languageButtonTextActive]}>
-                עברית
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-
-        <View style={styles.statsRow}>
-          <Pressable style={styles.statCard} onPress={() => router.push('/profile/payment')}>
-            <Text style={styles.statLabel}>{copy.payments}</Text>
-            <Text style={styles.statValue} numberOfLines={1}>
-              {copy.paymentReady}
-            </Text>
-          </Pressable>
-          <Pressable style={styles.statCard} onPress={() => router.push('/profile/alerts')}>
-            <Text style={styles.statLabel}>{copy.notifications}</Text>
-            <Text style={styles.statValue} numberOfLines={1}>
-              {copy.notificationsReady}
-            </Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.links}>
-          <Text style={styles.sectionTitle}>{copy.details}</Text>
+        {/* Quick links */}
+        <View style={styles.card}>
+          <Text style={styles.sectionLabel}>{copy.details}</Text>
           {quickLinks.map((item) => (
             <Pressable
               key={item.href}
-              style={({ pressed }) => [styles.link, pressed && styles.linkPressed]}
+              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.8 }]}
               onPress={() => router.push(item.href)}
             >
-              <View style={styles.linkCopy}>
-                <Text style={[styles.linkLabel, item.danger && styles.dangerText]}>{item.title}</Text>
-                <Text style={styles.linkBody}>{item.body}</Text>
+              <View style={styles.rowBadge}>
+                <Text style={styles.rowBadgeIcon}>{item.icon}</Text>
               </View>
-              <Text style={styles.linkArrow}>{'>'}</Text>
+              <View style={styles.rowBody}>
+                <Text style={styles.linkLabel}>{item.title}</Text>
+                <Text style={styles.rowBodyText} numberOfLines={1}>{item.body}</Text>
+              </View>
+              <Text style={styles.chevron}>›</Text>
             </Pressable>
           ))}
         </View>
 
+        {/* Sign out — prominent full-width dark button */}
         <Pressable
-          style={({ pressed }) => [styles.signOutCard, pressed && styles.linkPressed]}
+          style={({ pressed }) => [styles.signOutBtn, pressed && { opacity: 0.85 }]}
           onPress={onSignOut}
           disabled={signOut.isPending}
+          accessibilityRole="button"
         >
-          <View style={styles.linkCopy}>
-            <Text style={styles.signOutLabel}>
-              {signOut.isPending ? (isHebrew ? 'מתנתקים...' : 'Signing out...') : isHebrew ? 'התנתק' : 'Sign out'}
-            </Text>
-            <Text style={styles.linkBody}>
-              {isHebrew
-                ? 'צא מהחשבון הזה כדי להתחבר עם Gmail אחר.'
-                : 'Leave this account so another Gmail can sign in cleanly.'}
-            </Text>
-          </View>
+          <Text style={styles.signOutBtnText}>
+            {signOut.isPending ? (isHebrew ? 'מתנתקים...' : 'Signing out…') : isHebrew ? 'התנתק' : 'Sign out'}
+          </Text>
         </Pressable>
+
+        {/* Delete account */}
+        <Pressable
+          style={({ pressed }) => [styles.deleteBtn, pressed && { opacity: 0.75 }]}
+          onPress={() => router.push('/profile/delete')}
+          accessibilityRole="button"
+        >
+          <Text style={styles.deleteBtnText}>{isHebrew ? 'מחיקת חשבון' : 'Delete account'}</Text>
+        </Pressable>
+
       </ScrollView>
     </ScreenBase>
   );
@@ -318,244 +309,269 @@ export default function AccountTab() {
 
 const styles = StyleSheet.create({
   screen: {
-    gap: 14,
-    paddingHorizontal: 18,
-    paddingTop: 20,
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingTop: 10,
     paddingBottom: 110,
   },
+
+  // App bar
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'space-between',
     gap: 12,
+    paddingBottom: 2,
   },
-  brand: {
+  headerLeft: {
+    flex: 1,
+    gap: 2,
+  },
+  kicker: {
     fontFamily: fontFamily.bodyBold,
-    fontSize: 12,
-    letterSpacing: 2,
+    fontSize: 10,
+    letterSpacing: 2.4,
     color: colors.acc,
+    textTransform: 'uppercase',
   },
   title: {
     fontFamily: fontFamily.display,
     fontSize: 28,
+    fontStyle: 'italic',
     color: colors.tx,
+    lineHeight: 32,
   },
-  statusPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  langToggle: {
+    flexDirection: 'row',
+    gap: 4,
+    backgroundColor: colors.s2,
     borderRadius: radii.pill,
-    backgroundColor: colors.accLight,
+    padding: 3,
   },
-  statusText: {
+  langPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radii.pill,
+  },
+  langPillActive: {
+    backgroundColor: colors.tx,
+  },
+  langPillText: {
     fontFamily: fontFamily.bodyBold,
     fontSize: 12,
-    color: colors.acc,
+    color: colors.mu,
   },
-  heroCard: {
+  langPillTextActive: {
+    color: '#FAF6EF',
+  },
+
+  // Identity card
+  identityCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    padding: 18,
+    backgroundColor: colors.s1,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: colors.brBr,
-    borderRadius: radii.lg,
-    backgroundColor: colors.white,
-    ...shadow.card,
+    borderColor: 'rgba(30,24,18,0.10)',
+    padding: 16,
   },
   avatar: {
-    width: 58,
-    height: 58,
-    borderRadius: 20,
+    width: 78,
+    height: 78,
+    borderRadius: 39,
+    backgroundColor: colors.s3,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.navy,
+    flexShrink: 0,
   },
   avatarText: {
     fontFamily: fontFamily.display,
-    fontSize: 24,
-    color: colors.white,
+    fontSize: 32,
+    fontStyle: 'italic',
+    color: colors.tx,
   },
-  heroText: {
+  identityText: {
     flex: 1,
     gap: 4,
   },
-  heroKicker: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 11,
-    letterSpacing: 1.2,
-    color: colors.acc,
-    textTransform: 'uppercase',
-  },
-  heroName: {
+  identityName: {
     fontFamily: fontFamily.display,
     fontSize: 22,
+    fontStyle: 'italic',
     color: colors.tx,
+    lineHeight: 26,
   },
-  heroBody: {
+  identityMeta: {
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    color: colors.mu,
+    lineHeight: 18,
+  },
+
+  // Dark stats strip
+  statsStrip: {
+    flexDirection: 'row',
+    backgroundColor: colors.tx,
+    borderRadius: 20,
+    paddingVertical: 16,
+  },
+  statCell: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+  },
+  statCellBorder: {
+    borderRightWidth: 1,
+    borderRightColor: 'rgba(255,255,255,0.12)',
+  },
+  statValue: {
+    fontFamily: fontFamily.display,
+    fontSize: 26,
+    fontStyle: 'italic',
+    color: '#FAF6EF',
+    lineHeight: 30,
+  },
+  statLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 10,
+    letterSpacing: 1.4,
+    color: 'rgba(250,246,239,0.55)',
+    textTransform: 'uppercase',
+  },
+
+  // Generic card shell
+  card: {
+    backgroundColor: colors.s1,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(30,24,18,0.10)',
+    padding: 16,
+    gap: 12,
+  },
+  sectionLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 10,
+    letterSpacing: 1.4,
+    color: colors.mu2,
+    textTransform: 'uppercase',
+  },
+  cardBody: {
     fontFamily: fontFamily.body,
     fontSize: 13,
     lineHeight: 19,
     color: colors.mu,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  statCard: {
-    flex: 1,
-    minHeight: 84,
-    justifyContent: 'space-between',
-    padding: 14,
-    borderWidth: 1,
-    borderColor: colors.brBr,
-    borderRadius: radii.lg,
-    backgroundColor: colors.cardSoft,
-  },
-  statLabel: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 11,
-    letterSpacing: 1,
-    color: colors.mu,
-    textTransform: 'uppercase',
-  },
-  statValue: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 15,
-    color: colors.tx,
-  },
-  addressCard: {
-    gap: 8,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.brBr,
-    borderRadius: radii.lg,
-    backgroundColor: colors.white,
-  },
-  editCard: {
-    gap: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.brBr,
-    borderRadius: radii.lg,
-    backgroundColor: colors.white,
-    ...shadow.card,
+    marginTop: -4,
   },
   editRow: {
     flexDirection: 'row',
     gap: 10,
   },
-  addressShortcut: {
-    minHeight: 44,
+  ghostBtn: {
+    height: 44,
     borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: colors.brBr,
+    borderColor: 'rgba(30,24,18,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.cardSoft,
+    backgroundColor: colors.s2,
   },
-  addressShortcutText: {
+  ghostBtnText: {
     fontFamily: fontFamily.bodyBold,
     fontSize: 13,
     color: colors.acc,
   },
-  sectionTitle: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 13,
-    color: colors.tx,
-  },
-  addressText: {
-    fontFamily: fontFamily.body,
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.mu,
-  },
-  languageCard: {
-    gap: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.brBr,
-    borderRadius: radii.lg,
-    backgroundColor: colors.white,
-  },
-  languageButtons: {
+
+  // Address / single-row list card
+  listCard: {
     flexDirection: 'row',
-    gap: 10,
-  },
-  languageButton: {
-    flex: 1,
-    minHeight: 44,
-    borderRadius: radii.pill,
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.s1,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: colors.brBr,
+    borderColor: 'rgba(30,24,18,0.10)',
+    padding: 14,
+  },
+
+  // Shared list row pieces
+  rowBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: colors.s2,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.cardSoft,
+    flexShrink: 0,
   },
-  languageButtonActive: {
-    borderColor: colors.navy,
-    backgroundColor: colors.navy,
+  rowBadgeIcon: {
+    fontSize: 16,
   },
-  languageButtonText: {
+  rowBody: {
+    flex: 1,
+    gap: 2,
+  },
+  rowSectionLabel: {
     fontFamily: fontFamily.bodyBold,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    color: colors.mu2,
+    textTransform: 'uppercase',
+  },
+  rowBodyText: {
+    fontFamily: fontFamily.body,
     fontSize: 13,
-    color: colors.tx,
+    color: colors.mu,
+    lineHeight: 18,
   },
-  languageButtonTextActive: {
-    color: colors.white,
+  chevron: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 22,
+    color: colors.mu2,
+    lineHeight: 24,
+    flexShrink: 0,
   },
-  links: {
-    gap: 10,
-  },
-  link: {
+
+  // Quick links inside card
+  linkRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: colors.brBr,
-    borderRadius: radii.lg,
-    backgroundColor: colors.white,
-  },
-  linkPressed: {
-    backgroundColor: colors.cardSoft,
-  },
-  linkCopy: {
-    flex: 1,
-    gap: 3,
-    paddingRight: 10,
+    gap: 12,
+    paddingVertical: 6,
   },
   linkLabel: {
     fontFamily: fontFamily.bodyBold,
     fontSize: 14,
     color: colors.tx,
   },
-  linkBody: {
-    fontFamily: fontFamily.body,
-    fontSize: 12,
-    lineHeight: 17,
-    color: colors.mu,
-  },
-  linkArrow: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 18,
-    color: colors.mu,
-  },
-  dangerText: {
-    color: colors.err,
-  },
-  signOutCard: {
-    flexDirection: 'row',
+
+  // Sign out
+  signOutBtn: {
+    height: 52,
+    borderRadius: radii.pill,
+    backgroundColor: colors.tx,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 15,
-    borderWidth: 1,
-    borderColor: colors.brBr,
-    borderRadius: radii.lg,
-    backgroundColor: colors.cardSoft,
+    justifyContent: 'center',
+    marginTop: 4,
   },
-  signOutLabel: {
+  signOutBtnText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 15,
+    letterSpacing: 0.4,
+    color: '#FAF6EF',
+  },
+
+  // Delete account
+  deleteBtn: {
+    height: 52,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.err,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  deleteBtnText: {
     fontFamily: fontFamily.bodyBold,
     fontSize: 14,
     color: colors.err,

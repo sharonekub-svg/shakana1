@@ -1,10 +1,8 @@
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
 import { ScreenBase } from '@/components/primitives/ScreenBase';
-import { EmptyState } from '@/components/primitives/EmptyState';
-import { colors, radii, shadow } from '@/theme/tokens';
+import { colors, radii } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { useAuthStore } from '@/stores/authStore';
 import { useUserOrders } from '@/api/orders';
@@ -13,19 +11,6 @@ import { formatCompactDuration } from '@/utils/timer';
 import { track } from '@/lib/posthog';
 import { useLocale } from '@/i18n/locale';
 
-function OrdersMark() {
-  return (
-    <Svg width={46} height={46} viewBox="0 0 46 46" fill="none">
-      <Rect x="2" y="2" width="42" height="42" rx="16" fill={colors.acc} />
-      <Path d="M14 18h18l-2 11H17l-3-15h-4" stroke={colors.white} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M19 14c1.2-3 6.8-3 8 0" stroke={colors.white} strokeWidth={2.2} strokeLinecap="round" />
-      <Circle cx="19" cy="34" r="2.2" fill={colors.white} />
-      <Circle cx="29" cy="34" r="2.2" fill={colors.white} />
-      <Path d="M18 23h10" stroke={colors.white} strokeWidth={2} strokeLinecap="round" />
-    </Svg>
-  );
-}
-
 export default function OrdersTab() {
   const router = useRouter();
   const { language, t } = useLocale();
@@ -33,6 +18,7 @@ export default function OrdersTab() {
   const { data: orders = [], isLoading } = useUserOrders(user?.id);
   const openOrders = orders.filter((order) => !['completed', 'cancelled'].includes(order.status)).length;
   const completedOrders = orders.filter((order) => order.status === 'completed').length;
+
   const orderTimingLabel = (closesAt?: string | null) => {
     if (!closesAt) return language === 'he' ? 'ללא טיימר' : 'No timer';
     const remaining = new Date(closesAt).getTime() - Date.now();
@@ -51,8 +37,9 @@ export default function OrdersTab() {
     cancelled: { he: 'בוטל', en: 'CANCELLED' },
   };
   const statusLabel = (s: string) => STATUS_LABEL[s]?.[language] ?? s.toUpperCase();
+
   const stats = [
-    { label: t('tabs.home.openOrders'), value: String(openOrders), featured: true },
+    { label: t('tabs.home.openOrders'), value: String(openOrders) },
     { label: t('tabs.home.completed'), value: String(completedOrders) },
     { label: language === 'he' ? 'קישורי שיתוף' : 'Invite links', value: '1' },
   ];
@@ -64,67 +51,70 @@ export default function OrdersTab() {
 
   return (
     <ScreenBase padded={false} safeEdges={['top']}>
+      {/* App bar */}
       <View style={styles.header}>
-        <View style={styles.headerBrand}>
-          <View style={styles.logoBubble}>
-            <OrdersMark />
-          </View>
-          <View>
-            <Text style={styles.kicker}>SHAKANA</Text>
-            <Text style={styles.title}>{t('tabs.orders.title')}</Text>
-          </View>
+        <View style={styles.headerLeft}>
+          <Text style={styles.kicker}>SHAKANA</Text>
+          <Text style={styles.title}>{t('tabs.orders.title')}</Text>
         </View>
         <Pressable onPress={newOrder} style={styles.newBtn} accessibilityRole="button">
-          <Text style={styles.newBtnText}>{t('tabs.orders.newOrder')}</Text>
+          <Text style={styles.newBtnText}>+ {t('tabs.orders.newOrder')}</Text>
         </Pressable>
       </View>
 
-      <View style={styles.statsRow}>
-        {stats.map((stat) => (
-          <View key={stat.label} style={[styles.statCard, stat.featured && styles.statCardFeatured]}>
-            <Text style={[styles.statValue, stat.featured && styles.statValueFeatured]}>{stat.value}</Text>
-            <Text style={[styles.statLabel, stat.featured && styles.statLabelFeatured]}>{stat.label}</Text>
+      {/* Dark stats strip */}
+      <View style={styles.statsStrip}>
+        {stats.map((stat, i) => (
+          <View key={stat.label} style={[styles.statCell, i < stats.length - 1 && styles.statCellBorder]}>
+            <Text style={styles.statValue}>{stat.value}</Text>
+            <Text style={styles.statLabel}>{stat.label}</Text>
           </View>
         ))}
       </View>
 
+      {/* Order list / empty state */}
       {isLoading || orders.length === 0 ? (
-        <EmptyState
-          badge="ORD"
-          title={t('tabs.orders.noOrdersTitle')}
-          subtitle={t('tabs.orders.noOrdersBody')}
-          cta={t('tabs.orders.newOrder')}
-          onCta={newOrder}
-        />
+        <View style={styles.emptyWrap}>
+          <Text style={styles.emptyTitle}>{t('tabs.orders.noOrdersTitle')}</Text>
+          <Text style={styles.emptyBody}>{t('tabs.orders.noOrdersBody')}</Text>
+          <Pressable onPress={newOrder} style={styles.emptyBtn} accessibilityRole="button">
+            <Text style={styles.emptyBtnText}>+ {t('tabs.orders.newOrder')}</Text>
+          </Pressable>
+        </View>
       ) : (
         <FlatList
           data={orders}
           keyExtractor={(o) => o.id}
-          contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 28, gap: 12 }}
+          contentContainerStyle={styles.listContent}
           renderItem={({ item }) => (
             <Pressable
-              style={({ pressed }) => [styles.row, pressed && { transform: [{ scale: 0.99 }] }]}
+              style={({ pressed }) => [styles.row, pressed && { opacity: 0.88 }]}
               onPress={() => router.push(`/order/${item.id}`)}
               accessibilityRole="button"
             >
-              <View style={styles.rowTop}>
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{(item.store_label ?? 'ORD').slice(0, 3).toUpperCase()}</Text>
-                </View>
+              <View style={styles.rowBadge}>
+                <Text style={styles.rowBadgeText}>{(item.store_label ?? 'ORD').slice(0, 2).toUpperCase()}</Text>
+              </View>
+              <View style={styles.rowBody}>
                 {item.store_label ? (
-                  <Text style={styles.storeName} numberOfLines={1}>{item.store_label}</Text>
+                  <Text style={styles.rowStore} numberOfLines={1}>{item.store_label}</Text>
                 ) : null}
+                <Text style={styles.rowTitle} numberOfLines={1}>
+                  {item.product_title ?? item.product_url}
+                </Text>
+                <Text style={styles.rowSub} numberOfLines={1}>
+                  {formatAgorot(item.product_price_agorot)} · {orderTimingLabel(item.closes_at)}
+                  {item.estimated_shipping_agorot
+                    ? ` · ${formatAgorot(item.estimated_shipping_agorot)} ${language === 'he' ? 'משלוח' : 'shipping'}`
+                    : ''}
+                </Text>
+              </View>
+              <View style={styles.rowRight}>
                 <View style={styles.statusPill}>
                   <Text style={styles.statusText}>{statusLabel(item.status)}</Text>
                 </View>
+                <Text style={styles.chevron}>›</Text>
               </View>
-              <Text style={styles.rowTitle} numberOfLines={1}>
-                {item.product_title ?? item.product_url}
-              </Text>
-              <Text style={styles.rowSub}>
-                {formatAgorot(item.product_price_agorot)} · {orderTimingLabel(item.closes_at)}
-                {item.estimated_shipping_agorot ? ` · ${formatAgorot(item.estimated_shipping_agorot)} ${language === 'he' ? 'משלוח' : 'shipping'}` : ''}
-              </Text>
             </Pressable>
           )}
         />
@@ -135,129 +125,141 @@ export default function OrdersTab() {
 
 const styles = StyleSheet.create({
   header: {
-    paddingHorizontal: 18,
-    paddingTop: 8,
-    paddingBottom: 14,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 12,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'space-between',
     gap: 12,
   },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    paddingHorizontal: 18,
-    paddingBottom: 14,
-  },
-  statCard: {
+  headerLeft: {
     flex: 1,
-    minHeight: 84,
-    padding: 14,
-    borderRadius: 22,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.br,
-    justifyContent: 'space-between',
-    ...shadow.card,
-  },
-  statCardFeatured: {
-    backgroundColor: colors.acc,
-    borderColor: colors.acc,
-  },
-  statValue: {
-    fontFamily: fontFamily.display,
-    fontSize: 24,
-    lineHeight: 28,
-    color: colors.tx,
-  },
-  statValueFeatured: {
-    color: colors.white,
-  },
-  statLabel: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 10,
-    letterSpacing: 1,
-    color: colors.mu,
-    textTransform: 'uppercase',
-  },
-  statLabelFeatured: {
-    color: 'rgba(237,244,239,0.85)',
-  },
-  headerBrand: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    flex: 1,
-  },
-  logoBubble: {
-    width: 58,
-    height: 58,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.acc,
-    borderWidth: 1,
-    borderColor: colors.acc,
-    ...shadow.cta,
+    gap: 2,
   },
   kicker: {
     fontFamily: fontFamily.bodyBold,
     fontSize: 10,
     letterSpacing: 2.4,
     color: colors.acc,
-    marginBottom: 4,
+    textTransform: 'uppercase',
   },
-  title: { fontFamily: fontFamily.display, fontSize: 26, color: colors.tx },
+  title: {
+    fontFamily: fontFamily.display,
+    fontSize: 28,
+    fontStyle: 'italic',
+    color: colors.tx,
+    lineHeight: 32,
+  },
   newBtn: {
-    backgroundColor: colors.navy,
+    backgroundColor: colors.acc,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadow.cta,
   },
-  newBtnText: { color: colors.white, fontSize: 12, fontFamily: fontFamily.bodyBold, letterSpacing: 1.2 },
-  row: {
-    backgroundColor: colors.white,
-    borderRadius: 26,
-    padding: 16,
-    borderColor: colors.br,
-    borderWidth: 1,
-    gap: 8,
-    ...shadow.card,
+  newBtnText: {
+    color: '#FAF6EF',
+    fontSize: 12,
+    fontFamily: fontFamily.bodyBold,
+    letterSpacing: 0.6,
   },
-  rowTop: {
+
+  // Dark stats strip
+  statsStrip: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    backgroundColor: colors.tx,
+    marginHorizontal: 20,
+    borderRadius: 20,
+    marginBottom: 16,
+    paddingVertical: 16,
   },
-  badge: {
-    width: 42,
-    height: 42,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.br,
+  statCell: {
+    flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.cardSoft,
+    gap: 4,
   },
-  badgeText: {
+  statCellBorder: {
+    borderRightWidth: 1,
+    borderRightColor: 'rgba(255,255,255,0.12)',
+  },
+  statValue: {
+    fontFamily: fontFamily.display,
+    fontSize: 26,
+    fontStyle: 'italic',
+    color: '#FAF6EF',
+    lineHeight: 30,
+  },
+  statLabel: {
     fontFamily: fontFamily.bodyBold,
     fontSize: 10,
     letterSpacing: 1.4,
-    color: colors.tx,
+    color: 'rgba(250,246,239,0.55)',
+    textTransform: 'uppercase',
   },
-  storeName: {
+
+  // List
+  listContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 32,
+    gap: 10,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.s1,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(30,24,18,0.10)',
+    padding: 14,
+  },
+  rowBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: colors.s2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  rowBadgeText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 11,
+    letterSpacing: 1.2,
+    color: colors.mu,
+  },
+  rowBody: {
     flex: 1,
-    fontFamily: fontFamily.bodySemi,
+    gap: 2,
+  },
+  rowStore: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    color: colors.mu2,
+    textTransform: 'uppercase',
+  },
+  rowTitle: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 15,
+    color: colors.tx,
+    lineHeight: 20,
+  },
+  rowSub: {
+    fontFamily: fontFamily.body,
     fontSize: 12,
     color: colors.mu,
-    paddingHorizontal: 6,
+  },
+  rowRight: {
+    alignItems: 'flex-end',
+    gap: 6,
+    flexShrink: 0,
   },
   statusPill: {
-    paddingHorizontal: 12,
-    height: 28,
+    paddingHorizontal: 10,
+    height: 24,
     borderRadius: radii.pill,
     backgroundColor: colors.accLight,
     alignItems: 'center',
@@ -265,10 +267,54 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontFamily: fontFamily.bodyBold,
-    fontSize: 10,
+    fontSize: 9,
     letterSpacing: 1.2,
     color: colors.acc,
+    textTransform: 'uppercase',
   },
-  rowTitle: { fontFamily: fontFamily.bodyBold, fontSize: 16, color: colors.tx },
-  rowSub: { fontFamily: fontFamily.body, fontSize: 13, color: colors.mu },
+  chevron: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 20,
+    color: colors.mu2,
+    lineHeight: 22,
+  },
+
+  // Empty state
+  emptyWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 36,
+    gap: 12,
+  },
+  emptyTitle: {
+    fontFamily: fontFamily.display,
+    fontSize: 22,
+    fontStyle: 'italic',
+    color: colors.tx,
+    textAlign: 'center',
+    lineHeight: 28,
+  },
+  emptyBody: {
+    fontFamily: fontFamily.body,
+    fontSize: 14,
+    color: colors.mu,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  emptyBtn: {
+    marginTop: 8,
+    height: 52,
+    paddingHorizontal: 32,
+    borderRadius: radii.pill,
+    backgroundColor: colors.acc,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyBtnText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+    letterSpacing: 0.6,
+    color: '#FAF6EF',
+  },
 });
