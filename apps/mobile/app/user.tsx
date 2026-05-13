@@ -676,6 +676,12 @@ export default function DemoUserScreen() {
     router.replace('/user');
   };
 
+  const openDemoVideo = () => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.location.assign('/demo.html');
+    }
+  };
+
   if (!brand || !store) {
     return (
       <>
@@ -747,7 +753,7 @@ export default function DemoUserScreen() {
               {Platform.OS === 'web' ? (
                 <Pressable
                   accessibilityRole="button"
-                  onPress={() => { if (typeof window !== 'undefined') window.open('/demo.html', '_blank'); }}
+                  onPress={openDemoVideo}
                   style={({ pressed }) => [styles.tourBtn, styles.demoVidBtn, pressed && { opacity: 0.85 }]}
                 >
                   <Text style={styles.tourBtnIcon}>▶</Text>
