@@ -1,29 +1,43 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ImageBackground, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
-import { BrandPill, Card, DemoButton, DemoPage, SectionTitle, demoStyles } from '@/components/demo/DemoPrimitives';
+import { BrandPill, demoStyles } from '@/components/demo/DemoPrimitives';
 import { demoStores, type DemoBrandId } from '@/demo/catalog';
-import { type DemoParticipant, initDemoCommerceSync, useDemoCommerceStore } from '@/stores/demoCommerceStore';
+import {
+  buildSharedDemoInviteLink,
+  type DemoOrder,
+  type DemoParticipant,
+  initDemoCommerceSync,
+  useDemoCommerceStore,
+} from '@/stores/demoCommerceStore';
 import { useAuthStore } from '@/stores/authStore';
 import { searchCities, searchStreets } from '@/lib/locationAutocomplete';
 import { useLocale } from '@/i18n/locale';
-import { colors } from '@/theme/tokens';
+import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 
-const ADDRESS_SUGGESTIONS = [
-  'Rothschild Boulevard 12, Tel Aviv',
-  'Dizengoff Street 88, Tel Aviv',
-  'Herzl Street 21, Ramat Gan',
-  'Jabotinsky Street 42, Petah Tikva',
-  'Weizmann Street 17, Givatayim',
-  'Ben Gurion Street 9, Herzliya',
-  'King George Street 30, Jerusalem',
-  'HaNassi Boulevard 45, Haifa',
+const BRAND_ORDER: DemoBrandId[] = ['amazon', 'zara', 'hm'];
+const TIMER_OPTIONS = [30, 45, 60];
+
+const FALLBACK_ADDRESSES = [
+  'Herzl 12, Petah Tikva',
+  'Jabotinsky 42, Petah Tikva',
+  'Dizengoff 88, Tel Aviv',
+  'Rothschild 12, Tel Aviv',
+  'Ben Yehuda 14, Tel Aviv',
+  'Weizmann 17, Givatayim',
+  'Ben Gurion 9, Herzliya',
+  'King George 30, Jerusalem',
+  'HaNassi 45, Haifa',
 ];
 
+type StepKey = 'address' | 'store' | 'name' | 'copy';
+
+const STEP_KEYS: StepKey[] = ['address', 'store', 'name', 'copy'];
+
 function normalizeTimerMinutes(value: string) {
-  if (!value.trim()) return null;
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return null;
   return Math.max(1, Math.min(720, Math.round(parsed)));
@@ -35,16 +49,7 @@ function hasAddressNumber(value: string) {
 
 function isCompleteDeliveryAddress(value: string) {
   const trimmed = value.trim();
-  return trimmed.length >= 8 && hasAddressNumber(trimmed) && trimmed.includes(',');
-}
-
-function addressValidationMessage(value: string, language: 'he' | 'en' = 'en') {
-  const trimmed = value.trim();
-  const he = language === 'he';
-  if (!trimmed) return he ? 'חובה להזין רחוב + מספר בית + עיר לפני פתיחת הסל.' : 'Required: enter street + house number + city before opening the cart.';
-  if (!hasAddressNumber(trimmed)) return he ? 'חובה להוסיף מספר בית. לדוגמה: הרצל 12, פתח תקווה.' : 'House number is required. Example: Herzl 12, Petah Tikva.';
-  if (!trimmed.includes(',')) return he ? 'הוסיפו עיר אחרי הרחוב ומספר הבית. לדוגמה: הרצל 12, פתח תקווה.' : 'Add the city after the street and house number. Example: Herzl 12, Petah Tikva.';
-  return he ? 'חובה לבחור טיימר, חנות אחת וכתובת מלאה עם מספר בית.' : 'Required: valid timer, one store, and full address with house number before opening the cart.';
+  return trimmed.length >= 6 && hasAddressNumber(trimmed) && trimmed.includes(',');
 }
 
 function splitAddressQuery(value: string) {
@@ -63,94 +68,146 @@ function splitAddressQuery(value: string) {
   };
 }
 
-function getFallbackAddressSuggestions(value: string) {
-  const query = value.trim().toLowerCase();
-  if (query.length < 2) return [];
-  return ADDRESS_SUGGESTIONS.filter((address) => address.toLowerCase().includes(query)).slice(0, 5);
-}
-
-function uniqueAddressSuggestions(values: string[]) {
+function unique(values: string[]) {
   const seen = new Set<string>();
   return values.filter((value) => {
-    const normalized = value.trim().toLocaleLowerCase();
-    if (!normalized || seen.has(normalized)) return false;
-    seen.add(normalized);
+    const key = value.trim().toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
+}
+
+function fallbackAddressSuggestions(value: string) {
+  const query = value.trim().toLowerCase();
+  if (query.length < 2) return [];
+  return FALLBACK_ADDRESSES.filter((address) => address.toLowerCase().includes(query)).slice(0, 5);
+}
+
+function buildInviteMessage(name: string, order: DemoOrder) {
+  const storeName = demoStores[order.brand].name;
+  const link = buildSharedDemoInviteLink(order);
+  return `${name} is opening a shared ${storeName} order. Join before the timer closes, add only ${storeName} items, and save on delivery. Link: ${link} Code: ${order.inviteCode}`;
 }
 
 export default function NewOrderScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ brand?: string }>();
   const { language } = useLocale();
-  const copy = language === 'he'
-    ? {
-        title: 'הזמנה קבוצתית חדשה',
-        subtitle: 'בחרו חנות אחת, טיימר וכתובת משלוח מדויקת לפני פתיחת הסל.',
-        backHome: 'חזרה לבית',
-        profile: 'פרופיל',
-        setupTitle: 'הגדירו את ההזמנה קודם',
-        setupBody: 'ההזמנה עדיין לא נפתחה. היא תיפתח רק אחרי שיש טיימר, חנות וכתובת מלאה.',
-        timer: 'טיימר',
-        store: 'חנות',
-        addressStep: 'רחוב + מספר + עיר',
-        founderControl: 'שליטת פותח ההזמנה',
-        minutes: 'דקות',
-        timerError: 'הכניסו טיימר בין 1 ל-720 דקות.',
-        storeTitle: '2. חנות',
-        lockedCatalog: 'קטלוג נעול',
-        addressTitle: '3. כתובת משלוח',
-        addressKicker: 'חובה לפני פתיחה',
-        addressReqTitle: 'חובה מספר בית',
-        addressReqBody: 'כתבו כתובת מלאה בפורמט: רחוב + מספר בית, עיר. לדוגמה: הרצל 12, פתח תקווה.',
-        addressPlaceholder: 'רחוב + מספר בית, עיר',
-        looking: 'מחפש רחובות וערים מתאימים',
-        readyTitle: 'אפשר לפתוח את הסל הקבוצתי',
-        notReadyTitle: 'סיימו הגדרה כדי לפתוח את הסל',
-        readyBody: 'אחרי הפתיחה, חברים יוכלו להצטרף ולהוסיף מוצרים רק מהחנות הזו.',
-        create: 'צור הזמנה',
-        disabled: 'הוסיפו טיימר, חנות, מספר בית ועיר',
-      }
-    : {
-        title: 'New group order',
-        subtitle: 'Choose one store, set the timer, and add the exact delivery address before opening the cart.',
-        backHome: 'Back home',
-        profile: 'Profile',
-        setupTitle: 'Set up the order first',
-        setupBody: 'The order is not created yet. It opens only after timer, store, and exact address are ready.',
-        timer: 'Timer',
-        store: 'Store',
-        addressStep: 'Street + number + city',
-        founderControl: 'Founder control',
-        minutes: 'minutes',
-        timerError: 'Enter a timer from 1 to 720 minutes.',
-        storeTitle: '2. Store',
-        lockedCatalog: 'Locked catalog',
-        addressTitle: '3. Delivery address',
-        addressKicker: 'Required before launch',
-        addressReqTitle: 'House number required',
-        addressReqBody: 'Type the full address in this format: street + house number, city. Example: Herzl 12, Petah Tikva.',
-        addressPlaceholder: 'Street + house number, city',
-        looking: 'Looking for matching streets and cities',
-        readyTitle: 'Ready to open the group cart',
-        notReadyTitle: 'Finish setup to open the cart',
-        readyBody: 'After opening, friends can join and add products only from this store.',
-        create: 'Create order',
-        disabled: 'Add timer, store, street number, and city',
-      };
+  const isHebrew = language === 'he';
+
   const session = useAuthStore((state) => state.session);
   const demoMode = useDemoCommerceStore((state) => state.demoMode);
   const setDemoRole = useDemoCommerceStore((state) => state.setDemoRole);
   const createNewOrder = useDemoCommerceStore((state) => state.createNewOrder);
   const updateDeliveryAddress = useDemoCommerceStore((state) => state.updateDeliveryAddress);
   const selectBrand = useDemoCommerceStore((state) => state.selectBrand);
+  const setActiveParticipant = useDemoCommerceStore((state) => state.setActiveParticipant);
+  const orders = useDemoCommerceStore((state) => state.orders);
 
   const initialBrand = params.brand === 'hm' || params.brand === 'zara' || params.brand === 'amazon' ? params.brand : null;
-  const [setupBrand, setSetupBrand] = useState<DemoBrandId | null>(initialBrand);
-  const [customTimer, setCustomTimer] = useState('45');
-  const [setupDeliveryAddress, setSetupDeliveryAddress] = useState('');
-  const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
-  const [addressLoading, setAddressLoading] = useState(false);
+  const metadata = session?.user.user_metadata as Record<string, unknown> | undefined;
+  const defaultName =
+    (typeof metadata?.full_name === 'string' && metadata.full_name.trim()) ||
+    (typeof metadata?.name === 'string' && metadata.name.trim()) ||
+    'Sharone Kubovsky';
+
+  const copy = isHebrew
+    ? {
+        eyebrow: 'הזמנה חדשה',
+        title: 'פותחים סל משותף',
+        subtitle: 'מתחילים בכתובת, בוחרים חנות אחת, מוסיפים שם, ואז מעתיקים קישור לחברים.',
+        back: 'בית',
+        step: 'שלב',
+        next: 'המשך',
+        skip: 'דלג',
+        create: 'פתח הזמנה והעתק קישור',
+        copied: 'הקישור הועתק',
+        openCart: 'פתח קטלוג',
+        addressTitle: 'כתובת למשלוח',
+        addressBody: 'כתבו רחוב, מספר בית ועיר. החנות לא תוכל לטפל בהזמנה בלי מספר בית.',
+        addressPlaceholder: 'לדוגמה: הרצל 12, פתח תקווה',
+        addressMissing: 'צריך רחוב, מספר בית ועיר.',
+        timer: 'טיימר',
+        storeTitle: 'בחרו חנות',
+        storeBody: 'אחרי פתיחת ההזמנה, החברים יוכלו להוסיף מוצרים רק מהחנות הזאת.',
+        nameTitle: 'שם מוביל ההזמנה',
+        nameBody: 'השם הזה יופיע בקישור הוואטסאפ ובצד החנות.',
+        namePlaceholder: 'השם שלך',
+        copyTitle: 'הכל מוכן לשיתוף',
+        copyBody: 'נפתח סל נעול לחנות אחת. עכשיו אפשר להעתיק קישור או לפתוח את הקטלוג.',
+        locked: 'קטלוג נעול לחנות אחת',
+        members: 'חברים מצטרפים דרך הקישור או הקוד',
+        code: 'קוד הצטרפות',
+        review: 'סיכום לפני פתיחה',
+        address: 'כתובת',
+        store: 'חנות',
+        name: 'שם',
+        copyStep: 'העתקה',
+        minutes: 'דקות',
+        skipped: 'אפשר להשלים אחר כך',
+      }
+    : {
+        eyebrow: 'New order',
+        title: 'Open a shared cart',
+        subtitle: 'Start with the address, choose one store, add your name, then copy the invite link.',
+        back: 'Home',
+        step: 'Step',
+        next: 'Next',
+        skip: 'Skip',
+        create: 'Create order and copy link',
+        copied: 'Link copied',
+        openCart: 'Open catalog',
+        addressTitle: 'Delivery address',
+        addressBody: 'Enter street, house number, and city. The store cannot process the order without the house number.',
+        addressPlaceholder: 'Example: Herzl 12, Petah Tikva',
+        addressMissing: 'Street, house number, and city are required.',
+        timer: 'Timer',
+        storeTitle: 'Choose store',
+        storeBody: 'After launch, friends can add products only from this locked store.',
+        nameTitle: 'Order lead name',
+        nameBody: 'This name appears in the WhatsApp invite and merchant dashboard.',
+        namePlaceholder: 'Your name',
+        copyTitle: 'Ready to share',
+        copyBody: 'A one-store shared cart is ready. Copy the invite or open the catalog.',
+        locked: 'Catalog locked to one store',
+        members: 'Friends join by link or code',
+        code: 'Join code',
+        review: 'Launch review',
+        address: 'Address',
+        store: 'Store',
+        name: 'Name',
+        copyStep: 'Copy',
+        minutes: 'minutes',
+        skipped: 'Can be completed later',
+      };
+
+  const [stepIndex, setStepIndex] = useState(0);
+  const [address, setAddress] = useState('');
+  const [brand, setBrand] = useState<DemoBrandId | null>(initialBrand);
+  const [leadName, setLeadName] = useState(defaultName);
+  const [timerMinutes, setTimerMinutes] = useState('45');
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const currentStep = STEP_KEYS[stepIndex] ?? 'copy';
+  const safeTimer = normalizeTimerMinutes(timerMinutes) ?? 45;
+  const selectedStore = brand ? demoStores[brand] : null;
+  const createdOrder = createdOrderId ? orders.find((order) => order.id === createdOrderId) ?? null : null;
+  const inviteLink = createdOrder ? buildSharedDemoInviteLink(createdOrder) : '';
+  const completeAddress = isCompleteDeliveryAddress(address);
+  const cleanName = leadName.trim() || defaultName;
+
+  const stepLabels = useMemo(
+    () => ({
+      address: copy.address,
+      store: copy.store,
+      name: copy.name,
+      copy: copy.copyStep,
+    }),
+    [copy.address, copy.copyStep, copy.name, copy.store],
+  );
 
   useEffect(() => {
     initDemoCommerceSync();
@@ -158,37 +215,19 @@ export default function NewOrderScreen() {
   }, [demoMode, setDemoRole]);
 
   useEffect(() => {
-    if (initialBrand) setSetupBrand(initialBrand);
+    if (initialBrand) setBrand(initialBrand);
   }, [initialBrand]);
 
-  const accountParticipant: DemoParticipant = useMemo(() => {
-    const metadata = session?.user.user_metadata as Record<string, unknown> | undefined;
-    const fullName =
-      (typeof metadata?.full_name === 'string' && metadata.full_name.trim()) ||
-      (typeof metadata?.name === 'string' && metadata.name.trim()) ||
-      (session?.user ? 'Signed-in member' : 'Sharone');
-    return {
-      id: session?.user.id ?? 'user-a',
-      name: fullName,
-      joinedAt: Date.now(),
-    };
-  }, [session?.user.id, session?.user.user_metadata]);
-
-  const customTimerMinutes = normalizeTimerMinutes(customTimer);
-  const setupReady = !!setupBrand && !!customTimerMinutes && isCompleteDeliveryAddress(setupDeliveryAddress);
-
   useEffect(() => {
-    const value = setupDeliveryAddress.trim();
-    const fallback = getFallbackAddressSuggestions(value);
+    const value = address.trim();
+    const fallback = fallbackAddressSuggestions(value);
     if (value.length < 2) {
-      setAddressSuggestions([]);
-      setAddressLoading(false);
+      setSuggestions([]);
       return;
     }
 
     const controller = new AbortController();
     const timer = globalThis.setTimeout(() => {
-      setAddressLoading(true);
       const query = splitAddressQuery(value);
       Promise.all([
         searchCities(query.city, language, controller.signal),
@@ -198,301 +237,680 @@ export default function NewOrderScreen() {
       ])
         .then(([cities, streets]) => {
           if (controller.signal.aborted) return;
-          const bestCities = cities.slice(0, 4);
-          const streetCitySuggestions = streets.flatMap((street) => {
+          const cityPool = cities.slice(0, 4);
+          const streetSuggestions = streets.flatMap((street) => {
             if (street.includes(',')) return [street];
-            const cityPool = query.hasCityPart ? bestCities : bestCities.slice(0, 2);
             return cityPool.length > 0 ? cityPool.map((city) => `${street}, ${city}`) : [];
           });
-          const cityOnlySuggestions = bestCities.map((city) =>
+          const citySuggestions = cityPool.map((city) =>
             query.hasCityPart && query.street ? `${query.street}, ${city}` : city,
           );
-          setAddressSuggestions(uniqueAddressSuggestions([...streetCitySuggestions, ...cityOnlySuggestions, ...fallback]).slice(0, 6));
+          setSuggestions(unique([...streetSuggestions, ...citySuggestions, ...fallback]).slice(0, 6));
         })
         .catch(() => {
-          if (!controller.signal.aborted) setAddressSuggestions(fallback);
-        })
-        .finally(() => {
-          if (!controller.signal.aborted) setAddressLoading(false);
+          if (!controller.signal.aborted) setSuggestions(fallback);
         });
-    }, 220);
+    }, 180);
 
     return () => {
       controller.abort();
       globalThis.clearTimeout(timer);
     };
-  }, [setupDeliveryAddress, language]);
+  }, [address, language]);
 
-  const createOrder = () => {
-    if (!setupReady || !setupBrand || !customTimerMinutes) return;
-    const orderId = createNewOrder(setupBrand, accountParticipant, customTimerMinutes);
-    updateDeliveryAddress(orderId, setupDeliveryAddress.trim());
-    selectBrand(setupBrand);
+  const participant: DemoParticipant = useMemo(
+    () => ({
+      id: session?.user.id ?? 'user-a',
+      name: cleanName,
+      joinedAt: Date.now(),
+    }),
+    [cleanName, session?.user.id],
+  );
+
+  const createOrderIfNeeded = async () => {
+    let order = createdOrder;
+    if (!order) {
+      const nextBrand = brand ?? 'amazon';
+      const orderId = createNewOrder(nextBrand, participant, safeTimer);
+      updateDeliveryAddress(orderId, completeAddress ? address.trim() : copy.skipped);
+      selectBrand(nextBrand);
+      setActiveParticipant(participant.id);
+      setCreatedOrderId(orderId);
+      order = useDemoCommerceStore.getState().orders.find((candidate) => candidate.id === orderId) ?? null;
+    }
+    if (order) {
+      await Clipboard.setStringAsync(buildInviteMessage(cleanName, order));
+      setCopied(true);
+      globalThis.setTimeout(() => setCopied(false), 1800);
+    }
+  };
+
+  const goNext = async () => {
+    if (currentStep === 'copy') {
+      await createOrderIfNeeded();
+      return;
+    }
+    setStepIndex((value) => Math.min(value + 1, STEP_KEYS.length - 1));
+  };
+
+  const skipStep = () => setStepIndex((value) => Math.min(value + 1, STEP_KEYS.length - 1));
+
+  const openCatalog = () => {
+    if (brand) selectBrand(brand);
     router.replace('/user');
   };
 
   return (
-    <DemoPage>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.logo}>shakana</Text>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <View style={styles.phoneFrame}>
+        <View style={styles.topBar}>
+          <Pressable accessibilityRole="button" onPress={() => router.replace('/user')} style={({ pressed }) => [styles.iconButton, pressed && demoStyles.pressed]}>
+            <Text style={styles.iconText}>‹</Text>
+          </Pressable>
+          <View style={styles.brandMark}>
+            <Text style={styles.brandText}>shakana</Text>
+          </View>
+          <View style={styles.iconButton}>
+            <Text style={styles.iconText}>{stepIndex + 1}</Text>
+          </View>
+        </View>
+
+        <View style={styles.hero}>
+          <Text style={styles.eyebrow}>{copy.eyebrow}</Text>
           <Text style={styles.title}>{copy.title}</Text>
           <Text style={styles.subtitle}>{copy.subtitle}</Text>
         </View>
-        <View style={styles.headerActions}>
-          <DemoButton label={copy.backHome} onPress={() => router.replace('/user')} tone="light" style={styles.smallBtn} />
-          <DemoButton label={copy.profile} onPress={() => router.push('/profile')} tone="light" style={styles.smallBtn} />
-        </View>
-      </View>
 
-      <Card style={styles.setupCard}>
-        <Text style={styles.setupTitle}>{copy.setupTitle}</Text>
-        <Text style={styles.muted}>{copy.setupBody}</Text>
-        <View style={styles.setupSteps}>
-          <View style={[styles.setupStep, !!customTimerMinutes && styles.setupStepDone]}>
-            <Text style={styles.setupStepNumber}>1</Text>
-            <Text style={styles.setupStepText}>{copy.timer}</Text>
-          </View>
-          <View style={[styles.setupStep, !!setupBrand && styles.setupStepDone]}>
-            <Text style={styles.setupStepNumber}>2</Text>
-            <Text style={styles.setupStepText}>{copy.store}</Text>
-          </View>
-          <View style={[styles.setupStep, isCompleteDeliveryAddress(setupDeliveryAddress) && styles.setupStepDone]}>
-            <Text style={styles.setupStepNumber}>3</Text>
-            <Text style={styles.setupStepText}>{copy.addressStep}</Text>
-          </View>
+        <View style={styles.stepRail}>
+          {STEP_KEYS.map((key, index) => (
+            <Pressable key={key} accessibilityRole="button" onPress={() => setStepIndex(index)} style={styles.stepItem}>
+              <View style={[styles.stepDot, index <= stepIndex && styles.stepDotActive]}>
+                <Text style={[styles.stepDotText, index <= stepIndex && styles.stepDotTextActive]}>{index + 1}</Text>
+              </View>
+              <Text style={[styles.stepLabel, index === stepIndex && styles.stepLabelActive]}>{stepLabels[key]}</Text>
+            </Pressable>
+          ))}
         </View>
-      </Card>
 
-      <View style={styles.grid}>
-        <Card style={styles.panel}>
-          <SectionTitle title={`1. ${copy.timer}`} kicker={copy.founderControl} />
-          <View style={styles.timerRow}>
-            {['30', '45', '60'].map((minutes) => (
-              <DemoButton
-                key={minutes}
-                label={`${minutes} min`}
-                onPress={() => setCustomTimer(minutes)}
-                tone={customTimer === minutes ? 'accent' : 'light'}
-                style={styles.timerBtn}
+        <View style={styles.card}>
+          <Text style={styles.cardKicker}>{`${copy.step} ${stepIndex + 1} / ${STEP_KEYS.length}`}</Text>
+
+          {currentStep === 'address' ? (
+            <View style={styles.stepPanel}>
+              <Text style={styles.cardTitle}>{copy.addressTitle}</Text>
+              <Text style={styles.cardBody}>{copy.addressBody}</Text>
+              <TextInput
+                value={address}
+                onChangeText={setAddress}
+                placeholder={copy.addressPlaceholder}
+                placeholderTextColor={colors.mu2}
+                style={[styles.input, address.length > 0 && !completeAddress && styles.inputWarning]}
+                autoComplete="street-address"
+                autoCorrect={false}
               />
-            ))}
-          </View>
-          <View style={styles.customTimerBox}>
-            <TextInput
-              value={customTimer}
-              onChangeText={setCustomTimer}
-              keyboardType="number-pad"
-              placeholder="45"
-              style={styles.customTimerInput}
-            />
-            <Text style={styles.timerText}>{copy.minutes}</Text>
-          </View>
-          {customTimer.trim() && !customTimerMinutes ? (
-            <Text style={styles.validationText}>{copy.timerError}</Text>
-          ) : null}
-        </Card>
-
-        <Card style={styles.panel}>
-          <SectionTitle title={copy.storeTitle} kicker={copy.lockedCatalog} />
-          <View style={styles.storeGrid}>
-            {(['hm', 'zara', 'amazon'] as DemoBrandId[]).map((brandId) => {
-              const store = demoStores[brandId];
-              return (
-                <Pressable
-                  key={brandId}
-                  accessibilityRole="button"
-                  onPress={() => setSetupBrand(brandId)}
-                  style={({ pressed }) => [
-                    styles.storeChoice,
-                    setupBrand === brandId && styles.storeChoiceSelected,
-                    pressed && demoStyles.pressed,
-                  ]}
-                >
-                  <ImageBackground source={{ uri: store.heroImage }} resizeMode="cover" style={styles.storeImage}>
-                    <BrandPill brand={brandId} />
-                  </ImageBackground>
-                  <Text style={styles.storeName}>{store.name}</Text>
-                  <Text style={styles.muted}>{store.tagline}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </Card>
-
-        <Card style={styles.panel}>
-          <SectionTitle title={copy.addressTitle} kicker={copy.addressKicker} />
-          <View style={styles.addressRequirementBox}>
-            <Text style={styles.addressRequirementTitle}>{copy.addressReqTitle}</Text>
-            <Text style={styles.addressRequirementText}>{copy.addressReqBody}</Text>
-          </View>
-          <TextInput
-            value={setupDeliveryAddress}
-            onChangeText={setSetupDeliveryAddress}
-            placeholder={copy.addressPlaceholder}
-            style={[
-              styles.addressInput,
-              setupDeliveryAddress.trim().length > 0 && !isCompleteDeliveryAddress(setupDeliveryAddress) && styles.addressInputMissing,
-            ]}
-            accessibilityLabel="New order delivery address"
-            autoComplete="street-address"
-            autoCorrect={false}
-          />
-          {addressLoading ? (
-            <View style={styles.addressLoadingRow}>
-              <ActivityIndicator size="small" color={colors.acc} />
-              <Text style={styles.addressLoadingText}>{copy.looking}</Text>
+              {address.length > 0 && !completeAddress ? <Text style={styles.warning}>{copy.addressMissing}</Text> : null}
+              {suggestions.length > 0 ? (
+                <View style={styles.suggestions}>
+                  {suggestions.map((suggestion) => (
+                    <Pressable
+                      key={suggestion}
+                      accessibilityRole="button"
+                      onPress={() => setAddress(suggestion)}
+                      style={({ pressed }) => [styles.suggestionButton, pressed && demoStyles.pressed]}
+                    >
+                      <Text style={styles.suggestionText}>{suggestion}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              ) : null}
+              <View style={styles.timerBox}>
+                <View>
+                  <Text style={styles.timerTitle}>{copy.timer}</Text>
+                  <Text style={styles.cardBody}>{`${safeTimer} ${copy.minutes}`}</Text>
+                </View>
+                <View style={styles.timerOptions}>
+                  {TIMER_OPTIONS.map((minutes) => (
+                    <Pressable
+                      key={minutes}
+                      accessibilityRole="button"
+                      onPress={() => setTimerMinutes(String(minutes))}
+                      style={[styles.timerChip, safeTimer === minutes && styles.timerChipActive]}
+                    >
+                      <Text style={[styles.timerChipText, safeTimer === minutes && styles.timerChipTextActive]}>{minutes}</Text>
+                    </Pressable>
+                  ))}
+                  <TextInput
+                    value={timerMinutes}
+                    onChangeText={setTimerMinutes}
+                    keyboardType="number-pad"
+                    style={styles.timerInput}
+                  />
+                </View>
+              </View>
             </View>
           ) : null}
-          {addressSuggestions.length > 0 ? (
-            <View style={styles.addressSuggestionList}>
-              {addressSuggestions.map((suggestion) => (
-                <Pressable
-                  key={suggestion}
-                  accessibilityRole="button"
-                  onPress={() => setSetupDeliveryAddress(suggestion)}
-                  style={({ pressed }) => [styles.addressSuggestion, pressed && demoStyles.pressed]}
-                >
-                  <Text style={styles.addressSuggestionText}>{suggestion}</Text>
-                </Pressable>
-              ))}
+
+          {currentStep === 'store' ? (
+            <View style={styles.stepPanel}>
+              <Text style={styles.cardTitle}>{copy.storeTitle}</Text>
+              <Text style={styles.cardBody}>{copy.storeBody}</Text>
+              <View style={styles.storeList}>
+                {BRAND_ORDER.map((brandId) => {
+                  const store = demoStores[brandId];
+                  const active = brand === brandId;
+                  return (
+                    <Pressable
+                      key={brandId}
+                      accessibilityRole="button"
+                      onPress={() => setBrand(brandId)}
+                      style={({ pressed }) => [styles.storeCard, active && styles.storeCardActive, pressed && demoStyles.pressed]}
+                    >
+                      <ImageBackground source={{ uri: store.heroImage }} resizeMode="cover" style={styles.storeImage}>
+                        <BrandPill brand={brandId} />
+                      </ImageBackground>
+                      <View style={styles.storeCopy}>
+                        <Text style={styles.storeName}>{store.name}</Text>
+                        <Text style={styles.storeTagline}>{store.tagline}</Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
             </View>
           ) : null}
-        </Card>
-      </View>
 
-      <Card style={styles.launchCard}>
-        <View style={styles.launchCopy}>
-          <Text style={styles.launchTitle}>{setupReady ? copy.readyTitle : copy.notReadyTitle}</Text>
-          <Text style={styles.muted}>{setupReady ? copy.readyBody : addressValidationMessage(setupDeliveryAddress, language)}</Text>
+          {currentStep === 'name' ? (
+            <View style={styles.stepPanel}>
+              <Text style={styles.cardTitle}>{copy.nameTitle}</Text>
+              <Text style={styles.cardBody}>{copy.nameBody}</Text>
+              <TextInput
+                value={leadName}
+                onChangeText={setLeadName}
+                placeholder={copy.namePlaceholder}
+                placeholderTextColor={colors.mu2}
+                style={styles.input}
+                autoComplete="name"
+              />
+              <View style={styles.identityCard}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>{cleanName.slice(0, 2).toUpperCase()}</Text>
+                </View>
+                <View>
+                  <Text style={styles.identityName}>{cleanName}</Text>
+                  <Text style={styles.cardBody}>{copy.members}</Text>
+                </View>
+              </View>
+            </View>
+          ) : null}
+
+          {currentStep === 'copy' ? (
+            <View style={styles.stepPanel}>
+              <Text style={styles.cardTitle}>{copy.copyTitle}</Text>
+              <Text style={styles.cardBody}>{copy.copyBody}</Text>
+              <View style={styles.reviewCard}>
+                <Text style={styles.reviewTitle}>{copy.review}</Text>
+                <View style={styles.reviewLine}>
+                  <Text style={styles.reviewLabel}>{copy.address}</Text>
+                  <Text style={styles.reviewValue}>{completeAddress ? address.trim() : copy.skipped}</Text>
+                </View>
+                <View style={styles.reviewLine}>
+                  <Text style={styles.reviewLabel}>{copy.store}</Text>
+                  <Text style={styles.reviewValue}>{selectedStore?.name ?? demoStores.amazon.name}</Text>
+                </View>
+                <View style={styles.reviewLine}>
+                  <Text style={styles.reviewLabel}>{copy.name}</Text>
+                  <Text style={styles.reviewValue}>{cleanName}</Text>
+                </View>
+                <View style={styles.reviewLine}>
+                  <Text style={styles.reviewLabel}>{copy.timer}</Text>
+                  <Text style={styles.reviewValue}>{`${safeTimer} ${copy.minutes}`}</Text>
+                </View>
+              </View>
+              {createdOrder ? (
+                <View style={styles.inviteBox}>
+                  <Text style={styles.codeLabel}>{copy.code}</Text>
+                  <Text style={styles.codeValue}>{createdOrder.inviteCode}</Text>
+                  <Text style={styles.inviteLink} numberOfLines={1}>{inviteLink}</Text>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
         </View>
-        <DemoButton
-          label={setupReady ? copy.create : copy.disabled}
-          onPress={createOrder}
-          disabled={!setupReady}
-          tone="accent"
-          style={styles.launchBtn}
-        />
-      </Card>
-    </DemoPage>
+
+        <View style={styles.footer}>
+          <Pressable accessibilityRole="button" onPress={skipStep} style={({ pressed }) => [styles.secondaryButton, pressed && demoStyles.pressed]}>
+            <Text style={styles.secondaryButtonText}>{copy.skip}</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" onPress={goNext} style={({ pressed }) => [styles.primaryButton, pressed && demoStyles.pressed]}>
+            <Text style={styles.primaryButtonText}>{currentStep === 'copy' ? (copied ? copy.copied : copy.create) : copy.next}</Text>
+          </Pressable>
+        </View>
+
+        {createdOrder ? (
+          <Pressable accessibilityRole="button" onPress={openCatalog} style={({ pressed }) => [styles.catalogButton, pressed && demoStyles.pressed]}>
+            <Text style={styles.catalogButtonText}>{copy.openCart}</Text>
+          </Pressable>
+        ) : null}
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+  screen: {
+    flex: 1,
+    backgroundColor: colors.bg,
+  },
+  content: {
+    minHeight: '100%',
+    alignItems: 'center',
+    padding: 14,
+    paddingBottom: 34,
+  },
+  phoneFrame: {
+    width: '100%',
+    maxWidth: 460,
     gap: 16,
   },
-  logo: { color: colors.acc, fontFamily: fontFamily.bodyBold, fontSize: 12, textTransform: 'uppercase', letterSpacing: 1.4 },
-  title: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 38, lineHeight: 42 },
-  subtitle: { color: colors.mu, fontFamily: fontFamily.body, fontSize: 15, lineHeight: 22, maxWidth: 620 },
-  headerActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  smallBtn: { minHeight: 40, minWidth: 120 },
-  setupCard: { gap: 12 },
-  setupTitle: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 24 },
-  muted: { color: colors.mu, fontFamily: fontFamily.body, fontSize: 14, lineHeight: 21 },
-  setupSteps: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  setupStep: {
-    flexGrow: 1,
-    flexBasis: 160,
-    minHeight: 50,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.br,
-    backgroundColor: colors.s2,
-    paddingHorizontal: 12,
+  topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
+    paddingTop: 4,
   },
-  setupStepDone: { borderColor: colors.acc, backgroundColor: colors.accLight },
-  setupStepNumber: {
+  iconButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.s1,
+    borderWidth: 1,
+    borderColor: colors.br,
+  },
+  iconText: {
+    color: colors.tx,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 18,
+  },
+  brandMark: {
+    minWidth: 116,
+    minHeight: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.ink,
+  },
+  brandText: {
+    color: colors.white,
+    fontFamily: fontFamily.display,
+    fontSize: 19,
+    lineHeight: 22,
+  },
+  hero: {
+    gap: 8,
+    paddingHorizontal: 2,
+  },
+  eyebrow: {
+    color: colors.acc,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 11,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  title: {
+    color: colors.tx,
+    fontFamily: fontFamily.display,
+    fontSize: 44,
+    lineHeight: 46,
+    letterSpacing: 0,
+  },
+  subtitle: {
+    color: colors.mu,
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  stepRail: {
+    flexDirection: 'row',
+    gap: 8,
+    padding: 6,
+    borderRadius: radii.pill,
+    backgroundColor: colors.s2,
+  },
+  stepItem: {
+    flex: 1,
+    minHeight: 58,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  stepDot: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.s1,
+    borderWidth: 1,
+    borderColor: colors.br,
+  },
+  stepDotActive: {
     backgroundColor: colors.ink,
+    borderColor: colors.ink,
+  },
+  stepDotText: {
+    color: colors.mu,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 11,
+  },
+  stepDotTextActive: {
     color: colors.white,
+  },
+  stepLabel: {
+    color: colors.mu,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 10,
+  },
+  stepLabelActive: {
+    color: colors.tx,
+  },
+  card: {
+    minHeight: 500,
+    borderRadius: 30,
+    padding: 18,
+    backgroundColor: colors.s1,
+    borderWidth: 1,
+    borderColor: colors.br,
+    ...shadow.card,
+  },
+  cardKicker: {
+    color: colors.acc,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 11,
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+  },
+  stepPanel: {
+    gap: 14,
+  },
+  cardTitle: {
+    color: colors.tx,
+    fontFamily: fontFamily.display,
+    fontSize: 31,
+    lineHeight: 34,
+  },
+  cardBody: {
+    color: colors.mu,
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  input: {
+    minHeight: 54,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.brBr,
+    backgroundColor: colors.white,
+    paddingHorizontal: 16,
+    color: colors.tx,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 15,
+  },
+  inputWarning: {
+    borderColor: colors.acc,
+    backgroundColor: colors.accLight,
+  },
+  warning: {
+    color: colors.acc,
     fontFamily: fontFamily.bodyBold,
     fontSize: 12,
-    lineHeight: 24,
-    textAlign: 'center',
   },
-  setupStepText: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 13 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
-  panel: { flexGrow: 1, flexBasis: 310, gap: 12 },
-  timerRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  timerBtn: { flexGrow: 1, flexBasis: 88, minHeight: 42 },
-  customTimerBox: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  customTimerInput: {
-    width: 86,
-    minHeight: 44,
-    borderRadius: 14,
+  suggestions: {
+    gap: 7,
+  },
+  suggestionButton: {
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: colors.br,
+    backgroundColor: colors.s2,
+  },
+  suggestionText: {
+    color: colors.tx,
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 13,
+  },
+  timerBox: {
+    borderRadius: 22,
+    backgroundColor: colors.s2,
+    borderWidth: 1,
+    borderColor: colors.br,
+    padding: 12,
+    gap: 12,
+  },
+  timerTitle: {
+    color: colors.tx,
+    fontFamily: fontFamily.display,
+    fontSize: 22,
+  },
+  timerOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    alignItems: 'center',
+  },
+  timerChip: {
+    width: 54,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.br,
+    backgroundColor: colors.white,
+  },
+  timerChipActive: {
+    backgroundColor: colors.ink,
+    borderColor: colors.ink,
+  },
+  timerChipText: {
+    color: colors.tx,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+  },
+  timerChipTextActive: {
+    color: colors.white,
+  },
+  timerInput: {
+    width: 68,
+    height: 38,
+    borderRadius: 19,
     borderWidth: 1,
     borderColor: colors.brBr,
     backgroundColor: colors.white,
     color: colors.tx,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 15,
-    paddingHorizontal: 12,
     textAlign: 'center',
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
   },
-  timerText: { fontFamily: fontFamily.bodyBold, color: colors.tx, fontSize: 16 },
-  validationText: { color: colors.acc, fontFamily: fontFamily.bodyBold, fontSize: 12 },
-  storeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  storeChoice: {
-    flexGrow: 1,
-    flexBasis: 160,
-    borderRadius: 18,
+  storeList: {
+    gap: 10,
+  },
+  storeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.br,
-    backgroundColor: colors.s1,
+    backgroundColor: colors.white,
     padding: 8,
-    gap: 8,
   },
-  storeChoiceSelected: { borderColor: colors.acc, borderWidth: 2, backgroundColor: colors.accLight },
-  storeImage: { minHeight: 104, overflow: 'hidden', borderRadius: 16, padding: 10, alignItems: 'flex-end' },
-  storeName: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 22 },
-  addressRequirementBox: {
-    borderRadius: 16,
+  storeCardActive: {
+    borderWidth: 2,
+    borderColor: colors.ink,
+    backgroundColor: colors.s2,
+  },
+  storeImage: {
+    width: 94,
+    height: 78,
+    borderRadius: 17,
+    overflow: 'hidden',
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start',
+    padding: 8,
+  },
+  storeCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  storeName: {
+    color: colors.tx,
+    fontFamily: fontFamily.display,
+    fontSize: 26,
+  },
+  storeTagline: {
+    color: colors.mu,
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  identityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 13,
+    borderRadius: 22,
+    padding: 12,
+    backgroundColor: colors.s2,
+    borderWidth: 1,
+    borderColor: colors.br,
+  },
+  avatar: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.s3,
+  },
+  avatarText: {
+    color: colors.tx,
+    fontFamily: fontFamily.display,
+    fontSize: 20,
+  },
+  identityName: {
+    color: colors.tx,
+    fontFamily: fontFamily.display,
+    fontSize: 24,
+  },
+  reviewCard: {
+    borderRadius: 22,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.br,
+    padding: 14,
+    gap: 10,
+  },
+  reviewTitle: {
+    color: colors.tx,
+    fontFamily: fontFamily.display,
+    fontSize: 23,
+  },
+  reviewLine: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.br,
+    paddingTop: 9,
+  },
+  reviewLabel: {
+    color: colors.mu,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+  },
+  reviewValue: {
+    flex: 1,
+    color: colors.tx,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+    textAlign: 'right',
+  },
+  inviteBox: {
+    borderRadius: 22,
+    padding: 14,
+    backgroundColor: colors.ink,
+    gap: 6,
+  },
+  codeLabel: {
+    color: colors.mu2,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 1.1,
+  },
+  codeValue: {
+    color: colors.white,
+    fontFamily: fontFamily.display,
+    fontSize: 42,
+    lineHeight: 44,
+  },
+  inviteLink: {
+    color: colors.s3,
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 12,
+  },
+  footer: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  secondaryButton: {
+    flex: 0.42,
+    minHeight: 58,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.s1,
+    borderWidth: 1,
+    borderColor: colors.br,
+  },
+  secondaryButtonText: {
+    color: colors.tx,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+  },
+  primaryButton: {
+    flex: 1,
+    minHeight: 58,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.acc,
     borderWidth: 1,
     borderColor: colors.acc,
-    backgroundColor: colors.accLight,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 4,
+    ...shadow.cta,
   },
-  addressRequirementTitle: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 12 },
-  addressRequirementText: { color: colors.mu, fontFamily: fontFamily.bodySemi, fontSize: 12, lineHeight: 17 },
-  addressInput: {
-    minHeight: 46,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.brBr,
-    backgroundColor: colors.s1,
-    color: colors.tx,
-    fontFamily: fontFamily.bodySemi,
+  primaryButtonText: {
+    color: colors.white,
+    fontFamily: fontFamily.bodyBold,
     fontSize: 14,
-    paddingHorizontal: 12,
+    textAlign: 'center',
   },
-  addressInputMissing: { borderColor: colors.acc, backgroundColor: colors.accLight },
-  addressSuggestionList: { gap: 6 },
-  addressLoadingRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  addressLoadingText: { color: colors.mu, fontFamily: fontFamily.bodySemi, fontSize: 12 },
-  addressSuggestion: {
-    borderRadius: 14,
+  catalogButton: {
+    minHeight: 56,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.ink,
     borderWidth: 1,
-    borderColor: colors.br,
-    backgroundColor: colors.s2,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderColor: colors.ink,
   },
-  addressSuggestionText: { color: colors.tx, fontFamily: fontFamily.bodySemi, fontSize: 13 },
-  launchCard: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  launchCopy: { flexGrow: 1, flexBasis: 260 },
-  launchTitle: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 24 },
-  launchBtn: { flexGrow: 1, flexBasis: 260, minHeight: 52 },
+  catalogButtonText: {
+    color: colors.white,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 15,
+  },
 });
