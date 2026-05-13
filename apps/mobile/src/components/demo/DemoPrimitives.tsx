@@ -601,7 +601,7 @@ const styles = StyleSheet.create({
   socialBadge: {
     minWidth: 94,
     borderRadius: 16,
-    backgroundColor: colors.goldLight,
+    backgroundColor: colors.s2,
     paddingHorizontal: 12,
     paddingVertical: 10,
     alignItems: 'center',
@@ -627,7 +627,7 @@ const styles = StyleSheet.create({
   },
   savingsBadge: {
     borderRadius: 14,
-    backgroundColor: colors.goldLight,
+    backgroundColor: colors.accLight,
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
@@ -655,7 +655,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   statusItemDone: {
-    backgroundColor: colors.goldLight,
+    backgroundColor: colors.accLight,
   },
   statusItemCurrent: {
     backgroundColor: colors.acc,
