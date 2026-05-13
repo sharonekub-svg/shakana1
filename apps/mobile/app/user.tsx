@@ -33,6 +33,7 @@ import {
 import { fontFamily } from '@/theme/fonts';
 import { colors } from '@/theme/tokens';
 import { BuildingSections } from '@/components/demo/BuildingSections';
+import { ShakanaLogoCompact } from '@/components/ShakanaLogo';
 import { useLocale } from '@/i18n/locale';
 import { formatMoney } from '@/utils/money';
 import { useAuthStore } from '@/stores/authStore';
@@ -724,7 +725,7 @@ export default function DemoUserScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <DemoPage>
           <View style={styles.topBar}>
-            <Text style={styles.logo}>shakana</Text>
+            <ShakanaLogoCompact size={24} />
             <View style={styles.topActions}>
               <DemoButton label="New order" onPress={() => openNewOrderSetup()} tone="accent" style={styles.smallBtn} />
               <DemoButton label="How it works" onPress={() => router.push('/how-it-works')} tone="light" style={styles.smallBtn} />
@@ -975,7 +976,7 @@ export default function DemoUserScreen() {
       <DemoPage wide>
         <View style={styles.topBar}>
           <Pressable onPress={goToOrderHome} accessibilityRole="button">
-            <Text style={styles.logo}>shakana</Text>
+            <ShakanaLogoCompact size={24} />
           </Pressable>
           <View style={styles.topActions}>
             <DemoButton label="Home" onPress={goToOrderHome} tone="light" style={styles.smallBtn} />
