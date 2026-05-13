@@ -102,40 +102,56 @@ function FeaturedCard({
   );
 }
 
+const AVATAR_COLORS = ['#C5654B', '#D29A4A', '#E3D6BE', '#7A5B43', '#B8956A'];
+
 function OrderCard({
   title,
   subtitle,
   status,
   meta,
-  actionLabel,
+  storeInitial,
+  participantCount,
   onPress,
 }: {
   title: string;
   subtitle: string;
   status: string;
   meta: string;
-  actionLabel: string;
+  storeInitial: string;
+  participantCount: number;
   onPress: () => void;
 }) {
+  const avatars = Array.from({ length: Math.min(participantCount, 4) }, (_, i) => i);
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.orderCard, pressed && { transform: [{ scale: 0.99 }] }]}>
       <View style={styles.orderTopRow}>
         <View style={styles.orderBadge}>
-          <Text style={styles.orderBadgeText}>ORD</Text>
+          <Text style={styles.orderBadgeText}>{storeInitial}</Text>
         </View>
-        <View style={styles.orderStatus}>
-          <Text style={styles.orderStatusText}>{status}</Text>
+        <View style={{ flex: 1, gap: 2 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text numberOfLines={1} style={styles.orderTitle}>{title}</Text>
+            {status === 'OPEN' || status === 'JOINED' ? (
+              <View style={styles.orderStatus}>
+                <Text style={styles.orderStatusText}>{status}</Text>
+              </View>
+            ) : null}
+          </View>
+          <Text numberOfLines={1} style={styles.orderSubtitle}>{subtitle}</Text>
         </View>
       </View>
-      <Text numberOfLines={1} style={styles.orderTitle}>
-        {title}
-      </Text>
-      <Text numberOfLines={1} style={styles.orderSubtitle}>
-        {subtitle}
-      </Text>
       <View style={styles.orderFooter}>
-        <Text style={styles.orderMeta}>{meta}</Text>
-        <Text style={styles.orderAction}>{actionLabel}</Text>
+        <View style={styles.orderAvatarRow}>
+          {avatars.map((i) => (
+            <View key={i} style={[styles.orderAvatar, { marginLeft: i ? -6 : 0, backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length] }]}>
+              <Text style={styles.orderAvatarText}>{i + 1}</Text>
+            </View>
+          ))}
+          {participantCount > 4 ? <Text style={styles.orderAvatarMore}>+{participantCount - 4}</Text> : null}
+        </View>
+        <View style={styles.orderTimer}>
+          <Text style={styles.orderMeta}>{meta}</Text>
+        </View>
       </View>
     </Pressable>
   );
@@ -290,16 +306,24 @@ export default function BuildingTab() {
             <Text style={styles.sectionLink}>{t('common.recommended')}</Text>
           </View>
 
+          {openOrders.length > 0 ? (
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>{isHebrew ? 'פעיל בבניין שלך' : 'ACTIVE IN YOUR BUILDING'}</Text>
+              <Text style={styles.sectionLink}>{openOrders.length} {isHebrew ? 'פתוח' : 'open'}</Text>
+            </View>
+          ) : null}
+
           <View style={styles.ordersList}>
             {topOrders.length > 0 ? (
               topOrders.map((order) => (
                 <OrderCard
                   key={order.id}
-                  title={order.product_title ?? t('tabs.home.noOrdersTitle')}
-                  subtitle={order.product_url}
-                  status={order.status.toUpperCase()}
+                  title={order.store_label ?? order.product_title ?? t('tabs.home.noOrdersTitle')}
+                  subtitle={order.product_title ?? order.product_url}
+                  status={order.status === 'open' ? (isHebrew ? 'פתוחה' : 'JOINED') : order.status.toUpperCase()}
                   meta={orderMeta(order)}
-                  actionLabel={isHebrew ? 'פתח' : 'OPEN'}
+                  storeInitial={(order.store_label ?? order.product_title ?? 'ORD').slice(0, 1).toUpperCase()}
+                  participantCount={order.max_participants}
                   onPress={() => router.push(`/order/${order.id}`)}
                 />
               ))
@@ -307,12 +331,20 @@ export default function BuildingTab() {
               <View style={styles.emptyBlock}>
                 <Text style={styles.emptyTitle}>{t('tabs.home.noOrdersTitle')}</Text>
                 <Text style={styles.emptyBody}>{t('tabs.home.noOrdersBody')}</Text>
-                <Pressable style={styles.emptyButton} onPress={() => router.push('/order/new')}>
-                  <Text style={styles.emptyButtonText}>{t('common.newOrder')}</Text>
-                </Pressable>
               </View>
             )}
           </View>
+
+          <Pressable style={({ pressed }) => [styles.newOrderCta, pressed && { opacity: 0.88 }]} onPress={() => router.push('/order/new')}>
+            <View style={styles.newOrderCtaLeft}>
+              <Text style={styles.newOrderCtaPlus}>+</Text>
+              <View>
+                <Text style={styles.newOrderCtaTitle}>{isHebrew ? 'התחל הזמנה חדשה' : 'Start a new order'}</Text>
+                <Text style={styles.newOrderCtaSub}>{isHebrew ? 'בחר חנות · קבע טיימר · הזמן שכנים' : 'Pick a store · set a timer · invite your stairwell'}</Text>
+              </View>
+            </View>
+            <Text style={styles.newOrderCtaArrow}>→</Text>
+          </Pressable>
         </View>
       </ScrollView>
     </ScreenBase>
@@ -658,26 +690,29 @@ const styles = StyleSheet.create({
   },
   orderTopRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
   },
   orderBadge: {
-    width: 42,
-    height: 42,
-    borderRadius: radii.pill,
+    width: 46,
+    height: 46,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.acc,
+    backgroundColor: colors.s2,
+    borderWidth: 1,
+    borderColor: colors.br,
+    flexShrink: 0,
   },
   orderBadgeText: {
-    color: colors.white,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 11,
-    letterSpacing: 1.2,
+    color: colors.tx,
+    fontFamily: fontFamily.display,
+    fontSize: 18,
+    letterSpacing: -0.5,
   },
   orderStatus: {
-    paddingHorizontal: 12,
-    height: 30,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
     borderRadius: radii.pill,
     backgroundColor: colors.accLight,
     alignItems: 'center',
@@ -686,29 +721,58 @@ const styles = StyleSheet.create({
   orderStatusText: {
     color: colors.acc,
     fontFamily: fontFamily.bodyBold,
-    fontSize: 11,
-    letterSpacing: 1,
+    fontSize: 9,
+    letterSpacing: 0.8,
   },
   orderTitle: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 18,
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 15,
     color: colors.tx,
   },
   orderSubtitle: {
     fontFamily: fontFamily.body,
-    fontSize: 13,
+    fontSize: 12,
     color: colors.mu,
   },
   orderFooter: {
-    marginTop: 4,
+    marginTop: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  orderAvatarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  orderAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.white,
+  },
+  orderAvatarText: {
+    color: colors.white,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 9,
+  },
+  orderAvatarMore: {
+    marginLeft: 4,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 11,
+    color: colors.mu,
+  },
+  orderTimer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   orderMeta: {
-    fontFamily: fontFamily.body,
-    fontSize: 13,
-    color: colors.grn,
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 12,
+    color: colors.acc,
   },
   orderAction: {
     fontFamily: fontFamily.bodyBold,
@@ -749,6 +813,46 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodyBold,
     fontSize: 11,
     letterSpacing: 1.4,
+    color: colors.white,
+  },
+  newOrderCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.acc,
+    borderRadius: 26,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    gap: 12,
+    ...shadow.cta,
+  },
+  newOrderCtaLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    flex: 1,
+  },
+  newOrderCtaPlus: {
+    fontFamily: fontFamily.display,
+    fontSize: 32,
+    color: colors.white,
+    lineHeight: 36,
+  },
+  newOrderCtaTitle: {
+    fontFamily: fontFamily.display,
+    fontSize: 18,
+    color: colors.white,
+    fontStyle: 'italic',
+  },
+  newOrderCtaSub: {
+    fontFamily: fontFamily.body,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.78)',
+    lineHeight: 17,
+  },
+  newOrderCtaArrow: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 20,
     color: colors.white,
   },
 });
