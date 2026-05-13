@@ -52,12 +52,16 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: '#1E1812',
-        tabBarInactiveTintColor: '#A89B89',
-        tabBarLabelStyle: { fontFamily: fontFamily.bodyBold, fontSize: 9 },
+        tabBarActiveTintColor: colors.ink,
+        tabBarInactiveTintColor: colors.mu2,
+        tabBarLabelStyle: {
+          fontFamily: fontFamily.bodyBold,
+          fontSize: 9,
+          letterSpacing: 0.3,
+        },
         tabBarItemStyle: { flex: 1, minWidth: 0, paddingTop: 3 },
         tabBarStyle: {
-          backgroundColor: '#FAF6EF',
+          backgroundColor: colors.s1,
           borderTopWidth: 1,
           borderTopColor: 'rgba(30,24,18,0.10)',
           paddingTop: 6,
@@ -129,7 +133,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: 'rgba(30,24,18,0.10)',
-    backgroundColor: '#FAF6EF',
+    backgroundColor: colors.s1,
     padding: 1,
   },
   languageOption: {
@@ -141,18 +145,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
   },
   languageOptionActive: {
-    backgroundColor: '#1E1812',
+    backgroundColor: colors.ink,
   },
   languageText: {
-    color: '#6A5E50',
+    color: colors.mu,
     fontFamily: fontFamily.bodyBold,
     fontSize: 9,
   },
   languageTextActive: {
-    color: '#FAF6EF',
+    color: colors.white,
   },
   languageLabel: {
-    color: '#A89B89',
+    color: colors.mu2,
     fontFamily: fontFamily.bodyBold,
     fontSize: 9,
   },

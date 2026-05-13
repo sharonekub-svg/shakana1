@@ -97,30 +97,32 @@ export default function AccountTab() {
       icon: '₪',
       title: isHebrew ? 'תשלומים' : 'Payments',
       body: copy.paymentReady,
-      danger: false,
     },
     {
       href: '/profile/alerts',
       icon: '🔔',
       title: isHebrew ? 'התראות' : 'Alerts',
       body: copy.notificationsReady,
-      danger: false,
     },
     {
       href: '/profile/privacy',
       icon: '🔒',
       title: isHebrew ? 'פרטיות' : 'Privacy',
       body: isHebrew ? 'איך אנחנו משתמשים בפרטי החשבון והכתובת' : 'How account and address data is handled',
-      danger: false,
     },
     {
       href: '/profile/terms',
       icon: '📄',
       title: isHebrew ? 'תנאים' : 'Terms',
       body: isHebrew ? 'הכללים להזמנות משותפות באפליקציה' : 'Rules for shared orders',
-      danger: false,
     },
   ] as const;
+
+  const stats = [
+    { label: copy.openOrders, value: String(openOrders) },
+    { label: copy.payments, value: String(enabledPaymentCount) },
+    { label: copy.notifications, value: String(enabledNotifications) },
+  ];
 
   useEffect(() => {
     if (!notificationsHydrated) void loadNotifications();
@@ -166,12 +168,6 @@ export default function AccountTab() {
       pushToast(error instanceof Error ? error.message : isHebrew ? 'לא הצלחנו להתנתק' : 'Could not sign out', 'error');
     }
   };
-
-  const stats = [
-    { label: copy.openOrders, value: String(openOrders) },
-    { label: copy.payments, value: String(enabledPaymentCount) },
-    { label: copy.notifications, value: String(enabledNotifications) },
-  ];
 
   return (
     <ScreenBase padded={false}>
@@ -255,7 +251,10 @@ export default function AccountTab() {
             loading={upsertProfile.isPending}
             disabled={!user?.id}
           />
-          <Pressable style={styles.ghostBtn} onPress={() => router.push('/(auth)/address')}>
+          <Pressable
+            style={({ pressed }) => [styles.ghostBtn, pressed && { opacity: 0.8 }]}
+            onPress={() => router.push('/(auth)/address')}
+          >
             <Text style={styles.ghostBtnText}>{editCopy.addressButton}</Text>
           </Pressable>
         </View>
@@ -263,10 +262,14 @@ export default function AccountTab() {
         {/* Quick links */}
         <View style={styles.card}>
           <Text style={styles.sectionLabel}>{copy.details}</Text>
-          {quickLinks.map((item) => (
+          {quickLinks.map((item, index) => (
             <Pressable
               key={item.href}
-              style={({ pressed }) => [styles.linkRow, pressed && { opacity: 0.8 }]}
+              style={({ pressed }) => [
+                styles.linkRow,
+                index < quickLinks.length - 1 && styles.linkRowBorder,
+                pressed && { opacity: 0.8 },
+              ]}
               onPress={() => router.push(item.href)}
             >
               <View style={styles.rowBadge}>
@@ -311,17 +314,16 @@ const styles = StyleSheet.create({
   screen: {
     gap: 12,
     paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingTop: 12,
     paddingBottom: 110,
   },
 
-  // App bar
   header: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
     gap: 12,
-    paddingBottom: 2,
+    paddingBottom: 4,
   },
   headerLeft: {
     flex: 1,
@@ -331,20 +333,20 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodyBold,
     fontSize: 10,
     letterSpacing: 2.4,
-    color: colors.acc,
+    color: '#C5654B',
     textTransform: 'uppercase',
   },
   title: {
     fontFamily: fontFamily.display,
-    fontSize: 28,
+    fontSize: 30,
     fontStyle: 'italic',
-    color: colors.tx,
-    lineHeight: 32,
+    color: '#1E1812',
+    lineHeight: 34,
   },
   langToggle: {
     flexDirection: 'row',
     gap: 4,
-    backgroundColor: colors.s2,
+    backgroundColor: '#EFE6D6',
     borderRadius: radii.pill,
     padding: 3,
   },
@@ -354,23 +356,22 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   langPillActive: {
-    backgroundColor: colors.tx,
+    backgroundColor: '#1E1812',
   },
   langPillText: {
     fontFamily: fontFamily.bodyBold,
     fontSize: 12,
-    color: colors.mu,
+    color: '#6A5E50',
   },
   langPillTextActive: {
     color: '#FAF6EF',
   },
 
-  // Identity card
   identityCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    backgroundColor: colors.s1,
+    backgroundColor: '#FAF6EF',
     borderRadius: 20,
     borderWidth: 1,
     borderColor: 'rgba(30,24,18,0.10)',
@@ -380,7 +381,7 @@ const styles = StyleSheet.create({
     width: 78,
     height: 78,
     borderRadius: 39,
-    backgroundColor: colors.s3,
+    backgroundColor: '#E3D6BE',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -389,7 +390,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.display,
     fontSize: 32,
     fontStyle: 'italic',
-    color: colors.tx,
+    color: '#1E1812',
   },
   identityText: {
     flex: 1,
@@ -399,22 +400,21 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.display,
     fontSize: 22,
     fontStyle: 'italic',
-    color: colors.tx,
+    color: '#1E1812',
     lineHeight: 26,
   },
   identityMeta: {
     fontFamily: fontFamily.body,
     fontSize: 13,
-    color: colors.mu,
+    color: '#6A5E50',
     lineHeight: 18,
   },
 
-  // Dark stats strip
   statsStrip: {
     flexDirection: 'row',
-    backgroundColor: colors.tx,
+    backgroundColor: '#1E1812',
     borderRadius: 20,
-    paddingVertical: 16,
+    paddingVertical: 18,
   },
   statCell: {
     flex: 1,
@@ -427,10 +427,10 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontFamily: fontFamily.display,
-    fontSize: 26,
+    fontSize: 28,
     fontStyle: 'italic',
     color: '#FAF6EF',
-    lineHeight: 30,
+    lineHeight: 32,
   },
   statLabel: {
     fontFamily: fontFamily.bodyBold,
@@ -440,9 +440,8 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
 
-  // Generic card shell
   card: {
-    backgroundColor: colors.s1,
+    backgroundColor: '#FAF6EF',
     borderRadius: 20,
     borderWidth: 1,
     borderColor: 'rgba(30,24,18,0.10)',
@@ -453,14 +452,14 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodyBold,
     fontSize: 10,
     letterSpacing: 1.4,
-    color: colors.mu2,
+    color: '#A89B89',
     textTransform: 'uppercase',
   },
   cardBody: {
     fontFamily: fontFamily.body,
     fontSize: 13,
     lineHeight: 19,
-    color: colors.mu,
+    color: '#6A5E50',
     marginTop: -4,
   },
   editRow: {
@@ -474,7 +473,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(30,24,18,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.s2,
+    backgroundColor: '#EFE6D6',
   },
   ghostBtnText: {
     fontFamily: fontFamily.bodyBold,
@@ -482,24 +481,22 @@ const styles = StyleSheet.create({
     color: colors.acc,
   },
 
-  // Address / single-row list card
   listCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: colors.s1,
+    backgroundColor: '#FAF6EF',
     borderRadius: 20,
     borderWidth: 1,
     borderColor: 'rgba(30,24,18,0.10)',
     padding: 14,
   },
 
-  // Shared list row pieces
   rowBadge: {
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: colors.s2,
+    backgroundColor: '#EFE6D6',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -515,41 +512,43 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodyBold,
     fontSize: 10,
     letterSpacing: 1.2,
-    color: colors.mu2,
+    color: '#A89B89',
     textTransform: 'uppercase',
   },
   rowBodyText: {
     fontFamily: fontFamily.body,
     fontSize: 13,
-    color: colors.mu,
+    color: '#6A5E50',
     lineHeight: 18,
   },
   chevron: {
     fontFamily: fontFamily.bodyBold,
     fontSize: 22,
-    color: colors.mu2,
+    color: '#A89B89',
     lineHeight: 24,
     flexShrink: 0,
   },
 
-  // Quick links inside card
   linkRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
+  },
+  linkRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(30,24,18,0.07)',
   },
   linkLabel: {
     fontFamily: fontFamily.bodyBold,
     fontSize: 14,
-    color: colors.tx,
+    color: '#1E1812',
   },
 
-  // Sign out
   signOutBtn: {
     height: 52,
     borderRadius: radii.pill,
-    backgroundColor: colors.tx,
+    backgroundColor: '#1E1812',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 4,
@@ -561,12 +560,11 @@ const styles = StyleSheet.create({
     color: '#FAF6EF',
   },
 
-  // Delete account
   deleteBtn: {
     height: 52,
     borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: colors.err,
+    borderColor: '#C84D3A',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
@@ -574,6 +572,6 @@ const styles = StyleSheet.create({
   deleteBtnText: {
     fontFamily: fontFamily.bodyBold,
     fontSize: 14,
-    color: colors.err,
+    color: '#C84D3A',
   },
 });

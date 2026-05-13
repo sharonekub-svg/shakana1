@@ -57,7 +57,11 @@ export default function OrdersTab() {
           <Text style={styles.kicker}>SHAKANA</Text>
           <Text style={styles.title}>{t('tabs.orders.title')}</Text>
         </View>
-        <Pressable onPress={newOrder} style={styles.newBtn} accessibilityRole="button">
+        <Pressable
+          onPress={newOrder}
+          style={({ pressed }) => [styles.newBtn, pressed && { opacity: 0.85 }]}
+          accessibilityRole="button"
+        >
           <Text style={styles.newBtnText}>+ {t('tabs.orders.newOrder')}</Text>
         </Pressable>
       </View>
@@ -77,7 +81,11 @@ export default function OrdersTab() {
         <View style={styles.emptyWrap}>
           <Text style={styles.emptyTitle}>{t('tabs.orders.noOrdersTitle')}</Text>
           <Text style={styles.emptyBody}>{t('tabs.orders.noOrdersBody')}</Text>
-          <Pressable onPress={newOrder} style={styles.emptyBtn} accessibilityRole="button">
+          <Pressable
+            onPress={newOrder}
+            style={({ pressed }) => [styles.emptyBtn, pressed && { opacity: 0.85 }]}
+            accessibilityRole="button"
+          >
             <Text style={styles.emptyBtnText}>+ {t('tabs.orders.newOrder')}</Text>
           </Pressable>
         </View>
@@ -126,8 +134,8 @@ export default function OrdersTab() {
 const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 12,
+    paddingTop: 12,
+    paddingBottom: 14,
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
@@ -146,15 +154,15 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: fontFamily.display,
-    fontSize: 28,
+    fontSize: 30,
     fontStyle: 'italic',
     color: colors.tx,
-    lineHeight: 32,
+    lineHeight: 34,
   },
   newBtn: {
     backgroundColor: colors.acc,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 11,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -166,14 +174,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
 
-  // Dark stats strip
   statsStrip: {
     flexDirection: 'row',
-    backgroundColor: colors.tx,
+    backgroundColor: '#1E1812',
     marginHorizontal: 20,
     borderRadius: 20,
     marginBottom: 16,
-    paddingVertical: 16,
+    paddingVertical: 18,
   },
   statCell: {
     flex: 1,
@@ -186,10 +193,10 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontFamily: fontFamily.display,
-    fontSize: 26,
+    fontSize: 28,
     fontStyle: 'italic',
     color: '#FAF6EF',
-    lineHeight: 30,
+    lineHeight: 32,
   },
   statLabel: {
     fontFamily: fontFamily.bodyBold,
@@ -199,17 +206,16 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
 
-  // List
   listContent: {
     paddingHorizontal: 20,
-    paddingBottom: 32,
+    paddingBottom: 36,
     gap: 10,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: colors.s1,
+    backgroundColor: '#FAF6EF',
     borderRadius: 20,
     borderWidth: 1,
     borderColor: 'rgba(30,24,18,0.10)',
@@ -219,7 +225,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: colors.s2,
+    backgroundColor: '#EFE6D6',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -251,6 +257,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.body,
     fontSize: 12,
     color: colors.mu,
+    lineHeight: 17,
   },
   rowRight: {
     alignItems: 'flex-end',
@@ -274,38 +281,37 @@ const styles = StyleSheet.create({
   },
   chevron: {
     fontFamily: fontFamily.bodyBold,
-    fontSize: 20,
+    fontSize: 22,
     color: colors.mu2,
-    lineHeight: 22,
+    lineHeight: 24,
   },
 
-  // Empty state
   emptyWrap: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 36,
+    paddingHorizontal: 40,
     gap: 12,
   },
   emptyTitle: {
     fontFamily: fontFamily.display,
-    fontSize: 22,
+    fontSize: 24,
     fontStyle: 'italic',
     color: colors.tx,
     textAlign: 'center',
-    lineHeight: 28,
+    lineHeight: 30,
   },
   emptyBody: {
     fontFamily: fontFamily.body,
     fontSize: 14,
     color: colors.mu,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 21,
   },
   emptyBtn: {
     marginTop: 8,
     height: 52,
-    paddingHorizontal: 32,
+    paddingHorizontal: 36,
     borderRadius: radii.pill,
     backgroundColor: colors.acc,
     alignItems: 'center',
