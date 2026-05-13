@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import Svg, { Path, Rect } from 'react-native-svg';
 
 import { ScreenBase } from '@/components/primitives/ScreenBase';
 import { BackBtn } from '@/components/primitives/BackBtn';
-import { PrimaryBtn, SecondaryBtn } from '@/components/primitives/Button';
 import { Field } from '@/components/primitives/Field';
 import { NumField } from '@/components/primitives/NumField';
-import { colors, radii } from '@/theme/tokens';
+import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { useAddOrderItem, useCloseOrder, useOrder } from '@/api/orders';
 import { useGenerateInvite } from '@/api/invites';
@@ -15,7 +15,6 @@ import { useAuthStore } from '@/stores/authStore';
 import { useUiStore } from '@/stores/uiStore';
 import { formatAgorot } from '@/utils/format';
 import { formatCompactDuration } from '@/utils/timer';
-import type { Participant } from '@/types/domain';
 import { useLocale } from '@/i18n/locale';
 import { buildInviteUrl } from '@/lib/deeplinks';
 import { loadSharedProductInsights, parseSharedProduct, type SharedProductInsights } from '@/lib/sharedProduct';
@@ -24,33 +23,20 @@ import { fetchProductPageHtml } from '@/api/productInsights';
 const DEFAULT_DELIVERY_FEE_AGOROT = 3000;
 const DEFAULT_FREE_SHIPPING_THRESHOLD_AGOROT = 19900;
 
-function ParticipantTower({
-  participants,
-  currentUserId,
-}: {
-  participants: Participant[];
-  currentUserId: string | undefined;
-}) {
-  const { language } = useLocale();
-  const isHebrew = language === 'he';
-  const slots = participants;
+const AVATAR_COLORS = ['#C5654B', '#D29A4A', '#7A5B43', '#B8956A', '#8B6E5A'];
+
+function WaIcon() {
   return (
-    <View style={styles.tower}>
-      {slots.map((p, i) => {
-        const isMe = p && p.user_id === currentUserId;
-        return (
-          <View key={i} style={[styles.slot, p && styles.slotFilled, isMe && styles.slotMe]}>
-            {p ? (
-              <Text style={styles.slotText}>
-                {isMe ? (isHebrew ? 'אתה' : 'YOU') : `${isHebrew ? 'מקום' : 'SEAT'} ${i + 1}`} | {p.status === 'paid' ? (isHebrew ? 'שולם' : 'PAID') : (isHebrew ? 'פתוח' : 'OPEN')}
-              </Text>
-            ) : (
-              <Text style={styles.slotEmpty}>{isHebrew ? 'מקום פנוי' : 'OPEN SLOT'}</Text>
-            )}
-          </View>
-        );
-      })}
-    </View>
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M20.52 3.48A11.93 11.93 0 0012 0C5.37 0 0 5.37 0 12c0 2.12.55 4.1 1.5 5.84L0 24l6.34-1.66A11.94 11.94 0 0012 24c6.63 0 12-5.37 12-12 0-3.21-1.25-6.23-3.48-8.52z"
+        fill="#25D366"
+      />
+      <Path
+        d="M17.47 14.38c-.3-.15-1.77-.87-2.04-.97-.27-.1-.47-.15-.67.15s-.77.97-.94 1.17c-.17.2-.35.22-.65.07a8.18 8.18 0 01-2.4-1.48 9.03 9.03 0 01-1.66-2.07c-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.03 1-1.03 2.45s1.05 2.84 1.2 3.04c.15.2 2.07 3.16 5.01 4.43.7.3 1.25.48 1.67.62.7.22 1.34.19 1.84.11.56-.08 1.77-.72 2.02-1.42.25-.7.25-1.3.17-1.42-.07-.12-.27-.2-.57-.35z"
+        fill="#fff"
+      />
+    </Svg>
   );
 }
 
@@ -59,157 +45,6 @@ export default function OrderShell() {
   const router = useRouter();
   const { language } = useLocale();
   const isHebrew = language === 'he';
-  const copy = isHebrew
-    ? {
-        unableToLoad: 'לא הצלחנו לטעון את ההזמנה.',
-        mainProduct: 'המוצר הראשי',
-        productAdded: 'המוצר נוסף לסל המשותף.',
-        order: 'הזמנה',
-        item: 'פריט',
-        store: 'חנות',
-        timerOrder: 'הזמנה לפי טיימר',
-        locked: 'נעול',
-        timerBody: 'משתמשים יכולים להצטרף ולהוסיף פריטים עד שהטיימר מסתיים. עריכות ננעלות 15 שניות לפני הסגירה.',
-        editsLocked: 'העריכות נעולות.',
-        editsOpen: 'העריכות עדיין פתוחות.',
-        participants: 'משתתפים',
-        finderSummary: 'סיכום איתור מוצר',
-        importantCosts: 'עלויות חשובות',
-        productCost: 'מחיר המוצר',
-        shippingFee: 'דמי משלוח',
-        freeShippingMinimum: 'סכום למשלוח חינם',
-        costCardNote: 'אלה שלושת המספרים הכי חשובים להזמנה הזאת.',
-        whatItIs: 'מה המוצר',
-        notDetected: 'שם המוצר לא זוהה',
-        whereFrom: 'מאיפה זה מגיע',
-        detectedFromLink: 'החנות זוהתה מהקישור',
-        productPriceDetected: 'מחיר מוצר שזוהה',
-        estimatedShipping: 'משלוח משוער',
-        freeDeliveryNeeds: 'כל ההזמנה צריכה להגיע לסכום הזה למשלוח חינם',
-        approxEach: 'בערך לכל אחד עכשיו',
-        shippingSaved: 'חיסכון משלוח יחד',
-        missingParticipants: 'חסר למשלוח חינם לפי משתתפים',
-        missingCart: 'חסר למשלוח חינם לפי הסל',
-        neighborsCanJoin: 'שכנים שעוד יכולים להצטרף מהקישור',
-        dealNote:
-          'בדיקת המבצעים קוראת טקסט ציבורי של המוצר עבור 1+1, סייל ומבצעים דומים. אם החנות חוסמת פרטים, המשתמשים עדיין יכולים להוסיף אותם ידנית.',
-        fullCart: 'הסל המשותף המלא',
-        items: 'פריטים',
-        hide: 'הסתר',
-        show: 'הצג',
-        size: 'מידה',
-        productLinkSaved: 'קישור מוצר נשמר',
-        manualItem: 'פריט ידני',
-        addProduct: 'הוסף את המוצר שלך',
-        addProductBody: 'משתמשים שהצטרפו יכולים להוסיף עוד מוצר לאותו סל משותף. בדמו הזה התשלום מדולג, אז זה רק מעדכן את הסל ומקל לבדוק את הזרימה.',
-        productName: 'שם מוצר',
-        productPlaceholder: 'חולצה מזארה, ג׳ינס מ-H&M...',
-        price: 'מחיר',
-        sizeNote: 'מידה / הערה',
-        sizePlaceholder: 'M, שחור',
-        productLink: 'קישור מוצר',
-        cartLocked: 'הסל ננעל בגלל הטיימר',
-        adding: 'מוסיף...',
-        addToCart: 'הוסף לסל המשותף',
-        couldNotAdd: 'לא הצלחנו להוסיף את המוצר.',
-        pickupPlan: 'תוכנית איסוף',
-        pickupManager: 'אחראי איסוף נקבע',
-        preferredLocation: 'מיקום מועדף',
-        creatorWillAdd: 'יוגדר על ידי יוצר ההזמנה',
-        pickupMayVary: 'מיקום האיסוף עשוי להשתנות לפי החנות או חברת המשלוחים',
-        founderCheckout: 'פתח Checkout למייסד',
-        skippedProgress: 'התשלום מדולג: הצג התקדמות הזמנה',
-        createInvite: 'צור קישור הזמנה',
-        explainOrder: 'הסבר את ההזמנה',
-        noTimer: 'ללא טיימר',
-        noTimerOrder: 'הזמנה ידנית',
-        noTimerBody: 'ההזמנה פתוחה עד שתסגור אותה ידנית.',
-        closeOrder: 'סגור הזמנה',
-        closingOrder: 'סוגר...',
-      }
-    : {
-        unableToLoad: 'Unable to load order.',
-        mainProduct: 'Main product',
-        productAdded: 'Product added to the shared cart.',
-        order: 'Order',
-        item: 'ITEM',
-        store: 'Store',
-        timerOrder: 'Timer order',
-        locked: 'Locked',
-        timerBody: 'Users can join and add cart items until the timer ends. Edits lock 15 seconds before closing.',
-        editsLocked: 'Edits are locked.',
-        editsOpen: 'Edits are still open.',
-        participants: 'Participants',
-        finderSummary: 'Product finder summary',
-        importantCosts: 'Important costs',
-        productCost: 'Product price',
-        shippingFee: 'Delivery fee',
-        freeShippingMinimum: 'Free delivery minimum',
-        costCardNote: 'These are the three most important numbers for this order.',
-        whatItIs: 'What it is',
-        notDetected: 'Product name was not detected',
-        whereFrom: 'Where it comes from',
-        detectedFromLink: 'Store detected from link',
-        productPriceDetected: 'Product price detected',
-        estimatedShipping: 'Estimated shipping',
-        freeDeliveryNeeds: 'Whole order needs for free delivery',
-        approxEach: 'Approx. each right now',
-        shippingSaved: 'Shipping saved together',
-        missingParticipants: 'Missing for free shipping by participants',
-        missingCart: 'Missing for free shipping by cart total',
-        neighborsCanJoin: 'Neighbors who can still join from share link',
-        dealNote:
-          'Deal detection checks public product text for 1+1, sale, and similar promotions. If the store blocks details, users can still add them manually.',
-        fullCart: 'Full shared cart',
-        items: 'items',
-        hide: 'Hide',
-        show: 'Show',
-        size: 'Size',
-        productLinkSaved: 'Product link saved',
-        manualItem: 'Manual item',
-        addProduct: 'Add your product',
-        addProductBody: 'Joined users can add one more product to the same shared cart. Payment is skipped in this demo, so this only updates the cart and keeps the flow easy to test.',
-        productName: 'Product name',
-        productPlaceholder: 'Zara shirt, H&M jeans...',
-        price: 'Price',
-        sizeNote: 'Size / note',
-        sizePlaceholder: 'M, black',
-        productLink: 'Product link',
-        cartLocked: 'Cart locked by timer',
-        adding: 'Adding...',
-        addToCart: 'Add to shared cart',
-        couldNotAdd: 'Could not add the product.',
-        pickupPlan: 'Pickup plan',
-        pickupManager: 'Pickup manager assigned',
-        preferredLocation: 'Preferred location',
-        creatorWillAdd: 'Will be added by the order creator',
-        pickupMayVary: 'Pickup location may vary depending on the store/shipping provider',
-        founderCheckout: 'Open founder checkout',
-        skippedProgress: 'Payment skipped: view order progress',
-        createInvite: 'Create invite link',
-        explainOrder: 'Explain this order',
-        noTimer: 'No timer',
-        noTimerOrder: 'Manual order',
-        noTimerBody: 'Order stays open until you close it manually.',
-        closeOrder: 'Close order',
-        closingOrder: 'Closing...',
-      };
-  const actionCopy = {
-    changeTimer: isHebrew ? 'שנה' : 'Change',
-    chooseBeforeShare: isHebrew ? 'בחר מידה וצבע לפני שיתוף' : 'Choose size and color before sharing',
-    shareHint: isHebrew
-      ? 'בחר מידה וצבע כדי שהקישור לוואטסאפ יישלח עם פרטי הזמנה נכונים.'
-      : 'Choose size and color so the WhatsApp link includes the correct order details.',
-    shareAction: isHebrew ? 'שתף ב-WhatsApp' : 'Share on WhatsApp',
-    requiredStore: isHebrew ? 'החנות להזמנה הזאת' : 'Store for this order',
-    addLinkFirst: isHebrew ? 'אפשר להדביק לינק מוצר נוסף מאותה חנות' : 'Paste another product link from the same store',
-    readingItem: isHebrew ? 'קורא את הלינק...' : 'Reading link...',
-    wrongStore: isHebrew ? 'הלינק חייב להיות מאותה חנות של ההזמנה.' : 'The link must be from the same store as this order.',
-    noOptionsFound: isHebrew ? 'לא נמצאו מידות או צבעים בדף הזה, אז אין צורך לבחור.' : 'No sizes or colors were found on this product page, so no option is required.',
-    chooseSize: isHebrew ? 'בחר מידה' : 'Choose size',
-    chooseColor: isHebrew ? 'בחר צבע / טעם / אפשרות' : 'Choose color / flavor / option',
-    optionRequired: isHebrew ? 'בחר את האפשרויות שנמצאו בדף לפני הוספה לסל.' : 'Choose the options found on the page before adding to cart.',
-  };
   const userId = useAuthStore((s) => s.user?.id);
   const pushToast = useUiStore((s) => s.pushToast);
   const { data, isLoading, error } = useOrder(id);
@@ -217,7 +52,6 @@ export default function OrderShell() {
   const addItem = useAddOrderItem();
   const generateInvite = useGenerateInvite();
   const [now, setNow] = useState(Date.now());
-  const [cartOpen, setCartOpen] = useState(true);
   const [itemTitle, setItemTitle] = useState('');
   const [itemPrice, setItemPrice] = useState('');
   const [itemSize, setItemSize] = useState('');
@@ -228,14 +62,14 @@ export default function OrderShell() {
   const [itemInsights, setItemInsights] = useState<SharedProductInsights | null>(null);
   const [itemInsightsLoading, setItemInsightsLoading] = useState(false);
   const [itemStoreError, setItemStoreError] = useState('');
+  const [addOpen, setAddOpen] = useState(false);
 
   const order = data?.order;
   const me = data?.participants.find((p) => p.user_id === userId);
   const participantCount = data?.participants.length ?? 0;
   const cartItems = data?.items ?? [];
-  const loadErrorMessage = error instanceof Error ? error.message : typeof error === 'string' ? error : null;
-  const sizeOptions = detectedSizes;
-  const colorOptions = detectedColors;
+  const myItems = cartItems.filter((item) => item.participant_id === me?.id);
+  const neighborItems = cartItems.filter((item) => item.participant_id !== me?.id);
 
   useEffect(() => {
     if (!order || !me) return;
@@ -257,11 +91,7 @@ export default function OrderShell() {
 
   useEffect(() => {
     if (!order?.product_url) return;
-    const draft = parseSharedProduct({
-      url: order.product_url,
-      title: order.product_title,
-      manualStoreLabel: order.store_label,
-    });
+    const draft = parseSharedProduct({ url: order.product_url, title: order.product_title, manualStoreLabel: order.store_label });
     if (!draft) return;
     let active = true;
     void loadSharedProductInsights(draft, fetchProductPageHtml)
@@ -270,41 +100,18 @@ export default function OrderShell() {
         setDetectedSizes(insights.availableSizes);
         setDetectedColors(insights.availableColors);
       })
-      .catch(() => {
-        if (!active) return;
-        setDetectedSizes([]);
-        setDetectedColors([]);
-      });
-    return () => {
-      active = false;
-    };
+      .catch(() => { if (!active) return; setDetectedSizes([]); setDetectedColors([]); });
+    return () => { active = false; };
   }, [order?.product_title, order?.product_url, order?.store_label]);
 
   useEffect(() => {
-    const draft = parseSharedProduct({
-      url: itemRef,
-      title: itemTitle,
-      manualStoreLabel: order?.store_label,
-    });
-    if (!draft || !order) {
-      setItemStoreError('');
-      setItemInsights(null);
-      return;
-    }
-
+    const draft = parseSharedProduct({ url: itemRef, title: itemTitle, manualStoreLabel: order?.store_label });
+    if (!draft || !order) { setItemStoreError(''); setItemInsights(null); return; }
     const sameStore = !order.store_key || order.store_key === 'manual' || draft.source === order.store_key;
-    if (!sameStore) {
-      setItemStoreError(actionCopy.wrongStore);
-      setItemInsights(null);
-      setDetectedSizes([]);
-      setDetectedColors([]);
-      return;
-    }
-
+    if (!sameStore) { setItemStoreError(isHebrew ? 'הלינק חייב להיות מאותה חנות.' : 'The link must be from the same store.'); setItemInsights(null); setDetectedSizes([]); setDetectedColors([]); return; }
     let active = true;
     setItemStoreError('');
     setItemInsightsLoading(true);
-
     void loadSharedProductInsights(draft, fetchProductPageHtml)
       .then((insights) => {
         if (!active) return;
@@ -312,22 +119,12 @@ export default function OrderShell() {
         setDetectedSizes(insights.availableSizes);
         setDetectedColors(insights.availableColors);
         setItemTitle((prev) => prev.trim() ? prev : insights.title);
-        if (insights.priceAgorot) {
-          setItemPrice((insights.priceAgorot / 100).toFixed(2).replace(/\.00$/, ''));
-        }
+        if (insights.priceAgorot) setItemPrice((insights.priceAgorot / 100).toFixed(2).replace(/\.00$/, ''));
       })
-      .catch(() => {
-        if (!active) return;
-        setItemInsights(null);
-      })
-      .finally(() => {
-        if (active) setItemInsightsLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [actionCopy.wrongStore, itemRef, order?.store_key, order?.store_label]);
+      .catch(() => { if (!active) return; setItemInsights(null); })
+      .finally(() => { if (active) setItemInsightsLoading(false); });
+    return () => { active = false; };
+  }, [isHebrew, itemRef, order?.store_key, order?.store_label]);
 
   useEffect(() => {
     if (!order?.closes_at || !['open', 'paying'].includes(order.status) || closeOrder.isPending) return;
@@ -345,12 +142,11 @@ export default function OrderShell() {
   }
   if (error || !data || !order) {
     return (
-      <ScreenBase style={styles.loadErrorScreen}>
-        <View style={styles.loadErrorCard}>
-          <Text style={styles.loadErrorTitle}>{copy.unableToLoad}</Text>
-          {loadErrorMessage ? <Text style={styles.loadErrorBody}>{loadErrorMessage}</Text> : null}
-          <SecondaryBtn label={isHebrew ? 'חזרה להזמנות' : 'Back to orders'} onPress={() => router.replace('/(tabs)/orders')} />
-        </View>
+      <ScreenBase style={{ padding: 24, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={styles.errorTitle}>{isHebrew ? 'לא הצלחנו לטעון את ההזמנה.' : 'Unable to load order.'}</Text>
+        <Pressable onPress={() => router.replace('/(tabs)/orders')} style={styles.errorBtn}>
+          <Text style={styles.errorBtnText}>{isHebrew ? 'חזרה להזמנות' : 'Back to orders'}</Text>
+        </Pressable>
       </ScreenBase>
     );
   }
@@ -362,274 +158,297 @@ export default function OrderShell() {
   const estimatedShipping =
     typeof order.estimated_shipping_agorot === 'number' && order.estimated_shipping_agorot > 0
       ? order.estimated_shipping_agorot
-      : order.product_price_agorot >= freeShippingThreshold
-        ? 0
-        : DEFAULT_DELIVERY_FEE_AGOROT;
-  const sharedOrderTotal = order.product_price_agorot * participantCount;
-  const freeShippingGap = Math.max(0, freeShippingThreshold - sharedOrderTotal);
+      : order.product_price_agorot >= freeShippingThreshold ? 0 : DEFAULT_DELIVERY_FEE_AGOROT;
   const shippingSaved = Math.max(0, estimatedShipping * Math.max(0, participantCount - 1));
   const closesAtMs = order.closes_at ? new Date(order.closes_at).getTime() : null;
   const editLocksAtMs = order.edit_locks_at ? new Date(order.edit_locks_at).getTime() : null;
   const remainingMs = closesAtMs ? Math.max(0, closesAtMs - now) : null;
   const editLocked = Boolean(editLocksAtMs && editLocksAtMs <= now);
-  const timerLabel = remainingMs == null ? copy.noTimer : formatCompactDuration(remainingMs);
-  const visibleCartItems = cartItems.length > 0
-    ? cartItems
-    : [
-        {
-          id: 'main-product-preview',
-          title: order.product_title ?? copy.mainProduct,
-          price_agorot: order.product_price_agorot,
-          ref: order.product_url,
-          size: null,
-          participant_id: me?.id ?? '',
-          order_id: order.id,
-        },
-      ];
-  const cartTotal = visibleCartItems.reduce((sum, item) => sum + item.price_agorot, 0);
-  const cartFreeShippingGap = Math.max(0, freeShippingThreshold - cartTotal);
-  const hasSavedOptions = cartItems.some((item) => Boolean(item.size?.trim()));
+  const timerLabel = remainingMs == null ? (isHebrew ? 'ללא טיימר' : 'No timer') : formatCompactDuration(remainingMs);
+
+  const sizeOptions = detectedSizes;
+  const colorOptions = detectedColors;
   const requiresSize = sizeOptions.length > 0;
   const requiresColor = colorOptions.length > 0;
   const hasSelectedOptions = (!requiresSize || itemSize.trim().length > 0) && (!requiresColor || itemColor.trim().length > 0);
+  const hasSavedOptions = cartItems.some((item) => Boolean(item.size?.trim()));
   const needsAnyOptions = requiresSize || requiresColor;
   const canShareOrder = hasSavedOptions || !needsAnyOptions || hasSelectedOptions;
   const itemPriceAgorot = Math.floor(Number(itemPrice) * 100);
   const canAddItem =
-    Boolean(me?.id) &&
-    !editLocked &&
-    ['open', 'paying'].includes(order.status) &&
-    itemTitle.trim().length > 1 &&
-    (!requiresSize || itemSize.trim().length > 0) &&
-    (!requiresColor || itemColor.trim().length > 0) &&
-    !itemStoreError &&
-    Number.isFinite(itemPriceAgorot) &&
-    itemPriceAgorot > 0;
+    Boolean(me?.id) && !editLocked && ['open', 'paying'].includes(order.status) &&
+    itemTitle.trim().length > 1 && (!requiresSize || itemSize.trim().length > 0) &&
+    (!requiresColor || itemColor.trim().length > 0) && !itemStoreError &&
+    Number.isFinite(itemPriceAgorot) && itemPriceAgorot > 0;
 
   const onAddItem = async () => {
     if (!me?.id || !canAddItem) return;
-    const sizeStr = itemSize.trim();
-    const colorStr = itemColor.trim();
-    const optionParts = [
-      sizeStr && `${isHebrew ? 'מידה' : 'Size'}: ${sizeStr}`,
-      colorStr && `${isHebrew ? 'צבע' : 'Color'}: ${colorStr}`,
-    ].filter(Boolean);
     await addItem.mutateAsync({
-      orderId: order.id,
-      participantId: me.id,
-      title: itemTitle,
-      ref: itemRef,
+      orderId: order.id, participantId: me.id, title: itemTitle, ref: itemRef,
       size: [
         itemSize.trim() ? `${isHebrew ? 'מידה' : 'Size'}: ${itemSize.trim()}` : null,
-        itemColor.trim() ? `${isHebrew ? 'צבע/טעם' : 'Color/flavor'}: ${itemColor.trim()}` : null,
+        itemColor.trim() ? `${isHebrew ? 'צבע' : 'Color'}: ${itemColor.trim()}` : null,
       ].filter(Boolean).join(' | ') || null,
       priceAgorot: itemPriceAgorot,
     });
-    setItemTitle('');
-    setItemPrice('');
-    setItemSize('');
-    setItemColor('');
-    setItemRef('');
-    pushToast(copy.productAdded, 'success');
+    setItemTitle(''); setItemPrice(''); setItemSize(''); setItemColor(''); setItemRef('');
+    setAddOpen(false);
+    pushToast(isHebrew ? 'המוצר נוסף לסל המשותף.' : 'Product added to the shared cart.', 'success');
   };
 
   const onShareOrder = async () => {
-    if (!canShareOrder) {
-      pushToast(actionCopy.chooseBeforeShare, 'error');
-      return;
-    }
+    if (!canShareOrder) { pushToast(isHebrew ? 'בחר מידה וצבע לפני שיתוף' : 'Choose size and color before sharing', 'error'); return; }
     try {
       const invite = await generateInvite.mutateAsync(order.id);
       const inviteUrl = buildInviteUrl(invite.token);
-      const optionText = hasSelectedOptions
-        ? isHebrew
-          ? ` מידה: ${itemSize.trim()}, צבע: ${itemColor.trim()}.`
-          : ` Size: ${itemSize.trim()}, color: ${itemColor.trim()}.`
-        : '';
+      const cartTotal = cartItems.reduce((s, i) => s + i.price_agorot, 0);
+      const cartFreeShippingGap = Math.max(0, freeShippingThreshold - cartTotal);
       const message = isHebrew
-        ? `פתחתי הזמנה ב-Shakana: ${order.product_title ?? order.product_url}.${optionText} דמי משלוח: ${formatAgorot(estimatedShipping)}. משלוח חינם מ-${formatAgorot(freeShippingThreshold)}. חסר למשלוח חינם: ${formatAgorot(cartFreeShippingGap)}. ${inviteUrl}`
-        : `I opened a Shakana order: ${order.product_title ?? order.product_url}.${optionText} Delivery fee: ${formatAgorot(estimatedShipping)}. Free delivery from ${formatAgorot(freeShippingThreshold)}. Missing for free delivery: ${formatAgorot(cartFreeShippingGap)}. ${inviteUrl}`;
+        ? `פתחתי הזמנה ב-Shakana: ${order.product_title ?? order.product_url}. דמי משלוח: ${formatAgorot(estimatedShipping)}. חסר למשלוח חינם: ${formatAgorot(cartFreeShippingGap)}. ${inviteUrl}`
+        : `I opened a Shakana order: ${order.product_title ?? order.product_url}. Delivery: ${formatAgorot(estimatedShipping)}. Missing for free ship.: ${formatAgorot(cartFreeShippingGap)}. ${inviteUrl}`;
       await Linking.openURL(`https://wa.me/?text=${encodeURIComponent(message)}`);
     } catch (e) {
       pushToast(e instanceof Error ? e.message : isHebrew ? 'לא הצלחנו לפתוח שיתוף.' : 'Could not open sharing.', 'error');
     }
   };
 
+  const statusLabel = me?.status === 'paid' ? (isHebrew ? 'שולם' : 'PAID') : (isHebrew ? 'הצטרפת' : 'JOINED');
+
   return (
-    <ScreenBase style={{ paddingTop: 20, paddingBottom: 36 }}>
+    <ScreenBase padded={false} safeEdges={['top']}>
+      {/* Header */}
       <View style={styles.header}>
         <BackBtn onPress={() => router.back()} />
-        <Text style={styles.headerTitle}>{copy.order}</Text>
-        <View style={{ width: 40 }} />
+        <Text style={styles.headerKicker}>SHAKANA</Text>
+        {me ? (
+          <View style={styles.statusBadge}>
+            <Text style={styles.statusBadgeText}>{statusLabel}</Text>
+          </View>
+        ) : <View style={{ width: 56 }} />}
       </View>
 
-      <ScrollView contentContainerStyle={{ gap: 16, paddingBottom: 32 }}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* ── HERO: Add your product ── */}
-        <View style={styles.heroCard}>
-          {/* Store badge + timer row */}
-          <View style={styles.heroTopRow}>
-            <View style={styles.storeBadge}>
-              <Text style={styles.storeBadgeText}>{order.store_label ?? copy.store}</Text>
-            </View>
+        {/* Order title + meta */}
+        <View style={styles.titleBlock}>
+          <Text style={styles.orderTitle} numberOfLines={2}>
+            {order.product_title ?? (isHebrew ? 'הזמנה' : 'Order')}
+          </Text>
+          <View style={styles.metaRow}>
+            {order.store_label ? (
+              <View style={styles.storePill}>
+                <Text style={styles.storePillText}>{order.store_label.toUpperCase()}</Text>
+              </View>
+            ) : null}
             <View style={styles.timerPill}>
-              <Text style={styles.timerPillLabel}>{isHebrew ? 'טיימר' : 'Timer'}</Text>
-              <Text style={styles.timerPillValue}>
-                {order.status === 'locked' ? copy.locked : order.closes_at ? timerLabel : copy.noTimer}
+              <Text style={styles.timerPillText}>
+                {order.status === 'locked' ? (isHebrew ? 'נעול' : 'LOCKED') : timerLabel}
               </Text>
             </View>
           </View>
-
-          {/* Shipping savings strip */}
-          <View style={styles.savingsRow}>
-            <View style={styles.savingsCell}>
-              <Text style={styles.savingsCellLabel}>{isHebrew ? 'חיסכון משלוח' : 'Shipping saved'}</Text>
-              <Text style={styles.savingsCellValue}>{formatAgorot(shippingSaved)}</Text>
-            </View>
-            <View style={styles.savingsDivider} />
-            <View style={styles.savingsCell}>
-              <Text style={styles.savingsCellLabel}>{isHebrew ? 'חסר למשלוח חינם' : 'Missing for free ship.'}</Text>
-              <Text style={styles.savingsCellValue}>{formatAgorot(cartFreeShippingGap)}</Text>
-            </View>
-            <View style={styles.savingsDivider} />
-            <View style={styles.savingsCell}>
-              <Text style={styles.savingsCellLabel}>{isHebrew ? 'דמי משלוח' : 'Delivery fee'}</Text>
-              <Text style={styles.savingsCellValue}>{formatAgorot(estimatedShipping)}</Text>
-            </View>
-          </View>
-
-          {/* Add product form */}
-          <Text style={styles.heroSectionTitle}>{copy.addProduct}</Text>
-          <Field label={copy.productLink} value={itemRef} onChange={setItemRef} placeholder="https://..." ltr />
-          {itemInsightsLoading ? <Text style={styles.requiredHint}>{actionCopy.readingItem}</Text> : null}
-          {itemStoreError ? <Text style={styles.errorInline}>{itemStoreError}</Text> : null}
-          {itemInsights ? (
-            <View style={styles.detectedProductCard}>
-              <Text style={styles.detectedStore}>{itemInsights.sourceLabel}</Text>
-              <Text style={styles.detectedTitle}>{itemInsights.title}</Text>
-              <Text style={styles.detectedMeta}>{formatAgorot(itemInsights.priceAgorot ?? itemPriceAgorot)}</Text>
-            </View>
-          ) : null}
-          <Field label={copy.productName} value={itemTitle} onChange={setItemTitle} placeholder={copy.productPlaceholder} />
-          <NumField label={copy.price} value={itemPrice} onChange={setItemPrice} placeholder="99" />
-          {requiresSize ? (
-            <View style={styles.optionGroup}>
-              <Text style={styles.optionLabel}>{actionCopy.chooseSize}</Text>
-              <View style={styles.optionRow}>
-                {sizeOptions.map((size) => {
-                  const selected = itemSize === size;
-                  return (
-                    <Pressable key={size} accessibilityRole="button"
-                      style={[styles.optionChip, selected && styles.optionChipActive]}
-                      onPress={() => setItemSize(size)}>
-                      <Text style={[styles.optionChipText, selected && styles.optionChipTextActive]}>{size}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-          ) : (
-            <Field
-              label={isHebrew ? 'מידה / גרסה (אם רלוונטי)' : 'Size / variant (if applicable)'}
-              value={itemSize} onChange={setItemSize}
-              placeholder={isHebrew ? 'M, Queen, 42, XL...' : 'M, Queen, 42, XL...'}
-            />
-          )}
-          {requiresColor ? (
-            <View style={styles.optionGroup}>
-              <Text style={styles.optionLabel}>{actionCopy.chooseColor}</Text>
-              <View style={styles.optionRow}>
-                {colorOptions.map((color) => {
-                  const selected = itemColor === color;
-                  return (
-                    <Pressable key={color} accessibilityRole="button"
-                      style={[styles.optionChip, selected && styles.optionChipActive]}
-                      onPress={() => setItemColor(color)}>
-                      <Text style={[styles.optionChipText, selected && styles.optionChipTextActive]}>{color}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-          ) : (
-            <Field
-              label={isHebrew ? 'צבע / הערה (אם רלוונטי)' : 'Color / note (if applicable)'}
-              value={itemColor} onChange={setItemColor}
-              placeholder={isHebrew ? 'שחור, עץ אלון, לבן...' : 'Black, oak wood, white...'}
-            />
-          )}
-          {needsAnyOptions && !hasSelectedOptions ? (
-            <Text style={styles.requiredHint}>{actionCopy.optionRequired}</Text>
-          ) : null}
-          <PrimaryBtn
-            label={
-              editLocked || order.status === 'locked'
-                ? copy.cartLocked
-                : addItem.isPending ? copy.adding : copy.addToCart
-            }
-            onPress={() => void onAddItem().catch((e) => pushToast(e instanceof Error ? e.message : copy.couldNotAdd, 'error'))}
-            disabled={!canAddItem}
-            loading={addItem.isPending}
-          />
         </View>
 
-        {/* ── What's been ordered ── */}
-        <Text style={styles.sectionTitle}>{isHebrew ? 'מה הוזמן' : 'What\'s been ordered'}</Text>
-        <View style={styles.cartCard}>
-          {visibleCartItems.map((item, index) => (
-            <View key={item.id} style={[styles.cartItem, index < visibleCartItems.length - 1 && styles.cartItemBorder]}>
-              <View style={styles.cartIndex}>
-                <Text style={styles.cartIndexText}>{index + 1}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.cartItemTitle}>{item.title}</Text>
-                {item.size ? <Text style={styles.cartItemMeta}>{item.size}</Text> : null}
-              </View>
-              <Text style={styles.cartItemPrice}>{formatAgorot(item.price_agorot)}</Text>
+        {/* Savings hero */}
+        <View style={styles.savingsHero}>
+          <View style={styles.savingsHeroLeft}>
+            <Text style={styles.savingsHeroKicker}>{isHebrew ? 'חיסכון משלוח יחד' : 'Shipping saved together'}</Text>
+            <Text style={styles.savingsHeroAmount}>{formatAgorot(shippingSaved)}</Text>
+          </View>
+          <View style={styles.savingsHeroRight}>
+            <View style={styles.neighborAvatarRow}>
+              {data.participants.slice(0, 4).map((p, i) => (
+                <View key={p.id} style={[styles.neighborAvatar, { backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length], marginLeft: i > 0 ? -10 : 0 }]}>
+                  <Text style={styles.neighborAvatarText}>{(p.user_id ?? '?').slice(0, 1).toUpperCase()}</Text>
+                </View>
+              ))}
+              {participantCount > 4 ? (
+                <View style={[styles.neighborAvatar, { backgroundColor: colors.mu2, marginLeft: -10 }]}>
+                  <Text style={styles.neighborAvatarText}>+{participantCount - 4}</Text>
+                </View>
+              ) : null}
             </View>
-          ))}
-          <View style={styles.cartTotalRow}>
-            <Text style={styles.cartTotalLabel}>{isHebrew ? 'סך הכל' : 'Total'}</Text>
-            <Text style={styles.cartTotalValue}>{formatAgorot(cartTotal)}</Text>
+            <Text style={styles.savingsHeroNeighbors}>
+              {participantCount} {isHebrew ? 'שכנים' : 'neighbors'}
+            </Text>
           </View>
         </View>
 
-        {/* ── Participants ── */}
-        <Text style={styles.sectionTitle}>{copy.participants}</Text>
-        <ParticipantTower participants={data.participants} currentUserId={userId} />
+        {/* Your items */}
+        <Text style={styles.sectionTitle}>{isHebrew ? 'הפריטים שלך' : 'YOUR ITEMS'}</Text>
+        {myItems.length === 0 ? (
+          <View style={styles.emptyItemsCard}>
+            <Text style={styles.emptyItemsText}>
+              {isHebrew ? 'עוד לא הוספת פריטים' : 'No items added yet'}
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.itemsList}>
+            {myItems.map((item) => (
+              <View key={item.id} style={styles.itemCard}>
+                <View style={[styles.itemColorDot, { backgroundColor: colors.acc }]} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.itemName} numberOfLines={1}>{item.title}</Text>
+                  {item.size ? <Text style={styles.itemMeta}>{item.size}</Text> : null}
+                </View>
+                <View style={styles.privateBadge}>
+                  <Text style={styles.privateBadgeText}>{isHebrew ? 'פרטי' : 'PRIVATE'}</Text>
+                </View>
+                <Text style={styles.itemPrice}>{formatAgorot(item.price_agorot)}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
-        {/* ── Pickup ── */}
-        <View style={styles.pickupCard}>
-          <Text style={styles.kicker}>{copy.pickupPlan}</Text>
-          <Text style={styles.pickupTitle}>{order.pickup_responsible_name || copy.pickupManager}</Text>
-          <Text style={styles.pickupBody}>{copy.preferredLocation}: {order.preferred_pickup_location || copy.creatorWillAdd}</Text>
-          <Text style={styles.pickupNote}>{order.pickup_location_note || copy.pickupMayVary}</Text>
+        {/* Neighbors' items */}
+        <Text style={styles.sectionTitle}>{isHebrew ? 'פריטי השכנים' : 'NEIGHBORS\' ITEMS'}</Text>
+        <View style={styles.neighborsCard}>
+          <View style={styles.neighborsCardRow}>
+            <View style={styles.neighborAvatarRowSmall}>
+              {data.participants.filter((p) => p.user_id !== userId).slice(0, 4).map((p, i) => (
+                <View key={p.id} style={[styles.neighborAvatarSm, { backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length], marginLeft: i > 0 ? -8 : 0 }]}>
+                  <Text style={styles.neighborAvatarSmText}>{(p.user_id ?? '?').slice(0, 1).toUpperCase()}</Text>
+                </View>
+              ))}
+            </View>
+            <View>
+              <Text style={styles.neighborsCount}>{Math.max(0, participantCount - (me ? 1 : 0))} {isHebrew ? 'שכנים' : 'neighbors'}</Text>
+              <Text style={styles.neighborsMeta}>{neighborItems.length} {isHebrew ? 'פריטים' : 'items'}</Text>
+            </View>
+          </View>
+          <Text style={styles.neighborsPrivacyNote}>
+            {isHebrew ? 'פרטי הפריטים של השכנים מוסתרים לפרטיות' : 'Neighbors\' item details are hidden for privacy'}
+          </Text>
         </View>
 
-        {/* ── Actions ── */}
-        <View style={{ gap: 10 }}>
-          {order.status === 'locked' && order.creator_id === userId ? (
-            <PrimaryBtn label={copy.founderCheckout} onPress={() => void Linking.openURL(order.founder_checkout_url || order.product_url)} />
-          ) : order.status !== 'locked' ? (
+        {/* Add item form */}
+        {['open', 'paying'].includes(order.status) && me ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setAddOpen((o) => !o)}
+            style={styles.addItemToggle}
+          >
+            <Text style={styles.addItemToggleText}>
+              {addOpen ? (isHebrew ? 'סגור' : 'Close') : (isHebrew ? '+ הוסף פריט' : '+ Add item')}
+            </Text>
+          </Pressable>
+        ) : null}
+
+        {addOpen && me && (
+          <View style={styles.addCard}>
+            <Text style={styles.addCardTitle}>{isHebrew ? 'הוסף את הפריט שלך' : 'Add your item'}</Text>
+            <Field label={isHebrew ? 'קישור מוצר' : 'Product link'} value={itemRef} onChange={setItemRef} placeholder="https://..." ltr />
+            {itemInsightsLoading ? <Text style={styles.hintText}>{isHebrew ? 'קורא את הלינק...' : 'Reading link...'}</Text> : null}
+            {itemStoreError ? <Text style={styles.errorText}>{itemStoreError}</Text> : null}
+            {itemInsights ? (
+              <View style={styles.detectedCard}>
+                <Text style={styles.detectedStore}>{itemInsights.sourceLabel}</Text>
+                <Text style={styles.detectedTitle}>{itemInsights.title}</Text>
+              </View>
+            ) : null}
+            <Field label={isHebrew ? 'שם מוצר' : 'Product name'} value={itemTitle} onChange={setItemTitle} placeholder={isHebrew ? 'חולצה מזארה...' : 'Zara shirt...'} />
+            <NumField label={isHebrew ? 'מחיר' : 'Price'} value={itemPrice} onChange={setItemPrice} placeholder="99" />
+            {requiresSize ? (
+              <View style={styles.optionGroup}>
+                <Text style={styles.optionLabel}>{isHebrew ? 'בחר מידה' : 'Choose size'}</Text>
+                <View style={styles.optionRow}>
+                  {sizeOptions.map((size) => (
+                    <Pressable key={size} accessibilityRole="button" onPress={() => setItemSize(size)}
+                      style={[styles.optionChip, itemSize === size && styles.optionChipActive]}>
+                      <Text style={[styles.optionChipText, itemSize === size && styles.optionChipTextActive]}>{size}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            ) : (
+              <Field label={isHebrew ? 'מידה / גרסה' : 'Size / variant'} value={itemSize} onChange={setItemSize} placeholder="M, XL, 42..." />
+            )}
+            {requiresColor ? (
+              <View style={styles.optionGroup}>
+                <Text style={styles.optionLabel}>{isHebrew ? 'בחר צבע' : 'Choose color'}</Text>
+                <View style={styles.optionRow}>
+                  {colorOptions.map((color) => (
+                    <Pressable key={color} accessibilityRole="button" onPress={() => setItemColor(color)}
+                      style={[styles.optionChip, itemColor === color && styles.optionChipActive]}>
+                      <Text style={[styles.optionChipText, itemColor === color && styles.optionChipTextActive]}>{color}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            ) : (
+              <Field label={isHebrew ? 'צבע / הערה' : 'Color / note'} value={itemColor} onChange={setItemColor} placeholder={isHebrew ? 'שחור, לבן...' : 'Black, white...'} />
+            )}
             <Pressable
               accessibilityRole="button"
-              style={({ pressed }) => [styles.shareButton, !canShareOrder && styles.shareButtonDisabled, pressed && canShareOrder && { transform: [{ scale: 0.98 }] }]}
-              onPress={() => void onShareOrder()}
-              disabled={generateInvite.isPending}
+              onPress={() => void onAddItem().catch((e) => pushToast(e instanceof Error ? e.message : 'Error', 'error'))}
+              style={[styles.addBtn, !canAddItem && styles.addBtnDisabled]}
+              disabled={!canAddItem || addItem.isPending}
             >
-              <Text style={styles.shareButtonText}>
-                {generateInvite.isPending ? '...' : canShareOrder ? actionCopy.shareAction : actionCopy.chooseBeforeShare}
+              <Text style={styles.addBtnText}>
+                {addItem.isPending ? (isHebrew ? 'מוסיף...' : 'Adding...') : (editLocked ? (isHebrew ? 'הסל ננעל' : 'Cart locked') : (isHebrew ? 'הוסף לסל' : 'Add to cart'))}
               </Text>
             </Pressable>
-          ) : null}
-          {!canShareOrder && order.status !== 'locked' ? <Text style={styles.shareHint}>{actionCopy.shareHint}</Text> : null}
-          {!order.closes_at && order.creator_id === userId && ['open', 'paying'].includes(order.status) ? (
-            <SecondaryBtn
-              label={closeOrder.isPending ? copy.closingOrder : copy.closeOrder}
-              onPress={() => void closeOrder.mutateAsync(order.id).catch((e: unknown) => pushToast(e instanceof Error ? e.message : copy.closingOrder, 'error'))}
-            />
-          ) : null}
+          </View>
+        )}
+
+        {/* Share / Invite */}
+        <View style={styles.inviteCard}>
+          <View style={styles.inviteCardTop}>
+            <Rect x={0} y={0} width={0} height={0} />
+            <View style={styles.qrPlaceholder}>
+              <Svg width={56} height={56} viewBox="0 0 56 56" fill="none">
+                <Rect x={4} y={4} width={20} height={20} rx={3} stroke={colors.tx} strokeWidth={2.5} />
+                <Rect x={32} y={4} width={20} height={20} rx={3} stroke={colors.tx} strokeWidth={2.5} />
+                <Rect x={4} y={32} width={20} height={20} rx={3} stroke={colors.tx} strokeWidth={2.5} />
+                <Rect x={9} y={9} width={10} height={10} rx={1} fill={colors.tx} />
+                <Rect x={37} y={9} width={10} height={10} rx={1} fill={colors.tx} />
+                <Rect x={9} y={37} width={10} height={10} rx={1} fill={colors.tx} />
+                <Path d="M32 32h6v6h-6zM40 32h6v6h-6zM32 40h6v6h-6zM40 40h6v6h-6z" fill={colors.tx} />
+              </Svg>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.inviteTitle}>{isHebrew ? 'הזמן שכנים' : 'Invite neighbors'}</Text>
+              <Text style={styles.inviteBody}>
+                {isHebrew ? `${Math.max(0, 5 - participantCount)} שכנים נוספים למשלוח חינם` : `${Math.max(0, 5 - participantCount)} more neighbors for free shipping`}
+              </Text>
+            </View>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => void onShareOrder()}
+            disabled={generateInvite.isPending}
+            style={({ pressed }) => [styles.waBtn, pressed && { opacity: 0.9 }]}
+          >
+            <WaIcon />
+            <Text style={styles.waBtnText}>
+              {generateInvite.isPending ? '...' : (isHebrew ? 'שתף ב-WhatsApp' : 'Invite via WhatsApp')}
+            </Text>
+          </Pressable>
         </View>
+
+        {/* Close order (creator only, no timer) */}
+        {!order.closes_at && order.creator_id === userId && ['open', 'paying'].includes(order.status) ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => void closeOrder.mutateAsync(order.id).catch((e: unknown) => pushToast(e instanceof Error ? e.message : 'Error', 'error'))}
+            style={styles.closeBtn}
+          >
+            <Text style={styles.closeBtnText}>
+              {closeOrder.isPending ? (isHebrew ? 'סוגר...' : 'Closing...') : (isHebrew ? 'סגור הזמנה' : 'Close order')}
+            </Text>
+          </Pressable>
+        ) : null}
+
+        {/* Checkout (founder, locked) */}
+        {order.status === 'locked' && order.creator_id === userId ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => void Linking.openURL(order.founder_checkout_url || order.product_url)}
+            style={styles.checkoutBtn}
+          >
+            <Text style={styles.checkoutBtnText}>{isHebrew ? 'פתח Checkout למייסד' : 'Open founder checkout'}</Text>
+          </Pressable>
+        ) : null}
+
       </ScrollView>
     </ScreenBase>
   );
@@ -640,495 +459,426 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    paddingHorizontal: 18,
+    paddingTop: 8,
+    paddingBottom: 8,
   },
-  headerTitle: { fontFamily: fontFamily.display, fontSize: 22, color: colors.tx },
-  product: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: colors.white,
-    borderColor: colors.br,
-    borderWidth: 1,
-    borderRadius: radii.md,
-    padding: 12,
-  },
-  productImg: { width: 72, height: 72, borderRadius: radii.md },
-  productPlaceholder: {
-    backgroundColor: colors.s1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.brBr,
-  },
-  placeholderText: { fontFamily: fontFamily.bodySemi, fontSize: 11, color: colors.tx, letterSpacing: 1.2 },
-  productTitle: { fontFamily: fontFamily.bodySemi, fontSize: 15, color: colors.tx },
-  productPrice: { fontFamily: fontFamily.body, fontSize: 13, color: colors.mu, marginTop: 4 },
-  sectionTitle: { fontFamily: fontFamily.display, fontSize: 20, color: colors.tx },
-  sectionSub: { fontFamily: fontFamily.body, fontSize: 13, color: colors.mu, marginTop: 4 },
-  tower: { gap: 8 },
-  slot: {
-    backgroundColor: colors.s1,
-    borderRadius: radii.md,
-    borderColor: colors.brBr,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    paddingVertical: 16,
-    paddingHorizontal: 14,
-  },
-  slotFilled: {
-    backgroundColor: colors.white,
-    borderStyle: 'solid',
-    borderColor: colors.brBr,
-  },
-  slotMe: { borderColor: colors.acc, backgroundColor: colors.accLight },
-  slotText: { fontFamily: fontFamily.bodySemi, fontSize: 14, color: colors.tx },
-  slotEmpty: { fontFamily: fontFamily.body, fontSize: 14, color: colors.mu },
-  pickupCard: {
-    gap: 10,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: colors.br,
-    borderRadius: 24,
-    backgroundColor: colors.white,
-  },
-  costCard: {
-    gap: 12,
-    padding: 16,
-    borderRadius: radii.lg,
-    backgroundColor: colors.navy,
-  },
-  costKicker: {
-    fontFamily: fontFamily.bodySemi,
-    fontSize: 11,
-    letterSpacing: 1.2,
-    color: colors.s1,
-    textTransform: 'uppercase',
-  },
-  costGrid: {
-    gap: 10,
-  },
-  costItem: {
-    gap: 6,
-    padding: 14,
-    borderRadius: radii.md,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.16)',
-  },
-  costLabel: {
+  headerKicker: {
     fontFamily: fontFamily.bodyBold,
     fontSize: 11,
-    letterSpacing: 0.8,
-    color: 'rgba(255,255,255,0.7)',
-    textTransform: 'uppercase',
-  },
-  costValue: {
-    fontFamily: fontFamily.display,
-    fontSize: 24,
-    color: colors.white,
-  },
-  costNote: {
-    fontFamily: fontFamily.body,
-    fontSize: 12,
-    lineHeight: 18,
-    color: 'rgba(255,255,255,0.78)',
-  },
-  kicker: {
-    fontFamily: fontFamily.bodySemi,
-    fontSize: 11,
-    letterSpacing: 1.2,
+    letterSpacing: 2.4,
     color: colors.acc,
-    textTransform: 'uppercase',
   },
-  pickupTitle: { fontFamily: fontFamily.display, fontSize: 20, color: colors.tx },
-  pickupBody: { fontFamily: fontFamily.body, fontSize: 13, color: colors.mu, lineHeight: 20 },
-  pickupNote: { fontFamily: fontFamily.bodySemi, fontSize: 12, color: colors.acc, lineHeight: 18 },
-  cartHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  cartToggle: {
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: radii.pill,
+  statusBadge: {
     backgroundColor: colors.accLight,
-  },
-  cartToggleText: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 12,
-    color: colors.acc,
-  },
-  cartItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 12,
-  },
-  cartIndex: {
-    width: 30,
-    height: 30,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.navy,
   },
-  cartIndexText: { fontFamily: fontFamily.bodyBold, fontSize: 12, color: colors.white },
-  cartItemTitle: { fontFamily: fontFamily.bodyBold, fontSize: 14, color: colors.tx },
-  cartItemMeta: { fontFamily: fontFamily.body, fontSize: 12, color: colors.mu, marginTop: 3 },
-  cartItemPrice: { fontFamily: fontFamily.bodyBold, fontSize: 13, color: colors.tx },
-  addRow: {
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'flex-start',
-  },
-  storeBanner: {
-    gap: 8,
-    padding: 20,
-    borderRadius: 26,
-    backgroundColor: colors.navy,
-  },
-  storeBannerLabel: {
+  statusBadgeText: {
     fontFamily: fontFamily.bodyBold,
     fontSize: 11,
-    letterSpacing: 1,
-    color: 'rgba(255,255,255,0.66)',
-    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    color: colors.acc,
   },
-  storeBannerName: {
-    fontFamily: fontFamily.display,
-    fontSize: 42,
-    lineHeight: 48,
-    color: colors.white,
-    letterSpacing: -1.6,
+  scroll: {
+    paddingHorizontal: 18,
+    paddingBottom: 48,
+    gap: 16,
   },
-  storeBannerBody: {
-    fontFamily: fontFamily.bodySemi,
-    fontSize: 13,
-    lineHeight: 20,
-    color: 'rgba(255,255,255,0.78)',
+  titleBlock: {
+    gap: 10,
+    paddingTop: 4,
   },
-  savingsStrip: {
-    minHeight: 76,
-    borderRadius: 22,
-    backgroundColor: colors.lime,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.acc,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  savingsStripLabel: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 13,
-    color: colors.tx,
-    flex: 1,
-  },
-  savingsStripValue: {
+  orderTitle: {
     fontFamily: fontFamily.display,
     fontSize: 28,
     color: colors.tx,
+    lineHeight: 34,
   },
-  detectedProductCard: {
-    gap: 5,
-    padding: 14,
-    borderRadius: radii.md,
-    backgroundColor: colors.cardSoft,
-    borderWidth: 1,
-    borderColor: colors.br,
+  metaRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
   },
-  detectedStore: {
+  storePill: {
+    backgroundColor: colors.s2,
+    borderRadius: radii.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  storePillText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    color: colors.mu,
+  },
+  timerPill: {
+    backgroundColor: colors.accLight,
+    borderRadius: radii.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  timerPillText: {
     fontFamily: fontFamily.bodyBold,
     fontSize: 11,
+    letterSpacing: 0.8,
     color: colors.acc,
+  },
+  savingsHero: {
+    backgroundColor: colors.navy,
+    borderRadius: 26,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    ...shadow.cta,
+  },
+  savingsHeroLeft: { gap: 6 },
+  savingsHeroKicker: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 10,
+    letterSpacing: 1.4,
+    color: 'rgba(250,246,239,0.65)',
     textTransform: 'uppercase',
   },
-  detectedTitle: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 14,
-    color: colors.tx,
-  },
-  detectedMeta: {
-    fontFamily: fontFamily.display,
-    fontSize: 18,
-    color: colors.navy,
-  },
-  optionGroup: {
-    gap: 10,
-  },
-  optionLabel: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 13,
-    color: colors.tx,
-  },
-  optionRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  optionChip: {
-    minHeight: 42,
-    minWidth: 58,
-    paddingHorizontal: 14,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.brBr,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.white,
-  },
-  optionChipActive: {
-    backgroundColor: colors.acc,
-    borderColor: colors.acc,
-  },
-  optionChipText: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 13,
-    color: colors.tx,
-  },
-  optionChipTextActive: {
-    color: colors.white,
-  },
-  requiredHint: {
-    fontFamily: fontFamily.bodySemi,
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.acc,
-  },
-  optionEmptyHint: {
-    fontFamily: fontFamily.bodySemi,
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.mu,
-  },
-  errorInline: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.err,
-  },
-  shareButton: {
-    width: '100%',
-    minHeight: 56,
-    borderRadius: radii.pill,
-    backgroundColor: colors.lime,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.acc,
-  },
-  shareButtonDisabled: {
-    backgroundColor: colors.s1,
-    borderColor: colors.brBr,
-  },
-  shareButtonText: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 17,
-    color: colors.navy,
-  },
-  shareHint: {
-    fontFamily: fontFamily.bodySemi,
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.acc,
-    textAlign: 'center',
-  },
-  loadErrorScreen: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  loadErrorCard: {
-    width: '100%',
-    maxWidth: 420,
-    gap: 12,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: colors.brBr,
-    borderRadius: radii.lg,
-    backgroundColor: colors.white,
-  },
-  loadErrorTitle: {
-    fontFamily: fontFamily.display,
-    fontSize: 20,
-    color: colors.err,
-    textAlign: 'center',
-  },
-  loadErrorBody: {
-    fontFamily: fontFamily.body,
-    fontSize: 13,
-    lineHeight: 20,
-    color: colors.mu,
-    textAlign: 'center',
-  },
-  timerCard: {
-    gap: 8,
-    padding: 18,
-    borderRadius: radii.lg,
-    backgroundColor: colors.navy,
-  },
-  timerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  timerChangeButton: {
-    minHeight: 42,
-    paddingHorizontal: 16,
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.lime,
-    borderWidth: 1,
-    borderColor: colors.acc,
-  },
-  timerChangeText: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 13,
-    color: colors.navy,
-  },
-  timerValue: {
+  savingsHeroAmount: {
     fontFamily: fontFamily.display,
     fontSize: 36,
     color: colors.white,
   },
-  timerMetricRow: {
-    flexDirection: 'row',
-    gap: 10,
+  savingsHeroRight: { alignItems: 'flex-end', gap: 8 },
+  neighborAvatarRow: { flexDirection: 'row', alignItems: 'center' },
+  neighborAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.navy,
   },
-  timerMetric: {
-    flex: 1,
-    gap: 4,
-    padding: 12,
-    borderRadius: radii.md,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.16)',
-  },
-  timerMetricLabel: {
+  neighborAvatarText: {
     fontFamily: fontFamily.bodyBold,
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.68)',
-  },
-  timerMetricValue: {
-    fontFamily: fontFamily.display,
-    fontSize: 18,
+    fontSize: 13,
     color: colors.white,
   },
-  timerBody: { fontFamily: fontFamily.body, fontSize: 13, color: 'rgba(255,255,255,0.86)', lineHeight: 20 },
-  timerNote: { fontFamily: fontFamily.bodySemi, fontSize: 12, color: colors.s1, lineHeight: 18 },
-  heroCard: {
-    gap: 16,
-    padding: 20,
-    borderRadius: radii.xl,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.br,
-  },
-  heroTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  storeBadge: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: radii.pill,
-    backgroundColor: colors.accLight,
-    borderWidth: 1,
-    borderColor: colors.acc,
-  },
-  storeBadgeText: {
-    fontFamily: fontFamily.bodyBold,
+  savingsHeroNeighbors: {
+    fontFamily: fontFamily.body,
     fontSize: 12,
-    color: colors.acc,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    color: 'rgba(250,246,239,0.72)',
   },
-  timerPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: radii.pill,
-    backgroundColor: colors.s2,
-    borderWidth: 1,
-    borderColor: colors.brBr,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  timerPillLabel: {
-    fontFamily: fontFamily.bodySemi,
+  sectionTitle: {
+    fontFamily: fontFamily.bodyBold,
     fontSize: 11,
+    letterSpacing: 2,
     color: colors.mu,
     textTransform: 'uppercase',
+    marginTop: 4,
   },
-  timerPillValue: {
-    fontFamily: fontFamily.display,
+  emptyItemsCard: {
+    backgroundColor: colors.white,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.br,
+    padding: 20,
+    alignItems: 'center',
+  },
+  emptyItemsText: {
+    fontFamily: fontFamily.body,
+    fontSize: 14,
+    color: colors.mu2,
+  },
+  itemsList: { gap: 10 },
+  itemCard: {
+    backgroundColor: colors.white,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.br,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    ...shadow.card,
+  },
+  itemColorDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  itemName: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 15,
+    color: colors.tx,
+  },
+  itemMeta: {
+    fontFamily: fontFamily.body,
+    fontSize: 12,
+    color: colors.mu,
+    marginTop: 2,
+  },
+  privateBadge: {
+    backgroundColor: colors.s2,
+    borderRadius: radii.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  privateBadgeText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 9,
+    letterSpacing: 1,
+    color: colors.mu,
+  },
+  itemPrice: {
+    fontFamily: fontFamily.bodyBold,
     fontSize: 14,
     color: colors.tx,
   },
-  savingsRow: {
-    flexDirection: 'row',
-    backgroundColor: colors.limeSoft,
-    borderRadius: radii.md,
+  neighborsCard: {
+    backgroundColor: colors.white,
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: colors.acc,
-    overflow: 'hidden',
+    borderColor: colors.br,
+    padding: 18,
+    gap: 12,
+    ...shadow.card,
   },
-  savingsCell: {
-    flex: 1,
+  neighborsCardRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 6,
-    gap: 3,
+    gap: 14,
   },
-  savingsCellLabel: {
-    fontFamily: fontFamily.bodySemi,
-    fontSize: 10,
-    color: colors.mu,
-    textAlign: 'center',
+  neighborAvatarRowSmall: { flexDirection: 'row', alignItems: 'center' },
+  neighborAvatarSm: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.white,
   },
-  savingsCellValue: {
-    fontFamily: fontFamily.display,
+  neighborAvatarSmText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 11,
+    color: colors.white,
+  },
+  neighborsCount: {
+    fontFamily: fontFamily.bodyBold,
     fontSize: 16,
     color: colors.tx,
-    textAlign: 'center',
   },
-  savingsDivider: {
-    width: 1,
-    backgroundColor: colors.br,
-    marginVertical: 8,
+  neighborsMeta: {
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    color: colors.mu,
+    marginTop: 2,
   },
-  heroSectionTitle: {
+  neighborsPrivacyNote: {
+    fontFamily: fontFamily.body,
+    fontSize: 12,
+    color: colors.mu2,
+    lineHeight: 18,
+  },
+  addItemToggle: {
+    backgroundColor: colors.accLight,
+    borderRadius: radii.pill,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  addItemToggleText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+    color: colors.acc,
+  },
+  addCard: {
+    backgroundColor: colors.white,
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: colors.br,
+    padding: 18,
+    gap: 12,
+    ...shadow.card,
+  },
+  addCardTitle: {
     fontFamily: fontFamily.display,
-    fontSize: 18,
+    fontSize: 20,
     color: colors.tx,
+    marginBottom: 4,
+  },
+  hintText: {
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    color: colors.mu,
+  },
+  errorText: {
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 13,
+    color: colors.err,
+  },
+  detectedCard: {
+    backgroundColor: colors.accLight,
+    borderRadius: 16,
+    padding: 12,
+    gap: 4,
+  },
+  detectedStore: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 11,
+    letterSpacing: 1,
+    color: colors.acc,
+    textTransform: 'uppercase',
+  },
+  detectedTitle: {
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 14,
+    color: colors.tx,
+  },
+  optionGroup: { gap: 8 },
+  optionLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 12,
+    color: colors.mu,
+    letterSpacing: 0.6,
+  },
+  optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  optionChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.br,
+    backgroundColor: colors.s1,
+  },
+  optionChipActive: { backgroundColor: colors.tx, borderColor: colors.tx },
+  optionChipText: { fontFamily: fontFamily.bodySemi, fontSize: 13, color: colors.mu },
+  optionChipTextActive: { color: colors.white },
+  addBtn: {
+    backgroundColor: colors.acc,
+    borderRadius: radii.pill,
+    paddingVertical: 16,
+    alignItems: 'center',
     marginTop: 4,
+    ...shadow.cta,
+  },
+  addBtnDisabled: { backgroundColor: colors.br },
+  addBtnText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 15,
+    color: colors.white,
+    letterSpacing: 0.4,
+  },
+  inviteCard: {
+    backgroundColor: colors.white,
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: colors.br,
+    padding: 18,
+    gap: 14,
+    ...shadow.card,
+  },
+  inviteCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  qrPlaceholder: {
+    width: 72,
+    height: 72,
+    borderRadius: 16,
+    backgroundColor: colors.s1,
+    borderWidth: 1,
+    borderColor: colors.br,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inviteTitle: {
+    fontFamily: fontFamily.display,
+    fontSize: 20,
+    color: colors.tx,
+  },
+  inviteBody: {
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    color: colors.mu,
+    marginTop: 4,
+    lineHeight: 19,
+  },
+  waBtn: {
+    backgroundColor: '#25D366',
+    borderRadius: radii.pill,
+    paddingVertical: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    ...shadow.cta,
+  },
+  waBtnText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 15,
+    color: colors.white,
+    letterSpacing: 0.4,
+  },
+  closeBtn: {
+    borderWidth: 1,
+    borderColor: colors.br,
+    borderRadius: radii.pill,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  closeBtnText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+    color: colors.mu,
+  },
+  checkoutBtn: {
+    backgroundColor: colors.navy,
+    borderRadius: radii.pill,
+    paddingVertical: 16,
+    alignItems: 'center',
+    ...shadow.cta,
+  },
+  checkoutBtnText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 15,
+    color: colors.white,
+    letterSpacing: 0.4,
+  },
+  errorTitle: {
+    fontFamily: fontFamily.display,
+    fontSize: 20,
+    color: colors.tx,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  errorBtn: {
+    backgroundColor: colors.acc,
+    borderRadius: radii.pill,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+  },
+  errorBtnText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+    color: colors.white,
   },
   cartCard: {
     backgroundColor: colors.white,
-    borderRadius: radii.lg,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.br,
-    overflow: 'hidden',
-    paddingHorizontal: 16,
-    paddingTop: 4,
-  },
-  cartItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.br,
+    padding: 16,
+    gap: 0,
   },
   cartTotalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 14,
+    paddingTop: 12,
+    marginTop: 8,
     borderTopWidth: 1,
-    borderTopColor: colors.brBr,
+    borderTopColor: colors.br,
   },
   cartTotalLabel: {
     fontFamily: fontFamily.bodyBold,
@@ -1136,8 +886,8 @@ const styles = StyleSheet.create({
     color: colors.tx,
   },
   cartTotalValue: {
-    fontFamily: fontFamily.display,
-    fontSize: 18,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
     color: colors.tx,
   },
 });
