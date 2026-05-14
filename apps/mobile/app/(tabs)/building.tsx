@@ -179,7 +179,6 @@ export default function BuildingTab() {
   const { data: profile } = useProfile(user?.id);
   const { data: orders = [] } = useUserOrders(user?.id);
 
-  const first = profile?.first_name ?? '';
   const completedOrders = orders.filter((order) => order.status === 'completed').length;
   const openOrders = orders.filter((order) => !['completed', 'cancelled'].includes(order.status));
   const topOrders = orders.slice(0, 3);

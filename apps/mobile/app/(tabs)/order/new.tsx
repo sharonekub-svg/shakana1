@@ -17,9 +17,9 @@ import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { useCreateOrder } from '@/api/orders';
 import { useGenerateInvite } from '@/api/invites';
-import { useUpsertProfile } from '@/api/profile';
 import { useAuthStore } from '@/stores/authStore';
 import { useLocale } from '@/i18n/locale';
+import { track } from '@/lib/posthog';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TIMER_ITEM_WIDTH = 88;
@@ -36,9 +36,6 @@ const STORES: StoreInfo[] = [
   { id: 'superpharm', name: 'Super-Pharm', logo: 'SP', subtitle: 'Pharmacy & beauty',         active: false },
   { id: 'ikea',       name: 'IKEA',        logo: 'I',  subtitle: 'Home & furniture',          active: false },
 ];
-
-// Steps: 1=name  2=store  3=timer  4=draft  5=launched
-const TOTAL_STEPS = 3;
 
 function ProgressDots({ current }: { current: number }) {
   return (
@@ -85,7 +82,6 @@ export default function NewOrder() {
   const { language } = useLocale();
   const profile = useAuthStore((st) => st.profile);
   const user = useAuthStore((st) => st.user);
-  const setProfile = useAuthStore((st) => st.setProfile);
 
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
 
@@ -111,7 +107,6 @@ export default function NewOrder() {
 
   const createOrder    = useCreateOrder();
   const generateInvite = useGenerateInvite();
-  const upsertProfile  = useUpsertProfile(); // kept for future profile steps
 
   const isHe = language === 'he';
   const storeInfo   = STORES.find((st) => st.id === selectedStore);
@@ -168,6 +163,7 @@ export default function NewOrder() {
     if (!orderId) return;
     setLaunching(true);
     try {
+      track('order_launched', { orderId, storeKey: selectedStore, timerHours });
       setStep(5);
     } finally {
       setLaunching(false);
@@ -432,11 +428,21 @@ export default function NewOrder() {
     <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
       <ScrollView style={s.scroll} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
 
+        <View style={s.stepNav}>
+          <View style={s.navBack} />
+          <View style={s.liveBadge}>
+            <Text style={s.liveBadgeTx}>{isHe ? '🟢 פעיל' : '🟢 LIVE'}</Text>
+          </View>
+          <Pressable onPress={() => router.replace('/(tabs)/building')} style={s.navBack} accessibilityRole="button">
+            <Text style={s.navHomeIcon}>⌂</Text>
+          </Pressable>
+        </View>
+
         <View style={s.liveCard}>
           <Text style={s.liveEmoji}>🎉</Text>
           <Text style={s.liveTitle}>{isHe ? 'ההזמנה פעילה!' : 'Order is live!'}</Text>
           <Text style={s.liveSub}>
-            {storeName} · {isHe ? `נסגר בעוד ${timerHours} שעות` : `Closes in ${timerHours} hours`}
+            {storeName} · {isHe ? `נסגר בעוד ${timerHours ?? '?'} שעות` : `Closes in ${timerHours ?? '?'} hours`}
           </Text>
           <View style={s.liveLockBadge}>
             <Text style={s.liveLockTx}>🔒 {isHe ? 'נעול — לא ניתן לשנות' : 'Locked — nothing can be changed'}</Text>
@@ -585,4 +591,8 @@ const s = StyleSheet.create({
 
   doneLink:   { alignItems: 'center', paddingVertical: 14 },
   doneLinkTx: { fontFamily: fontFamily.bodyBold, fontSize: 14, color: colors.acc },
+
+  liveBadge:   { backgroundColor: colors.accLight, borderRadius: radii.pill, paddingHorizontal: 14, paddingVertical: 6, borderWidth: 1, borderColor: colors.acc },
+  liveBadgeTx: { fontFamily: fontFamily.bodyBold, fontSize: 10, letterSpacing: 1.8, color: colors.acc, textTransform: 'uppercase' },
+  navHomeIcon: { fontSize: 22, color: colors.tx, textAlign: 'center' },
 });
