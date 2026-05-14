@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as Clipboard from 'expo-clipboard';
-import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Dimensions, ImageBackground, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { BrandPill, demoStyles } from '@/components/demo/DemoPrimitives';
@@ -18,10 +18,11 @@ import { useLocale } from '@/i18n/locale';
 import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const BRAND_ORDER: DemoBrandId[] = ['amazon', 'zara', 'hm'];
-const TIMER_VALUES = Array.from({ length: 60 }, (_, index) => index + 1);
-type TimerUnit = 'minutes' | 'hours' | 'days';
-const TIMER_UNITS: TimerUnit[] = ['minutes', 'hours', 'days'];
+const TIMER_PRESETS = [6, 12, 24, 48, 72] as const;
+const TIMER_CHIP_W = 72;
+const TIMER_SLOT = TIMER_CHIP_W + 8;
 
 const FALLBACK_ADDRESSES = [
   'Herzl 12, Petah Tikva',
@@ -35,19 +36,12 @@ const FALLBACK_ADDRESSES = [
   'HaNassi 45, Haifa',
 ];
 
-type StepKey = 'address' | 'store' | 'name' | 'copy';
-
-const STEP_KEYS: StepKey[] = ['address', 'store', 'name', 'copy'];
-
-function normalizeTimerMinutes(value: number, unit: TimerUnit) {
-  const multiplier = unit === 'days' ? 24 * 60 : unit === 'hours' ? 60 : 1;
-  const parsed = value * multiplier;
-  if (!Number.isFinite(parsed)) return null;
-  return Math.max(1, Math.min(60 * 24 * 7, Math.round(parsed)));
-}
+type StepKey = 'address' | 'store' | 'name' | 'draft' | 'launched';
+const STEP_KEYS: StepKey[] = ['address', 'store', 'name', 'draft', 'launched'];
+const QUESTION_STEPS: StepKey[] = ['address', 'store', 'name'];
 
 function hasAddressNumber(value: string) {
-  return /\d+[\u0590-\u05FFA-Za-z]?/.test(value);
+  return /\d+[֐-׿A-Za-z]?/.test(value);
 }
 
 function isCompleteDeliveryAddress(value: string) {
@@ -58,17 +52,9 @@ function isCompleteDeliveryAddress(value: string) {
 function splitAddressQuery(value: string) {
   const parts = value.split(',').map((part) => part.trim()).filter(Boolean);
   if (parts.length >= 2) {
-    return {
-      street: parts.slice(0, -1).join(', '),
-      city: parts[parts.length - 1] ?? '',
-      hasCityPart: true,
-    };
+    return { street: parts.slice(0, -1).join(', '), city: parts[parts.length - 1] ?? '', hasCityPart: true };
   }
-  return {
-    street: value.trim(),
-    city: value.trim(),
-    hasCityPart: false,
-  };
+  return { street: value.trim(), city: value.trim(), hasCityPart: false };
 }
 
 function unique(values: string[]) {
@@ -87,20 +73,19 @@ function fallbackAddressSuggestions(value: string) {
   return FALLBACK_ADDRESSES.filter((address) => address.toLowerCase().includes(query)).slice(0, 5);
 }
 
-function buildInviteMessage(name: string, order: DemoOrder, language: 'he' | 'en') {
-  const storeName = demoStores[order.brand].name;
-  const link = buildSharedDemoInviteLink(order);
-  if (language === 'he') {
-    return `${name} פותח הזמנה משותפת מ-${storeName}. מצטרפים לפני שהטיימר נסגר, מוסיפים רק מוצרים מ-${storeName}, וחוסכים במשלוח. קישור: ${link} קוד: ${order.inviteCode}`;
+function buildInviteMessage(orderName: string, storeName: string, timerHours: number, link: string, inviteCode: string, isHe: boolean) {
+  if (isHe) {
+    return `"${orderName}" — הזמנה קבוצתית מ-${storeName} ב-Shakana. יש לך ${timerHours} שעות להצטרף וביחד חוסכים במשלוח! ${link} קוד: ${inviteCode}`;
   }
-  return `${name} is opening a shared ${storeName} order. Join before the timer closes, add only ${storeName} items, and save on delivery. Link: ${link} Code: ${order.inviteCode}`;
+  return `"${orderName}" — group order from ${storeName} on Shakana. You have ${timerHours}h to join and split shipping! ${link} Code: ${inviteCode}`;
 }
 
 export default function NewOrderScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ brand?: string }>();
   const { language } = useLocale();
-  const isHebrew = language === 'he';
+  const isHe = language === 'he';
+  const timerRef = useRef<ScrollView>(null);
 
   const session = useAuthStore((state) => state.session);
   const demoMode = useDemoCommerceStore((state) => state.demoMode);
@@ -113,426 +98,402 @@ export default function NewOrderScreen() {
 
   const initialBrand = params.brand === 'hm' || params.brand === 'zara' || params.brand === 'amazon' ? params.brand : null;
   const metadata = session?.user.user_metadata as Record<string, unknown> | undefined;
-  const defaultName =
+  const defaultLeaderName =
     (typeof metadata?.full_name === 'string' && metadata.full_name.trim()) ||
     (typeof metadata?.name === 'string' && metadata.name.trim()) ||
     'Sharone Kubovsky';
 
-
-  const copy = isHebrew
-    ? {
-        eyebrow: 'הזמנה חדשה',
-        title: 'פותחים סל משותף',
-        subtitle: 'מתחילים בכתובת, בוחרים חנות אחת, מוסיפים שם, ואז פותחים את הקטלוג הנעול.',
-        back: 'בית',
-        step: 'שלב',
-        next: 'המשך',
-        create: 'צור הזמנה ופתח קטלוג',
-        ready: 'הקטלוג מוכן',
-        openCart: 'פתח קטלוג',
-        addressTitle: 'כתובת למשלוח',
-        addressBody: 'כתבו רחוב, מספר בית ועיר. החנות לא תוכל לטפל בהזמנה בלי מספר בית.',
-        addressPlaceholder: 'לדוגמה: הרצל 12, פתח תקווה',
-        addressMissing: 'צריך רחוב, מספר בית ועיר.',
-        timer: 'טיימר',
-        timerBody: 'בחרו מספר בגלילה ואז דקות, שעות או ימים.',
-        storeTitle: 'בחרו חנות',
-        storeBody: 'אחרי פתיחת ההזמנה, החברים יוכלו להוסיף מוצרים רק מהחנות הזאת.',
-        nameTitle: 'שם מוביל ההזמנה',
-        nameBody: 'השם הזה יופיע בקישור הוואטסאפ ובצד החנות.',
-        namePlaceholder: 'השם שלך',
-        copyTitle: 'הכל מוכן לפתיחת הקטלוג',
-        copyBody: 'נפתח סל נעול לחנות אחת. עכשיו עוברים לקטלוג כדי להוסיף מוצרים.',
-        locked: 'קטלוג נעול לחנות אחת',
-        members: 'חברים מצטרפים דרך הקישור או הקוד',
-        code: 'קוד הצטרפות',
-        review: 'סיכום לפני פתיחה',
-        address: 'כתובת',
-        store: 'חנות',
-        name: 'שם',
-        copyStep: 'קטלוג',
-        minutes: 'דקות',
-        hours: 'שעות',
-        days: 'ימים',
-        skipped: 'אפשר להשלים אחר כך',
-      }
-    : {
-        eyebrow: 'New order',
-        title: 'Open a shared cart',
-        subtitle: 'Start with the address, choose one store, add your name, then open the locked catalog.',
-        back: 'Home',
-        step: 'Step',
-        next: 'Next',
-        create: 'Create order and open catalog',
-        ready: 'Catalog ready',
-        openCart: 'Open catalog',
-        addressTitle: 'Delivery address',
-        addressBody: 'Enter street, house number, and city. The store cannot process the order without the house number.',
-        addressPlaceholder: 'Example: Herzl 12, Petah Tikva',
-        addressMissing: 'Street, house number, and city are required.',
-        timer: 'Timer',
-        timerBody: 'Swipe to choose a number, then choose minutes, hours, or days.',
-        storeTitle: 'Choose store',
-        storeBody: 'After launch, friends can add products only from this locked store.',
-        nameTitle: 'Order lead name',
-        nameBody: 'This name appears in the WhatsApp invite and merchant dashboard.',
-        namePlaceholder: 'Your name',
-        copyTitle: 'Ready to open the catalog',
-        copyBody: 'A one-store shared cart is ready. Move into the catalog to add products.',
-        locked: 'Catalog locked to one store',
-        members: 'Friends join by link or code',
-        code: 'Join code',
-        review: 'Launch review',
-        address: 'Address',
-        store: 'Store',
-        name: 'Name',
-        copyStep: 'Catalog',
-        minutes: 'minutes',
-        hours: 'hours',
-        days: 'days',
-        skipped: 'Can be completed later',
-      };
-
   const [stepIndex, setStepIndex] = useState(0);
   const [address, setAddress] = useState('');
   const [brand, setBrand] = useState<DemoBrandId | null>(initialBrand);
-  const [leadName, setLeadName] = useState(defaultName);
-  const [timerValue, setTimerValue] = useState(45);
-  const [timerUnit, setTimerUnit] = useState<TimerUnit>('minutes');
+  const [orderName, setOrderName] = useState('');
+  const [timerHours, setTimerHours] = useState<number>(24);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  const currentStep = STEP_KEYS[stepIndex] ?? 'copy';
-  const safeTimer = normalizeTimerMinutes(timerValue, timerUnit) ?? 45;
+  const currentStep = STEP_KEYS[stepIndex] ?? 'launched';
   const selectedStore = brand ? demoStores[brand] : null;
+  const storeName = selectedStore?.name ?? demoStores.amazon.name;
+  const displayName = orderName.trim() || storeName;
   const createdOrder = createdOrderId ? orders.find((order) => order.id === createdOrderId) ?? null : null;
   const inviteLink = createdOrder ? buildSharedDemoInviteLink(createdOrder) : '';
   const completeAddress = isCompleteDeliveryAddress(address);
-  const cleanName = leadName.trim() || defaultName;
+  const nameValid = orderName.trim().length >= 2;
 
-  const stepLabels = useMemo(
-    () => ({
-      address: copy.address,
-      store: copy.store,
-      name: copy.name,
-      copy: copy.copyStep,
-    }),
-    [copy.address, copy.copyStep, copy.name, copy.store],
+  const stepLabels: Record<StepKey, string> = useMemo(
+    () => isHe
+      ? { address: 'כתובת', store: 'חנות', name: 'שם', draft: 'טיוטה', launched: 'פעיל' }
+      : { address: 'Address', store: 'Store', name: 'Name', draft: 'Draft', launched: 'Live' },
+    [isHe],
   );
 
-  useEffect(() => {
-    initDemoCommerceSync();
-    if (demoMode) setDemoRole('user');
-  }, [demoMode, setDemoRole]);
-
-  useEffect(() => {
-    if (initialBrand) setBrand(initialBrand);
-  }, [initialBrand]);
+  useEffect(() => { initDemoCommerceSync(); if (demoMode) setDemoRole('user'); }, [demoMode, setDemoRole]);
+  useEffect(() => { if (initialBrand) setBrand(initialBrand); }, [initialBrand]);
 
   useEffect(() => {
     const value = address.trim();
     const fallback = fallbackAddressSuggestions(value);
-    if (value.length < 2) {
-      setSuggestions([]);
-      return;
-    }
-
+    if (value.length < 2) { setSuggestions([]); return; }
     const controller = new AbortController();
     const timer = globalThis.setTimeout(() => {
       const query = splitAddressQuery(value);
       Promise.all([
         searchCities(query.city, language, controller.signal),
-        query.street.length >= 2
-          ? searchStreets(query.street, query.hasCityPart ? query.city : '', language, controller.signal)
-          : Promise.resolve([]),
-      ])
-        .then(([cities, streets]) => {
-          if (controller.signal.aborted) return;
-          const cityPool = cities.slice(0, 4);
-          const streetSuggestions = streets.flatMap((street) => {
-            if (street.includes(',')) return [street];
-            return cityPool.length > 0 ? cityPool.map((city) => `${street}, ${city}`) : [];
-          });
-          const citySuggestions = cityPool.map((city) =>
-            query.hasCityPart && query.street ? `${query.street}, ${city}` : city,
-          );
-          setSuggestions(unique([...streetSuggestions, ...citySuggestions, ...fallback]).slice(0, 6));
-        })
-        .catch(() => {
-          if (!controller.signal.aborted) setSuggestions(fallback);
+        query.street.length >= 2 ? searchStreets(query.street, query.hasCityPart ? query.city : '', language, controller.signal) : Promise.resolve([]),
+      ]).then(([cities, streets]) => {
+        if (controller.signal.aborted) return;
+        const cityPool = cities.slice(0, 4);
+        const streetSuggestions = streets.flatMap((street) => {
+          if (street.includes(',')) return [street];
+          return cityPool.length > 0 ? cityPool.map((city) => `${street}, ${city}`) : [];
         });
+        const citySuggestions = cityPool.map((city) =>
+          query.hasCityPart && query.street ? `${query.street}, ${city}` : city,
+        );
+        setSuggestions(unique([...streetSuggestions, ...citySuggestions, ...fallback]).slice(0, 6));
+      }).catch(() => { if (!controller.signal.aborted) setSuggestions(fallback); });
     }, 180);
-
-    return () => {
-      controller.abort();
-      globalThis.clearTimeout(timer);
-    };
+    return () => { controller.abort(); globalThis.clearTimeout(timer); };
   }, [address, language]);
 
-  const participant: DemoParticipant = useMemo(
-    () => ({
-      id: session?.user.id ?? 'user-a',
-      name: cleanName,
-      joinedAt: Date.now(),
-    }),
-    [cleanName, session?.user.id],
-  );
+  const participant: DemoParticipant = useMemo(() => ({
+    id: session?.user.id ?? 'user-a',
+    name: defaultLeaderName,
+    joinedAt: Date.now(),
+  }), [defaultLeaderName, session?.user.id]);
 
-  const createOrderIfNeeded = async () => {
-    let order = createdOrder;
-    if (!order) {
-      const nextBrand = brand ?? 'amazon';
-      const orderId = createNewOrder(nextBrand, participant, safeTimer);
-      updateDeliveryAddress(orderId, completeAddress ? address.trim() : copy.skipped);
-      selectBrand(nextBrand);
-      setActiveParticipant(participant.id);
-      setCreatedOrderId(orderId);
-      order = useDemoCommerceStore.getState().orders.find((candidate) => candidate.id === orderId) ?? null;
-    }
-    if (order) {
-      await Clipboard.setStringAsync(buildInviteMessage(cleanName, order, language));
-    }
+  const ensureOrderCreated = () => {
+    if (createdOrderId) return createdOrderId;
+    const nextBrand = brand ?? 'amazon';
+    const orderId = createNewOrder(nextBrand, participant, timerHours * 60);
+    updateDeliveryAddress(orderId, completeAddress ? address.trim() : '');
+    selectBrand(nextBrand);
+    setActiveParticipant(participant.id);
+    setCreatedOrderId(orderId);
+    return orderId;
+  };
+
+  const handleCopy = async () => {
+    if (!createdOrder) return;
+    const msg = buildInviteMessage(displayName, storeName, timerHours, inviteLink, createdOrder.inviteCode, isHe);
+    await Clipboard.setStringAsync(msg);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleWhatsApp = () => {
+    if (!createdOrder) return;
+    const msg = buildInviteMessage(displayName, storeName, timerHours, inviteLink, createdOrder.inviteCode, isHe);
+    Linking.openURL(`whatsapp://send?text=${encodeURIComponent(msg)}`).catch(() => {});
   };
 
   const currentStepValid =
     currentStep === 'address' ? completeAddress :
     currentStep === 'store'   ? brand !== null :
-    currentStep === 'name'    ? leadName.trim().length >= 2 :
+    currentStep === 'name'    ? nameValid :
     true;
 
-  const goNext = async () => {
+  const goNext = () => {
     if (!currentStepValid) return;
-    if (currentStep === 'copy') {
-      await createOrderIfNeeded();
-      openCatalog();
+    if (currentStep === 'name') {
+      ensureOrderCreated();
+      setStepIndex(STEP_KEYS.indexOf('draft'));
       return;
     }
-    setStepIndex((value) => Math.min(value + 1, STEP_KEYS.length - 1));
+    if (currentStep === 'draft') {
+      setStepIndex(STEP_KEYS.indexOf('launched'));
+      return;
+    }
+    if (currentStep === 'launched') {
+      if (brand) selectBrand(brand);
+      router.replace('/user');
+      return;
+    }
+    setStepIndex((v) => Math.min(v + 1, STEP_KEYS.length - 1));
   };
 
-  const openCatalog = () => {
-    if (brand) selectBrand(brand);
-    router.replace('/user');
+  const goBack = () => {
+    if (stepIndex > 0) setStepIndex((v) => v - 1);
+    else router.replace('/user');
   };
+
+  const questionStepIndex = QUESTION_STEPS.indexOf(currentStep as StepKey);
+  const isQuestionStep = questionStepIndex !== -1;
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <View style={styles.phoneFrame}>
+
+        {/* Top bar */}
         <View style={styles.topBar}>
-          <Pressable accessibilityRole="button" onPress={() => router.replace('/user')} style={({ pressed }) => [styles.iconButton, pressed && demoStyles.pressed]}>
+          <Pressable accessibilityRole="button" onPress={goBack} style={({ pressed }) => [styles.iconButton, pressed && demoStyles.pressed]}>
             <Text style={styles.iconText}>‹</Text>
           </Pressable>
           <View style={styles.brandMark}>
             <Text style={styles.brandText}>shakana</Text>
           </View>
-          <View style={styles.iconButton}>
-            <Text style={styles.iconText}>{stepIndex + 1}</Text>
+          {currentStep === 'launched' ? (
+            <View style={[styles.iconButton, styles.livePip]}>
+              <Text style={styles.livePipText}>🟢</Text>
+            </View>
+          ) : (
+            <View style={styles.iconButton}>
+              <Text style={styles.iconText}>{isQuestionStep ? questionStepIndex + 1 : ''}</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Step rail — only for question steps */}
+        {isQuestionStep ? (
+          <View style={styles.stepRail}>
+            {QUESTION_STEPS.map((key, index) => (
+              <Pressable
+                key={key}
+                accessibilityRole="button"
+                onPress={() => { if (index < questionStepIndex) setStepIndex(STEP_KEYS.indexOf(key)); }}
+                style={styles.stepItem}
+              >
+                <View style={[styles.stepDot, index <= questionStepIndex && styles.stepDotActive]}>
+                  <Text style={[styles.stepDotText, index <= questionStepIndex && styles.stepDotTextActive]}>{index + 1}</Text>
+                </View>
+                <Text style={[styles.stepLabel, index === questionStepIndex && styles.stepLabelActive]}>{stepLabels[key]}</Text>
+              </Pressable>
+            ))}
           </View>
-        </View>
+        ) : null}
 
-        <View style={styles.hero}>
-          <Text style={styles.eyebrow}>{copy.eyebrow}</Text>
-          <Text style={styles.title}>{copy.title}</Text>
-          <Text style={styles.subtitle}>{copy.subtitle}</Text>
-        </View>
-
-        <View style={styles.stepRail}>
-          {STEP_KEYS.map((key, index) => (
-            <Pressable
-              key={key}
-              accessibilityRole="button"
-              onPress={() => { if (index < stepIndex) setStepIndex(index); }}
-              style={styles.stepItem}
-            >
-              <View style={[styles.stepDot, index <= stepIndex && styles.stepDotActive]}>
-                <Text style={[styles.stepDotText, index <= stepIndex && styles.stepDotTextActive]}>{index + 1}</Text>
+        {/* ── STEP: ADDRESS ──────────────────────────────────────── */}
+        {currentStep === 'address' ? (
+          <View style={styles.card}>
+            <Text style={styles.cardKicker}>{isHe ? 'שלב 1 / 3' : 'Step 1 / 3'}</Text>
+            <Text style={styles.cardTitle}>{isHe ? 'כתובת משלוח' : 'Delivery address'}</Text>
+            <Text style={styles.cardBody}>{isHe ? 'רחוב, מספר בית ועיר. החנות צריכה מספר בית.' : 'Street, house number, and city. The store needs the house number.'}</Text>
+            <TextInput
+              value={address}
+              onChangeText={setAddress}
+              placeholder={isHe ? 'לדוגמה: הרצל 12, פתח תקווה' : 'Example: Herzl 12, Petah Tikva'}
+              placeholderTextColor={colors.mu2}
+              style={[styles.input, address.length > 0 && !completeAddress && styles.inputWarning]}
+              autoComplete="street-address"
+              autoCorrect={false}
+            />
+            {address.length > 0 && !completeAddress ? (
+              <Text style={styles.warning}>{isHe ? 'צריך רחוב, מספר בית ועיר.' : 'Street, house number, and city required.'}</Text>
+            ) : null}
+            {suggestions.length > 0 ? (
+              <View style={styles.suggestions}>
+                {suggestions.map((suggestion) => (
+                  <Pressable key={suggestion} accessibilityRole="button" onPress={() => setAddress(suggestion)}
+                    style={({ pressed }) => [styles.suggestionButton, pressed && demoStyles.pressed]}>
+                    <Text style={styles.suggestionText}>{suggestion}</Text>
+                  </Pressable>
+                ))}
               </View>
-              <Text style={[styles.stepLabel, index === stepIndex && styles.stepLabelActive]}>{stepLabels[key]}</Text>
-            </Pressable>
-          ))}
-        </View>
+            ) : null}
 
-        <View style={styles.card}>
-          <Text style={styles.cardKicker}>{`${copy.step} ${stepIndex + 1} / ${STEP_KEYS.length}`}</Text>
-
-          {currentStep === 'address' ? (
-            <View style={styles.stepPanel}>
-              <Text style={styles.cardTitle}>{copy.addressTitle}</Text>
-              <Text style={styles.cardBody}>{copy.addressBody}</Text>
-              <TextInput
-                value={address}
-                onChangeText={setAddress}
-                placeholder={copy.addressPlaceholder}
-                placeholderTextColor={colors.mu2}
-                style={[styles.input, address.length > 0 && !completeAddress && styles.inputWarning]}
-                autoComplete="street-address"
-                autoCorrect={false}
-              />
-              {address.length > 0 && !completeAddress ? <Text style={styles.warning}>{copy.addressMissing}</Text> : null}
-              {suggestions.length > 0 ? (
-                <View style={styles.suggestions}>
-                  {suggestions.map((suggestion) => (
-                    <Pressable
-                      key={suggestion}
-                      accessibilityRole="button"
-                      onPress={() => setAddress(suggestion)}
-                      style={({ pressed }) => [styles.suggestionButton, pressed && demoStyles.pressed]}
-                    >
-                      <Text style={styles.suggestionText}>{suggestion}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              ) : null}
-              <View style={styles.timerBox}>
-                <View>
-                  <Text style={styles.timerTitle}>{copy.timer}</Text>
-                  <Text style={styles.cardBody}>{copy.timerBody}</Text>
-                </View>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.timerScroller}>
-                  {TIMER_VALUES.map((value) => (
-                    <Pressable
-                      key={value}
-                      accessibilityRole="button"
-                      onPress={() => setTimerValue(value)}
-                      style={[styles.timerChip, timerValue === value && styles.timerChipActive]}
-                    >
-                      <Text style={[styles.timerChipText, timerValue === value && styles.timerChipTextActive]}>{value}</Text>
-                    </Pressable>
-                  ))}
+            {/* Timer inside address step */}
+            <View style={styles.timerBox}>
+              <Text style={styles.timerTitle}>{isHe ? 'כמה זמן?' : 'How long?'}</Text>
+              <Text style={styles.cardBody}>{isHe ? 'כמה זמן שכנים יוכלו להצטרף.' : 'How long neighbors can join.'}</Text>
+              <View style={styles.timerDisplay}>
+                <Text style={styles.timerNum}>{timerHours}</Text>
+                <Text style={styles.timerUnit}>{isHe ? 'שע׳' : 'HRS'}</Text>
+              </View>
+              <View style={styles.timerTrack}>
+                <ScrollView
+                  ref={timerRef}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  snapToInterval={TIMER_SLOT}
+                  decelerationRate="fast"
+                  contentContainerStyle={styles.timerRow}
+                  scrollEventThrottle={16}
+                  onScroll={(e) => {
+                    const idx = Math.round(e.nativeEvent.contentOffset.x / TIMER_SLOT);
+                    const h = TIMER_PRESETS[Math.max(0, Math.min(idx, TIMER_PRESETS.length - 1))];
+                    if (h !== timerHours) setTimerHours(h);
+                  }}
+                  onMomentumScrollEnd={(e) => {
+                    const idx = Math.round(e.nativeEvent.contentOffset.x / TIMER_SLOT);
+                    setTimerHours(TIMER_PRESETS[Math.max(0, Math.min(idx, TIMER_PRESETS.length - 1))]);
+                  }}
+                >
+                  <View style={{ width: (Math.min(SCREEN_WIDTH - 28, 460) - TIMER_SLOT) / 2 }} />
+                  {TIMER_PRESETS.map((h) => {
+                    const on = timerHours === h;
+                    return (
+                      <Pressable key={h} onPress={() => {
+                        setTimerHours(h);
+                        timerRef.current?.scrollTo({ x: TIMER_PRESETS.indexOf(h) * TIMER_SLOT, animated: true });
+                      }} style={[styles.timerChip, on && styles.timerChipActive]}>
+                        <Text style={[styles.timerChipText, on && styles.timerChipTextActive]}>{h}h</Text>
+                      </Pressable>
+                    );
+                  })}
+                  <View style={{ width: (Math.min(SCREEN_WIDTH - 28, 460) - TIMER_SLOT) / 2 }} />
                 </ScrollView>
-                <View style={styles.timerOptions}>
-                  {TIMER_UNITS.map((unit) => (
-                    <Pressable
-                      key={unit}
-                      accessibilityRole="button"
-                      onPress={() => setTimerUnit(unit)}
-                      style={[styles.timerUnitChip, timerUnit === unit && styles.timerChipActive]}
-                    >
-                      <Text style={[styles.timerChipText, timerUnit === unit && styles.timerChipTextActive]}>{copy[unit]}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-                <Text style={styles.timerSummary}>
-                  {timerUnit === 'minutes'
-                    ? `${timerValue} ${copy.minutes}`
-                    : timerUnit === 'hours'
-                      ? `${timerValue} ${copy.hours}`
-                      : `${timerValue} ${copy.days}`}
-                </Text>
               </View>
             </View>
-          ) : null}
+          </View>
+        ) : null}
 
-          {currentStep === 'store' ? (
-            <View style={styles.stepPanel}>
-              <Text style={styles.cardTitle}>{copy.storeTitle}</Text>
-              <Text style={styles.cardBody}>{copy.storeBody}</Text>
-              <View style={styles.storeList}>
-                {BRAND_ORDER.map((brandId) => {
-                  const store = demoStores[brandId];
-                  const active = brand === brandId;
-                  return (
-                    <Pressable
-                      key={brandId}
-                      accessibilityRole="button"
-                      onPress={() => setBrand(brandId)}
-                      style={({ pressed }) => [styles.storeCard, active && styles.storeCardActive, pressed && demoStyles.pressed]}
-                    >
-                      <ImageBackground source={{ uri: store.heroImage }} resizeMode="cover" style={styles.storeImage}>
-                        <BrandPill brand={brandId} />
-                      </ImageBackground>
-                      <View style={styles.storeCopy}>
-                        <Text style={styles.storeName}>{store.name}</Text>
-                        <Text style={styles.storeTagline}>{store.tagline}</Text>
-                      </View>
-                    </Pressable>
-                  );
-                })}
+        {/* ── STEP: STORE ────────────────────────────────────────── */}
+        {currentStep === 'store' ? (
+          <View style={styles.card}>
+            <Text style={styles.cardKicker}>{isHe ? 'שלב 2 / 3' : 'Step 2 / 3'}</Text>
+            <Text style={styles.cardTitle}>{isHe ? 'איזה חנות?' : 'Which store?'}</Text>
+            <Text style={styles.cardBody}>{isHe ? 'לא ניתן לשנות לאחר פתיחת ההזמנה.' : 'Cannot be changed after the order is created.'}</Text>
+            <View style={styles.storeList}>
+              {BRAND_ORDER.map((brandId) => {
+                const store = demoStores[brandId];
+                const active = brand === brandId;
+                return (
+                  <Pressable key={brandId} accessibilityRole="button" onPress={() => setBrand(brandId)}
+                    style={({ pressed }) => [styles.storeCard, active && styles.storeCardActive, pressed && demoStyles.pressed]}>
+                    <ImageBackground source={{ uri: store.heroImage }} resizeMode="cover" style={styles.storeImage}>
+                      <BrandPill brand={brandId} />
+                    </ImageBackground>
+                    <View style={styles.storeCopy}>
+                      <Text style={styles.storeName}>{store.name}</Text>
+                      <Text style={styles.storeTagline}>{store.tagline}</Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        ) : null}
+
+        {/* ── STEP: NAME (group order name) ─────────────────────── */}
+        {currentStep === 'name' ? (
+          <View style={styles.card}>
+            <Text style={styles.cardKicker}>{isHe ? 'שלב 3 / 3' : 'Step 3 / 3'}</Text>
+            <Text style={styles.cardTitle}>{isHe ? 'מה שם ההזמנה?' : 'Name your group order'}</Text>
+            <Text style={styles.cardBody}>{isHe ? 'השם יופיע בקישור ובהודעת ההזמנה לשכנים.' : 'This name appears in the invite link and WhatsApp message your neighbors receive.'}</Text>
+            <TextInput
+              value={orderName}
+              onChangeText={setOrderName}
+              placeholder={isHe ? 'למשל: זרא קומה 3, איקאה ביחד' : 'e.g. Floor 3 Zara Run, IKEA Together'}
+              placeholderTextColor={colors.mu2}
+              style={styles.input}
+            />
+            {orderName.trim().length > 0 ? (
+              <View style={styles.namePreview}>
+                <Text style={styles.namePreviewLabel}>{isHe ? 'תצוגה מקדימה:' : 'Preview:'}</Text>
+                <Text style={styles.namePreviewValue}>"{orderName.trim()}" · {storeName} · {timerHours}h</Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
+        {/* ── STEP: DRAFT ────────────────────────────────────────── */}
+        {currentStep === 'draft' ? (
+          <View style={styles.card}>
+            <View style={styles.draftHeader}>
+              <View style={styles.draftBadge}>
+                <Text style={styles.draftBadgeTx}>{isHe ? 'טיוטה · לא פעיל' : 'DRAFT · NOT LIVE'}</Text>
               </View>
             </View>
-          ) : null}
-
-          {currentStep === 'name' ? (
-            <View style={styles.stepPanel}>
-              <Text style={styles.cardTitle}>{copy.nameTitle}</Text>
-              <Text style={styles.cardBody}>{copy.nameBody}</Text>
-              <TextInput
-                value={leadName}
-                onChangeText={setLeadName}
-                placeholder={copy.namePlaceholder}
-                placeholderTextColor={colors.mu2}
-                style={styles.input}
-                autoComplete="name"
-              />
-              <View style={styles.identityCard}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{cleanName.slice(0, 2).toUpperCase()}</Text>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryLabel}>{isHe ? 'סיכום הזמנה' : 'ORDER SUMMARY'}</Text>
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryItemLabel}>{isHe ? 'שם' : 'NAME'}</Text>
+                  <Text style={styles.summaryItemValue} numberOfLines={1}>{displayName}</Text>
                 </View>
-                <View>
-                  <Text style={styles.identityName}>{cleanName}</Text>
-                  <Text style={styles.cardBody}>{copy.members}</Text>
+                <View style={styles.summaryDivider} />
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryItemLabel}>{isHe ? 'חנות' : 'STORE'}</Text>
+                  <Text style={styles.summaryItemValue}>{storeName}</Text>
+                </View>
+                <View style={styles.summaryDivider} />
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryItemLabel}>{isHe ? 'טיימר' : 'TIMER'}</Text>
+                  <Text style={styles.summaryItemValue}>{timerHours}h</Text>
                 </View>
               </View>
             </View>
-          ) : null}
+            {createdOrder ? (
+              <View style={styles.inviteBox}>
+                <Text style={styles.inviteLabel}>{isHe ? 'קישור טיוטה — שתף לפני השקה' : 'DRAFT LINK — SHARE BEFORE LAUNCH'}</Text>
+                <Text style={styles.inviteLinkText} numberOfLines={1}>{inviteLink}</Text>
+                <Text style={styles.inviteNote}>{isHe ? 'שכנים יוכלו לראות את הטיוטה אך ההזמנה תהיה פעילה רק אחרי השקה.' : 'Neighbors can preview the draft. Goes live only when you tap Launch.'}</Text>
+              </View>
+            ) : null}
+            <View style={styles.draftShareRow}>
+              <Pressable onPress={handleWhatsApp} disabled={!createdOrder}
+                style={[styles.outlineBtn, !createdOrder && { opacity: 0.35 }]}>
+                <Text style={styles.outlineBtnTx}>💬 {isHe ? 'שתף טיוטה' : 'Share Draft'}</Text>
+              </Pressable>
+              <Pressable onPress={handleCopy} disabled={!createdOrder}
+                style={[styles.outlineBtn, !createdOrder && { opacity: 0.35 }]}>
+                <Text style={styles.outlineBtnTx}>{copied ? '✓' : (isHe ? 'העתק' : 'Copy')}</Text>
+              </Pressable>
+            </View>
+            <View style={styles.lockNote}>
+              <Text style={styles.lockNoteIcon}>🔒</Text>
+              <Text style={styles.lockNoteTx}>{isHe ? 'לאחר ההשקה הטיימר מתחיל ולא ניתן לשנות חנות, זמן או פרטים.' : 'After launch the timer starts. Store, timer, and details are locked.'}</Text>
+            </View>
+          </View>
+        ) : null}
 
-          {currentStep === 'copy' ? (
-            <View style={styles.stepPanel}>
-              <Text style={styles.cardTitle}>{copy.copyTitle}</Text>
-              <Text style={styles.cardBody}>{copy.copyBody}</Text>
-              <View style={styles.reviewCard}>
-                <Text style={styles.reviewTitle}>{copy.review}</Text>
-                <View style={styles.reviewLine}>
-                  <Text style={styles.reviewLabel}>{copy.address}</Text>
-                  <Text style={styles.reviewValue}>{completeAddress ? address.trim() : copy.skipped}</Text>
-                </View>
-                <View style={styles.reviewLine}>
-                  <Text style={styles.reviewLabel}>{copy.store}</Text>
-                  <Text style={styles.reviewValue}>{selectedStore?.name ?? demoStores.amazon.name}</Text>
-                </View>
-                <View style={styles.reviewLine}>
-                  <Text style={styles.reviewLabel}>{copy.name}</Text>
-                  <Text style={styles.reviewValue}>{cleanName}</Text>
-                </View>
-                <View style={styles.reviewLine}>
-                  <Text style={styles.reviewLabel}>{copy.timer}</Text>
-                  <Text style={styles.reviewValue}>{`${safeTimer} ${copy.minutes}`}</Text>
+        {/* ── STEP: LAUNCHED ─────────────────────────────────────── */}
+        {currentStep === 'launched' ? (
+          <View style={styles.card}>
+            <View style={styles.liveCard}>
+              <Text style={styles.liveEmoji}>🎉</Text>
+              <Text style={styles.liveTitle}>{isHe ? 'ההזמנה פעילה!' : 'Order is live!'}</Text>
+              <Text style={styles.liveSub}>{storeName} · {isHe ? `נסגר בעוד ${timerHours} שעות` : `Closes in ${timerHours} hours`}</Text>
+              <View style={styles.liveLockBadge}>
+                <Text style={styles.liveLockTx}>🔒 {isHe ? 'נעול — לא ניתן לשנות' : 'Locked — nothing can be changed'}</Text>
+              </View>
+            </View>
+            {createdOrder ? (
+              <View style={styles.inviteBox}>
+                <Text style={styles.inviteLabel}>{isHe ? 'העתק הודעה + קישור' : 'COPY MESSAGE + LINK'}</Text>
+                <View style={styles.inviteRow}>
+                  <Text style={styles.inviteLinkText} numberOfLines={1}>{inviteLink}</Text>
+                  <Pressable onPress={handleCopy} style={styles.copyBtn}>
+                    <Text style={styles.copyBtnTx}>{copied ? '✓' : (isHe ? 'העתק' : 'Copy')}</Text>
+                  </Pressable>
                 </View>
               </View>
-              {createdOrder ? (
-                <View style={styles.inviteBox}>
-                  <Text style={styles.codeLabel}>{copy.code}</Text>
-                  <Text style={styles.codeValue}>{createdOrder.inviteCode}</Text>
-                  <Text style={styles.inviteLink} numberOfLines={1}>{inviteLink}</Text>
-                </View>
-              ) : null}
-            </View>
-          ) : null}
-        </View>
+            ) : null}
+          </View>
+        ) : null}
 
+        {/* Footer */}
         <View style={styles.footer}>
-          <Pressable
-            accessibilityRole="button"
-            onPress={goNext}
-            disabled={!currentStepValid}
-            style={({ pressed }) => [styles.primaryButton, !currentStepValid && styles.primaryButtonOff, pressed && currentStepValid && demoStyles.pressed]}
-          >
-            <Text style={styles.primaryButtonText}>{currentStep === 'copy' ? copy.create : copy.next}</Text>
-          </Pressable>
+          {currentStep === 'launched' ? (
+            <Pressable accessibilityRole="button" onPress={handleWhatsApp}
+              style={({ pressed }) => [styles.primaryButton, styles.primaryButtonDark, pressed && demoStyles.pressed]}>
+              <Text style={styles.primaryButtonText}>💬 {isHe ? 'שלח ב-WhatsApp' : 'Invite via WhatsApp'}</Text>
+            </Pressable>
+          ) : (
+            <Pressable accessibilityRole="button" onPress={goNext} disabled={!currentStepValid}
+              style={({ pressed }) => [styles.primaryButton, !currentStepValid && styles.primaryButtonOff, pressed && currentStepValid && demoStyles.pressed]}>
+              <Text style={styles.primaryButtonText}>
+                {currentStep === 'draft' ? (isHe ? '🚀 השק עכשיו' : '🚀 Launch Order') :
+                 currentStep === 'name' ? (isHe ? 'המשך לטיוטה ←' : 'Continue to Draft →') :
+                 (isHe ? 'המשך' : 'Next')}
+              </Text>
+            </Pressable>
+          )}
         </View>
-        {!currentStepValid && (
-          <Text style={styles.validationHint}>
-            {currentStep === 'address'
-              ? (isHebrew ? 'יש להזין כתובת מלאה עם מספר בית ועיר' : 'Enter a full address with street number and city')
-              : currentStep === 'store'
-              ? (isHebrew ? 'יש לבחור חנות' : 'Please choose a store')
-              : (isHebrew ? 'יש להזין שם' : 'Please enter your name')}
-          </Text>
-        )}
 
-        {createdOrder ? (
-          <Pressable accessibilityRole="button" onPress={openCatalog} style={({ pressed }) => [styles.catalogButton, pressed && demoStyles.pressed]}>
-            <Text style={styles.catalogButtonText}>{copy.openCart}</Text>
+        {!currentStepValid && currentStep !== 'draft' && currentStep !== 'launched' ? (
+          <Text style={styles.validationHint}>
+            {currentStep === 'address' ? (isHe ? 'יש להזין כתובת מלאה עם מספר בית ועיר' : 'Enter a full address with street number and city') :
+             currentStep === 'store'   ? (isHe ? 'יש לבחור חנות' : 'Please choose a store') :
+             (isHe ? 'יש להזין לפחות 2 תווים' : 'At least 2 characters required')}
+          </Text>
+        ) : null}
+
+        {currentStep === 'launched' ? (
+          <Pressable accessibilityRole="button" onPress={() => { if (brand) selectBrand(brand); router.replace('/user'); }}
+            style={styles.doneLink}>
+            <Text style={styles.doneLinkTx}>{isHe ? 'לדף הבית ←' : 'Go to home →'}</Text>
           </Pressable>
         ) : null}
       </View>
@@ -541,451 +502,104 @@ export default function NewOrderScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  content: {
-    minHeight: '100%',
-    alignItems: 'center',
-    padding: 14,
-    paddingBottom: 34,
-  },
-  phoneFrame: {
-    width: '100%',
-    maxWidth: 460,
-    gap: 16,
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 4,
-  },
-  iconButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.s1,
-    borderWidth: 1,
-    borderColor: colors.br,
-  },
-  iconText: {
-    color: colors.tx,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 18,
-  },
-  brandMark: {
-    minWidth: 116,
-    minHeight: 42,
-    borderRadius: 21,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.ink,
-  },
-  brandText: {
-    color: colors.white,
-    fontFamily: fontFamily.display,
-    fontSize: 19,
-    lineHeight: 22,
-  },
-  hero: {
-    gap: 8,
-    paddingHorizontal: 2,
-  },
-  eyebrow: {
-    color: colors.acc,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 11,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-  },
-  title: {
-    color: colors.tx,
-    fontFamily: fontFamily.display,
-    fontSize: 44,
-    lineHeight: 46,
-    letterSpacing: 0,
-  },
-  subtitle: {
-    color: colors.mu,
-    fontFamily: fontFamily.bodySemi,
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  stepRail: {
-    flexDirection: 'row',
-    gap: 8,
-    padding: 6,
-    borderRadius: radii.pill,
-    backgroundColor: colors.s2,
-  },
-  stepItem: {
-    flex: 1,
-    minHeight: 58,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  stepDot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.s1,
-    borderWidth: 1,
-    borderColor: colors.br,
-  },
-  stepDotActive: {
-    backgroundColor: colors.ink,
-    borderColor: colors.ink,
-  },
-  stepDotText: {
-    color: colors.mu,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 11,
-  },
-  stepDotTextActive: {
-    color: colors.white,
-  },
-  stepLabel: {
-    color: colors.mu,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 10,
-  },
-  stepLabelActive: {
-    color: colors.tx,
-  },
-  card: {
-    minHeight: 500,
-    borderRadius: 30,
-    padding: 18,
-    backgroundColor: colors.s1,
-    borderWidth: 1,
-    borderColor: colors.br,
-    ...shadow.card,
-  },
-  cardKicker: {
-    color: colors.acc,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 11,
-    letterSpacing: 1.1,
-    textTransform: 'uppercase',
-    marginBottom: 8,
-  },
-  stepPanel: {
-    gap: 14,
-  },
-  cardTitle: {
-    color: colors.tx,
-    fontFamily: fontFamily.display,
-    fontSize: 31,
-    lineHeight: 34,
-  },
-  cardBody: {
-    color: colors.mu,
-    fontFamily: fontFamily.bodySemi,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  input: {
-    minHeight: 54,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.brBr,
-    backgroundColor: colors.s2,
-    paddingHorizontal: 16,
-    color: colors.tx,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 15,
-  },
-  inputWarning: {
-    borderColor: colors.acc,
-    backgroundColor: colors.accLight,
-  },
-  warning: {
-    color: colors.acc,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 12,
-  },
-  suggestions: {
-    gap: 7,
-  },
-  suggestionButton: {
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: colors.br,
-    backgroundColor: colors.s2,
-  },
-  suggestionText: {
-    color: colors.tx,
-    fontFamily: fontFamily.bodySemi,
-    fontSize: 13,
-  },
-  timerBox: {
-    borderRadius: 22,
-    backgroundColor: colors.s2,
-    borderWidth: 1,
-    borderColor: colors.br,
-    padding: 12,
-    gap: 12,
-  },
-  timerTitle: {
-    color: colors.tx,
-    fontFamily: fontFamily.display,
-    fontSize: 22,
-  },
-  timerOptions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    alignItems: 'center',
-  },
-  timerScroller: {
-    gap: 8,
-    paddingRight: 6,
-  },
-  timerChip: {
-    width: 54,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.br,
-    backgroundColor: colors.s2,
-  },
-  timerChipActive: {
-    backgroundColor: colors.ink,
-    borderColor: colors.ink,
-  },
-  timerChipText: {
-    color: colors.tx,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 12,
-  },
-  timerChipTextActive: {
-    color: colors.white,
-  },
-  timerUnitChip: {
-    flex: 1,
-    minWidth: 86,
-    height: 42,
-    borderRadius: 21,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.br,
-    backgroundColor: colors.s2,
-  },
-  timerSummary: {
-    color: colors.tx,
-    fontFamily: fontFamily.display,
-    fontSize: 26,
-    lineHeight: 30,
-  },
-  timerInput: {
-    width: 68,
-    height: 38,
-    borderRadius: 19,
-    borderWidth: 1,
-    borderColor: colors.brBr,
-    backgroundColor: colors.s2,
-    color: colors.tx,
-    textAlign: 'center',
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 13,
-  },
-  storeList: {
-    gap: 10,
-  },
-  storeCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: colors.br,
-    backgroundColor: colors.s2,
-    padding: 8,
-  },
-  storeCardActive: {
-    borderWidth: 2,
-    borderColor: colors.ink,
-    backgroundColor: colors.s2,
-  },
-  storeImage: {
-    width: 94,
-    height: 78,
-    borderRadius: 17,
-    overflow: 'hidden',
-    alignItems: 'flex-end',
-    justifyContent: 'flex-start',
-    padding: 8,
-  },
-  storeCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  storeName: {
-    color: colors.tx,
-    fontFamily: fontFamily.display,
-    fontSize: 26,
-  },
-  storeTagline: {
-    color: colors.mu,
-    fontFamily: fontFamily.bodySemi,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  identityCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 13,
-    borderRadius: 22,
-    padding: 12,
-    backgroundColor: colors.s2,
-    borderWidth: 1,
-    borderColor: colors.br,
-  },
-  avatar: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.s3,
-  },
-  avatarText: {
-    color: colors.tx,
-    fontFamily: fontFamily.display,
-    fontSize: 20,
-  },
-  identityName: {
-    color: colors.tx,
-    fontFamily: fontFamily.display,
-    fontSize: 24,
-  },
-  reviewCard: {
-    borderRadius: 22,
-    backgroundColor: colors.s2,
-    borderWidth: 1,
-    borderColor: colors.br,
-    padding: 14,
-    gap: 10,
-  },
-  reviewTitle: {
-    color: colors.tx,
-    fontFamily: fontFamily.display,
-    fontSize: 23,
-  },
-  reviewLine: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.br,
-    paddingTop: 9,
-  },
-  reviewLabel: {
-    color: colors.mu,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 12,
-  },
-  reviewValue: {
-    flex: 1,
-    color: colors.tx,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 12,
-    textAlign: 'right',
-  },
-  inviteBox: {
-    borderRadius: 22,
-    padding: 14,
-    backgroundColor: colors.ink,
-    gap: 6,
-  },
-  codeLabel: {
-    color: colors.mu2,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 11,
-    textTransform: 'uppercase',
-    letterSpacing: 1.1,
-  },
-  codeValue: {
-    color: colors.white,
-    fontFamily: fontFamily.display,
-    fontSize: 42,
-    lineHeight: 44,
-  },
-  inviteLink: {
-    color: colors.s3,
-    fontFamily: fontFamily.bodySemi,
-    fontSize: 12,
-  },
-  footer: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  secondaryButton: {
-    flex: 0.42,
-    minHeight: 58,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.s1,
-    borderWidth: 1,
-    borderColor: colors.br,
-  },
-  secondaryButtonText: {
-    color: colors.tx,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 14,
-  },
-  primaryButton: {
-    flex: 1,
-    minHeight: 58,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.acc,
-    borderWidth: 1,
-    borderColor: colors.acc,
-    ...shadow.cta,
-  },
-  primaryButtonText: {
-    color: colors.white,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  catalogButton: {
-    minHeight: 56,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.ink,
-    borderWidth: 1,
-    borderColor: colors.ink,
-  },
-  catalogButtonText: {
-    color: colors.white,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 15,
-  },
-  primaryButtonOff: {
-    opacity: 0.35,
-  },
-  validationHint: {
-    textAlign: 'center',
-    color: colors.mu,
-    fontFamily: fontFamily.body,
-    fontSize: 13,
-    marginTop: -8,
-  },
+  screen:  { flex: 1, backgroundColor: colors.bg },
+  content: { minHeight: '100%', alignItems: 'center', padding: 14, paddingBottom: 34 },
+  phoneFrame: { width: '100%', maxWidth: 460, gap: 16 },
+
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4 },
+  iconButton: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.br },
+  iconText: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 18 },
+  livePip: { backgroundColor: colors.accLight, borderColor: colors.acc },
+  livePipText: { fontSize: 16 },
+  brandMark: { minWidth: 116, minHeight: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.ink },
+  brandText: { color: colors.white, fontFamily: fontFamily.display, fontSize: 19, lineHeight: 22 },
+
+  stepRail: { flexDirection: 'row', gap: 8, padding: 6, borderRadius: radii.pill, backgroundColor: colors.s2 },
+  stepItem: { flex: 1, minHeight: 58, alignItems: 'center', justifyContent: 'center', gap: 4 },
+  stepDot: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.br },
+  stepDotActive: { backgroundColor: colors.ink, borderColor: colors.ink },
+  stepDotText: { color: colors.mu, fontFamily: fontFamily.bodyBold, fontSize: 11 },
+  stepDotTextActive: { color: colors.white },
+  stepLabel: { color: colors.mu, fontFamily: fontFamily.bodyBold, fontSize: 10 },
+  stepLabelActive: { color: colors.tx },
+
+  card: { borderRadius: 30, padding: 18, backgroundColor: colors.s1, borderWidth: 1, borderColor: colors.br, gap: 14, ...shadow.card },
+  cardKicker: { color: colors.acc, fontFamily: fontFamily.bodyBold, fontSize: 11, letterSpacing: 1.1, textTransform: 'uppercase' },
+  cardTitle: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 31, lineHeight: 34 },
+  cardBody: { color: colors.mu, fontFamily: fontFamily.bodySemi, fontSize: 13, lineHeight: 19 },
+
+  input: { minHeight: 54, borderRadius: 18, borderWidth: 1, borderColor: colors.brBr, backgroundColor: colors.s2, paddingHorizontal: 16, color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 15 },
+  inputWarning: { borderColor: colors.acc, backgroundColor: colors.accLight },
+  warning: { color: colors.acc, fontFamily: fontFamily.bodyBold, fontSize: 12 },
+  suggestions: { gap: 7 },
+  suggestionButton: { borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: colors.br, backgroundColor: colors.s2 },
+  suggestionText: { color: colors.tx, fontFamily: fontFamily.bodySemi, fontSize: 13 },
+
+  timerBox: { borderRadius: 22, backgroundColor: colors.s2, borderWidth: 1, borderColor: colors.br, padding: 12, gap: 10 },
+  timerTitle: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 22 },
+  timerDisplay: { flexDirection: 'row', alignItems: 'flex-end', gap: 4 },
+  timerNum: { fontFamily: fontFamily.display, fontSize: 56, color: colors.tx, lineHeight: 60 },
+  timerUnit: { fontFamily: fontFamily.bodyBold, fontSize: 12, color: colors.mu, letterSpacing: 1, paddingBottom: 8 },
+  timerTrack: { position: 'relative' },
+  timerRow: { alignItems: 'center' },
+  timerChip: { width: TIMER_CHIP_W, height: 48, borderRadius: radii.xl, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: colors.br, backgroundColor: colors.s1, marginHorizontal: 4 },
+  timerChipActive: { borderColor: colors.acc, backgroundColor: colors.accLight },
+  timerChipText: { fontFamily: fontFamily.display, fontSize: 18, color: colors.mu },
+  timerChipTextActive: { color: colors.acc },
+
+  storeList: { gap: 10 },
+  storeCard: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 22, borderWidth: 1, borderColor: colors.br, backgroundColor: colors.s2, padding: 8 },
+  storeCardActive: { borderWidth: 2, borderColor: colors.ink, backgroundColor: colors.s2 },
+  storeImage: { width: 94, height: 78, borderRadius: 17, overflow: 'hidden', alignItems: 'flex-end', justifyContent: 'flex-start', padding: 8 },
+  storeCopy: { flex: 1, minWidth: 0 },
+  storeName: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 26 },
+  storeTagline: { color: colors.mu, fontFamily: fontFamily.bodySemi, fontSize: 12, lineHeight: 17 },
+
+  namePreview: { backgroundColor: colors.accLight, borderRadius: 16, padding: 12, borderWidth: 1, borderColor: colors.acc, gap: 4 },
+  namePreviewLabel: { fontFamily: fontFamily.bodyBold, fontSize: 10, letterSpacing: 1.4, color: colors.acc, textTransform: 'uppercase' },
+  namePreviewValue: { fontFamily: fontFamily.bodyBold, fontSize: 13, color: colors.tx },
+
+  draftHeader: { alignItems: 'flex-start' },
+  draftBadge: { backgroundColor: colors.s2, borderRadius: radii.pill, paddingHorizontal: 14, paddingVertical: 6, borderWidth: 1, borderColor: colors.br },
+  draftBadgeTx: { fontFamily: fontFamily.bodyBold, fontSize: 10, letterSpacing: 1.8, color: colors.mu, textTransform: 'uppercase' },
+
+  summaryCard: { backgroundColor: colors.ink, borderRadius: radii.xl, padding: 16, gap: 12, ...shadow.cta },
+  summaryLabel: { fontFamily: fontFamily.bodyBold, fontSize: 10, letterSpacing: 2, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase' },
+  summaryRow: { flexDirection: 'row', alignItems: 'center' },
+  summaryItem: { flex: 1, alignItems: 'center', gap: 4 },
+  summaryItemLabel: { fontFamily: fontFamily.bodyBold, fontSize: 10, letterSpacing: 1.4, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase' },
+  summaryItemValue: { fontFamily: fontFamily.display, fontSize: 15, color: colors.white, lineHeight: 20 },
+  summaryDivider: { width: 1, height: 36, backgroundColor: 'rgba(255,255,255,0.12)' },
+
+  inviteBox: { borderRadius: 18, backgroundColor: colors.s2, borderWidth: 1, borderColor: colors.br, padding: 14, gap: 8 },
+  inviteLabel: { fontFamily: fontFamily.bodyBold, fontSize: 10, letterSpacing: 1.8, color: colors.mu, textTransform: 'uppercase' },
+  inviteLinkText: { fontFamily: fontFamily.bodyBold, fontSize: 13, color: colors.tx, letterSpacing: 0.3 },
+  inviteNote: { fontFamily: fontFamily.body, fontSize: 12, color: colors.mu, lineHeight: 17 },
+  inviteRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  copyBtn: { backgroundColor: colors.accLight, borderRadius: radii.pill, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: colors.acc },
+  copyBtnTx: { fontFamily: fontFamily.bodyBold, fontSize: 12, color: colors.acc },
+
+  draftShareRow: { flexDirection: 'row', gap: 10 },
+  outlineBtn: { flex: 1, minHeight: 48, borderRadius: radii.pill, borderWidth: 1.5, borderColor: colors.acc, alignItems: 'center', justifyContent: 'center' },
+  outlineBtnTx: { fontFamily: fontFamily.bodyBold, fontSize: 13, color: colors.acc },
+
+  lockNote: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  lockNoteIcon: { fontSize: 14, lineHeight: 20 },
+  lockNoteTx: { flex: 1, fontFamily: fontFamily.body, fontSize: 13, color: colors.mu, lineHeight: 19 },
+
+  liveCard: { alignItems: 'center', gap: 10, paddingVertical: 16 },
+  liveEmoji: { fontSize: 52, lineHeight: 60 },
+  liveTitle: { fontFamily: fontFamily.display, fontSize: 32, color: colors.tx, textAlign: 'center', lineHeight: 36 },
+  liveSub: { fontFamily: fontFamily.body, fontSize: 14, color: colors.mu, textAlign: 'center' },
+  liveLockBadge: { backgroundColor: colors.s2, borderRadius: radii.pill, paddingHorizontal: 14, paddingVertical: 7, borderWidth: 1, borderColor: colors.br, marginTop: 4 },
+  liveLockTx: { fontFamily: fontFamily.bodyBold, fontSize: 12, color: colors.mu },
+
+  footer: { flexDirection: 'row', gap: 10 },
+  primaryButton: { flex: 1, minHeight: 58, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.acc, borderWidth: 1, borderColor: colors.acc, ...shadow.cta },
+  primaryButtonDark: { backgroundColor: colors.ink, borderColor: colors.ink },
+  primaryButtonText: { color: colors.white, fontFamily: fontFamily.bodyBold, fontSize: 14, textAlign: 'center' },
+  primaryButtonOff: { opacity: 0.35 },
+  validationHint: { textAlign: 'center', color: colors.mu, fontFamily: fontFamily.body, fontSize: 13, marginTop: -8 },
+  doneLink: { alignItems: 'center', paddingVertical: 14 },
+  doneLinkTx: { fontFamily: fontFamily.bodyBold, fontSize: 14, color: colors.acc },
 });
