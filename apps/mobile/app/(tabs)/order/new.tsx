@@ -23,6 +23,7 @@ import { useLocale } from '@/i18n/locale';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TIMER_ITEM_WIDTH = 88;
+const TIMER_SLOT = TIMER_ITEM_WIDTH + 8; // chip width + marginHorizontal*2
 const TIMER_PRESETS = [6, 12, 24, 48, 72] as const;
 
 type StoreId = 'zara' | 'hm' | 'amazon' | 'superpharm' | 'ikea';
@@ -271,40 +272,53 @@ export default function NewOrder() {
                 <Text style={s.timerUnit}>{isHe ? 'שע׳' : 'HRS'}</Text>
               </>
             ) : (
-              <Text style={s.timerPrompt}>{isHe ? 'גרור ←' : 'Swipe →'}</Text>
+              <Text style={s.timerPrompt}>{isHe ? 'החלק לבחירה' : 'Swipe to pick'}</Text>
             )}
           </View>
-          <ScrollView
-            ref={timerRef}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            snapToInterval={TIMER_ITEM_WIDTH}
-            decelerationRate="fast"
-            contentContainerStyle={s.timerRow}
-            onMomentumScrollEnd={(e) => {
-              const idx = Math.round(e.nativeEvent.contentOffset.x / TIMER_ITEM_WIDTH);
-              setTimerHours(TIMER_PRESETS[Math.max(0, Math.min(idx, TIMER_PRESETS.length - 1))]);
-            }}
-          >
-            <View style={{ width: (SCREEN_WIDTH - 40 - TIMER_ITEM_WIDTH) / 2 }} />
-            {TIMER_PRESETS.map((h) => {
-              const on = timerHours === h;
-              return (
-                <Pressable key={h} onPress={() => {
-                  setTimerHours(h);
-                  timerRef.current?.scrollTo({ x: TIMER_PRESETS.indexOf(h) * TIMER_ITEM_WIDTH, animated: true });
-                }} style={[s.timerChip, on && s.timerChipOn]}>
-                  <Text style={[s.timerChipNum, on && s.timerChipNumOn]}>{h}</Text>
-                  <Text style={[s.timerChipH, on && s.timerChipHOn]}>h</Text>
-                </Pressable>
-              );
-            })}
-            <View style={{ width: (SCREEN_WIDTH - 40 - TIMER_ITEM_WIDTH) / 2 }} />
-          </ScrollView>
+          <View style={s.timerTrack}>
+            <ScrollView
+              ref={timerRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              snapToInterval={TIMER_SLOT}
+              decelerationRate="fast"
+              contentContainerStyle={s.timerRow}
+              scrollEventThrottle={16}
+              onScroll={(e) => {
+                const idx = Math.round(e.nativeEvent.contentOffset.x / TIMER_SLOT);
+                const h = TIMER_PRESETS[Math.max(0, Math.min(idx, TIMER_PRESETS.length - 1))];
+                if (h !== timerHours) setTimerHours(h);
+              }}
+              onMomentumScrollEnd={(e) => {
+                const idx = Math.round(e.nativeEvent.contentOffset.x / TIMER_SLOT);
+                setTimerHours(TIMER_PRESETS[Math.max(0, Math.min(idx, TIMER_PRESETS.length - 1))]);
+              }}
+            >
+              <View style={{ width: (SCREEN_WIDTH - 40 - TIMER_SLOT) / 2 }} />
+              {TIMER_PRESETS.map((h) => {
+                const on = timerHours === h;
+                return (
+                  <Pressable key={h} onPress={() => {
+                    setTimerHours(h);
+                    timerRef.current?.scrollTo({ x: TIMER_PRESETS.indexOf(h) * TIMER_SLOT, animated: true });
+                  }} style={[s.timerChip, on && s.timerChipOn]}>
+                    <Text style={[s.timerChipNum, on && s.timerChipNumOn]}>{h}</Text>
+                    <Text style={[s.timerChipH, on && s.timerChipHOn]}>h</Text>
+                  </Pressable>
+                );
+              })}
+              <View style={{ width: (SCREEN_WIDTH - 40 - TIMER_SLOT) / 2 }} />
+            </ScrollView>
+            {/* center selector indicator */}
+            <View style={s.timerCenter} pointerEvents="none">
+              <View style={s.timerCenterLine} />
+              <View style={[s.timerCenterLine, { marginLeft: TIMER_SLOT - 2 }]} />
+            </View>
+          </View>
         </View>
 
         <View style={s.reviewPill}>
-          <Text style={s.reviewPillTx}>{firstName.trim()} · {storeName}{timerHours ? ` · ${timerHours}h` : ''}</Text>
+          <Text style={s.reviewPillTx}>{displayName} · {storeName}{timerHours ? ` · ${timerHours}h` : ''}</Text>
         </View>
 
         <BigCta
@@ -341,7 +355,7 @@ export default function NewOrder() {
             <View style={s.summaryRow}>
               <View style={s.summaryItem}>
                 <Text style={s.summaryItemLabel}>{isHe ? 'שם' : 'NAME'}</Text>
-                <Text style={s.summaryItemValue}>{firstName.trim()} {lastName.trim()}</Text>
+                <Text style={s.summaryItemValue}>{displayName}</Text>
               </View>
               <View style={s.summaryDivider} />
               <View style={s.summaryItem}>
@@ -507,18 +521,21 @@ const s = StyleSheet.create({
   storeChevronOn:{ color: colors.acc, fontSize: 18 },
 
   // Timer
-  timerCard:    { backgroundColor: colors.s1, borderRadius: radii.xl, paddingVertical: 24, paddingHorizontal: 0, borderWidth: 1, borderColor: colors.br, gap: 16, ...shadow.card },
-  timerDisplay: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, paddingLeft: 20 },
-  timerNum:     { fontFamily: fontFamily.display, fontSize: 68, color: colors.tx, lineHeight: 72 },
-  timerUnit:    { fontFamily: fontFamily.bodyBold, fontSize: 14, color: colors.mu, letterSpacing: 1, paddingBottom: 10 },
-  timerPrompt:  { fontFamily: fontFamily.display, fontSize: 28, color: colors.mu2, lineHeight: 34, fontStyle: 'italic', paddingLeft: 4 },
-  timerRow:     { alignItems: 'center', paddingHorizontal: 0 },
-  timerChip:    { width: TIMER_ITEM_WIDTH, height: 60, borderRadius: radii.xl, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: colors.br, backgroundColor: colors.s2, marginHorizontal: 4 },
-  timerChipOn:  { borderColor: colors.acc, backgroundColor: colors.accLight },
-  timerChipNum: { fontFamily: fontFamily.display, fontSize: 26, color: colors.mu, lineHeight: 30 },
-  timerChipNumOn:{ color: colors.acc },
-  timerChipH:   { fontFamily: fontFamily.bodyBold, fontSize: 11, color: colors.mu2 },
-  timerChipHOn: { color: colors.acc },
+  timerCard:       { backgroundColor: colors.s1, borderRadius: radii.xl, paddingVertical: 24, paddingHorizontal: 0, borderWidth: 1, borderColor: colors.br, gap: 16, ...shadow.card },
+  timerDisplay:    { flexDirection: 'row', alignItems: 'flex-end', gap: 6, paddingLeft: 20 },
+  timerNum:        { fontFamily: fontFamily.display, fontSize: 68, color: colors.tx, lineHeight: 72 },
+  timerUnit:       { fontFamily: fontFamily.bodyBold, fontSize: 14, color: colors.mu, letterSpacing: 1, paddingBottom: 10 },
+  timerPrompt:     { fontFamily: fontFamily.display, fontSize: 28, color: colors.mu2, lineHeight: 34, fontStyle: 'italic', paddingLeft: 4 },
+  timerTrack:      { position: 'relative' },
+  timerRow:        { alignItems: 'center', paddingHorizontal: 0 },
+  timerChip:       { width: TIMER_ITEM_WIDTH, height: 60, borderRadius: radii.xl, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: colors.br, backgroundColor: colors.s2, marginHorizontal: 4 },
+  timerChipOn:     { borderColor: colors.acc, backgroundColor: colors.accLight },
+  timerChipNum:    { fontFamily: fontFamily.display, fontSize: 26, color: colors.mu, lineHeight: 30 },
+  timerChipNumOn:  { color: colors.acc },
+  timerChipH:      { fontFamily: fontFamily.bodyBold, fontSize: 11, color: colors.mu2 },
+  timerChipHOn:    { color: colors.acc },
+  timerCenter:     { position: 'absolute', top: 0, bottom: 0, left: (SCREEN_WIDTH - 40 - TIMER_SLOT) / 2, width: TIMER_SLOT, flexDirection: 'row', alignItems: 'stretch', pointerEvents: 'none' },
+  timerCenterLine: { width: 2, backgroundColor: colors.acc, opacity: 0.35, borderRadius: 1 },
 
   reviewPill:   { alignSelf: 'center', backgroundColor: colors.s2, borderRadius: radii.pill, paddingHorizontal: 18, paddingVertical: 9, borderWidth: 1, borderColor: colors.br },
   reviewPillTx: { fontFamily: fontFamily.bodyBold, fontSize: 13, color: colors.tx },
