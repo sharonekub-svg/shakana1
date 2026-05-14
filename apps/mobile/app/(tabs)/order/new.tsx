@@ -299,10 +299,7 @@ export default function NewOrder() {
           </View>
 
           <View style={styles.ctaWrap}>
-            <Cta label={isHe ? '← הבא' : '→ Next'} onPress={() => setStep(2)} />
-            <Pressable onPress={() => setStep(2)} style={styles.skipLink} accessibilityRole="button">
-              <Text style={styles.skipLinkText}>{isHe ? 'דלג על כתובת' : 'Skip for now'}</Text>
-            </Pressable>
+            <Cta label={isHe ? '← הבא' : '→ Next'} onPress={() => setStep(2)} disabled={!city.trim() || !street.trim() || !building.trim()} />
           </View>
         </ScrollView>
       )}
@@ -368,10 +365,7 @@ export default function NewOrder() {
           </View>
 
           <View style={styles.ctaWrap}>
-            <Cta label={isHe ? '← הבא' : '→ Next'} onPress={() => setStep(3)} />
-            <Pressable onPress={() => setStep(3)} style={styles.skipLink} accessibilityRole="button">
-              <Text style={styles.skipLinkText}>{isHe ? 'דלג על בחירת חנות' : 'Skip for now'}</Text>
-            </Pressable>
+            <Cta label={isHe ? '← הבא' : '→ Next'} onPress={() => setStep(3)} disabled={!selectedStore} />
           </View>
         </ScrollView>
       )}
@@ -402,10 +396,7 @@ export default function NewOrder() {
           </View>
 
           <View style={styles.ctaWrap}>
-            <Cta label={isHe ? '← הבא' : '→ Next'} onPress={handleNameNext} loading={upsertProfile.isPending} />
-            <Pressable onPress={() => setStep(4)} style={styles.skipLink} accessibilityRole="button">
-              <Text style={styles.skipLinkText}>{isHe ? 'דלג על שם' : 'Skip for now'}</Text>
-            </Pressable>
+            <Cta label={isHe ? '← הבא' : '→ Next'} onPress={handleNameNext} disabled={firstName.trim().length < 2} loading={upsertProfile.isPending} />
           </View>
         </ScrollView>
       )}
@@ -458,89 +449,101 @@ export default function NewOrder() {
       {step === 5 && (
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <StepHeader step={5} title={isHe ? 'השקה ושיתוף' : 'Launch & share'} onBack={goBack} />
-          <Text style={styles.sub}>{isHe ? 'הגדר טיימר ושלח את הקישור — שכנים יצטרפו לפני הסיום.' : 'Set a timer and send the link — neighbors join before it closes.'}</Text>
+          <Text style={styles.sub}>{isHe ? 'בחר כמה זמן תהיה ההזמנה פתוחה, ולחץ השקה.' : 'Choose how long the order stays open, then launch.'}</Text>
 
-          {/* Store pill */}
+          {/* Store summary pill */}
           <View style={styles.storePill}>
             <Text style={styles.storePillText}>
-              {(NEARBY_STORES.find((s) => s.id === selectedStore)?.logo ?? storeName.slice(0, 1)).toUpperCase()} · {storeName} · {addressLine} ✓
+              {(NEARBY_STORES.find((s) => s.id === selectedStore)?.logo ?? storeName.slice(0, 1)).toUpperCase()} · {storeName} · {addressLine}
             </Text>
           </View>
 
-          {/* Timer wheel */}
-          <View style={styles.timerCard}>
-            <Text style={styles.timerCardLabel}>{isHe ? 'נסגר בעוד' : 'CLOSES IN'}</Text>
-            <View style={styles.timerDisplay}>
-              <Text style={styles.timerNumber}>{timerHours}</Text>
-              <Text style={styles.timerUnit}>{isHe ? 'שעות' : 'HOURS'}</Text>
-            </View>
+          {!launched ? (
+            <>
+              {/* Timer card */}
+              <View style={styles.timerCard}>
+                <Text style={styles.timerCardLabel}>{isHe ? 'נסגר בעוד' : 'CLOSES IN'}</Text>
+                <View style={styles.timerDisplay}>
+                  <Text style={styles.timerNumber}>{timerHours}</Text>
+                  <Text style={styles.timerUnit}>{isHe ? 'שעות' : 'HOURS'}</Text>
+                </View>
 
-            {/* Swipeable wheel */}
-            <ScrollView
-              ref={timerScrollRef}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              snapToInterval={TIMER_ITEM_WIDTH}
-              decelerationRate="fast"
-              contentContainerStyle={styles.timerWheelContent}
-              onMomentumScrollEnd={(e) => {
-                const idx = Math.round(e.nativeEvent.contentOffset.x / TIMER_ITEM_WIDTH);
-                const clamped = Math.max(0, Math.min(idx, TIMER_PRESETS.length - 1));
-                setTimerHours(TIMER_PRESETS[clamped]);
-              }}
-            >
-              {/* Left padding so first item can center */}
-              <View style={{ width: (SCREEN_WIDTH - 36 - TIMER_ITEM_WIDTH) / 2 }} />
-              {TIMER_PRESETS.map((h) => (
-                <Pressable key={h} onPress={() => {
-                  setTimerHours(h);
-                  const idx = TIMER_PRESETS.indexOf(h);
-                  timerScrollRef.current?.scrollTo({ x: idx * TIMER_ITEM_WIDTH, animated: true });
-                }} style={[styles.timerItem, timerHours === h && styles.timerItemOn]}>
-                  <Text style={[styles.timerItemVal, timerHours === h && styles.timerItemValOn]}>{h}</Text>
-                  <Text style={[styles.timerItemUnit2, timerHours === h && styles.timerItemUnit2On]}>h</Text>
-                </Pressable>
-              ))}
-              <View style={{ width: (SCREEN_WIDTH - 36 - TIMER_ITEM_WIDTH) / 2 }} />
-            </ScrollView>
+                <ScrollView
+                  ref={timerScrollRef}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  snapToInterval={TIMER_ITEM_WIDTH}
+                  decelerationRate="fast"
+                  contentContainerStyle={styles.timerWheelContent}
+                  onMomentumScrollEnd={(e) => {
+                    const idx = Math.round(e.nativeEvent.contentOffset.x / TIMER_ITEM_WIDTH);
+                    const clamped = Math.max(0, Math.min(idx, TIMER_PRESETS.length - 1));
+                    setTimerHours(TIMER_PRESETS[clamped]);
+                  }}
+                >
+                  <View style={{ width: (SCREEN_WIDTH - 36 - TIMER_ITEM_WIDTH) / 2 }} />
+                  {TIMER_PRESETS.map((h) => (
+                    <Pressable key={h} onPress={() => {
+                      setTimerHours(h);
+                      const idx = TIMER_PRESETS.indexOf(h);
+                      timerScrollRef.current?.scrollTo({ x: idx * TIMER_ITEM_WIDTH, animated: true });
+                    }} style={[styles.timerItem, timerHours === h && styles.timerItemOn]}>
+                      <Text style={[styles.timerItemVal, timerHours === h && styles.timerItemValOn]}>{h}</Text>
+                      <Text style={[styles.timerItemUnit2, timerHours === h && styles.timerItemUnit2On]}>h</Text>
+                    </Pressable>
+                  ))}
+                  <View style={{ width: (SCREEN_WIDTH - 36 - TIMER_ITEM_WIDTH) / 2 }} />
+                </ScrollView>
+                <Text style={styles.timerNote}>{isHe ? 'גרור כדי לבחור — שכנים יצטרפו לפני הסיום.' : 'Swipe to choose — neighbors join before it closes.'}</Text>
+              </View>
 
-            <Text style={styles.timerNote}>{isHe ? 'שכנים יכולים להצטרף לפני שהחלון נסגר.' : 'Neighbors can join before the window closes.'}</Text>
-          </View>
+              {/* Invite link preview */}
+              <View style={styles.inviteBox}>
+                <Text style={styles.inviteBoxLabel}>{isHe ? 'קישור הזמנה' : 'INVITE LINK'}</Text>
+                <View style={styles.inviteRow}>
+                  <Text style={styles.inviteLink} numberOfLines={1}>{inviteLink}</Text>
+                </View>
+                <Text style={styles.inviteNote}>{isHe ? 'הקישור יהיה פעיל ברגע ההשקה.' : 'Goes live the moment you launch.'}</Text>
+              </View>
 
-          {/* Invite link — always visible, even before launch */}
-          <View style={styles.inviteBox}>
-            <Text style={styles.inviteBoxLabel}>{isHe ? 'קישור הזמנה' : 'INVITE LINK'}</Text>
-            <View style={styles.inviteRow}>
-              <Text style={styles.inviteLink} numberOfLines={1}>{inviteLink}</Text>
-              <Pressable onPress={handleCopy} style={styles.copyBtn}>
-                <Text style={styles.copyBtnText}>{copied ? (isHe ? '✓ הועתק' : '✓ Copied') : (isHe ? '📋 העתק' : '📋 Copy')}</Text>
-              </Pressable>
-            </View>
-          </View>
-
-          <View style={styles.gap10}>
-            {/* Launch button */}
-            {!launched ? (
+              {/* Launch CTA */}
               <Cta
-                label={isHe ? `🚀 השקת ההזמנה — ${timerHours}ש׳` : `🚀 Launch order — ${timerHours}h timer`}
+                label={launching ? '···' : (isHe ? `🚀 השקה — ${timerHours} שעות` : `🚀 Launch — ${timerHours}h timer`)}
                 onPress={handleLaunch}
                 disabled={!orderId}
                 loading={launching}
               />
-            ) : (
-              <View style={styles.launchedBadge}>
-                <Text style={styles.launchedText}>{isHe ? '✓ ההזמנה פעילה! שכנים יכולים להצטרף.' : '✓ Order is live! Neighbors can join.'}</Text>
+              <Text style={styles.launchNote}>{isHe
+                ? 'שכנים בבניין שלך יקבלו הודעה ויוכלו להצטרף.'
+                : 'Neighbors in your building will be notified and can join.'}</Text>
+            </>
+          ) : (
+            <>
+              {/* Success card */}
+              <View style={styles.successCard}>
+                <Text style={styles.successEmoji}>🎉</Text>
+                <Text style={styles.successTitle}>{isHe ? 'ההזמנה שלך פעילה!' : 'Your order is live!'}</Text>
+                <Text style={styles.successSub}>{storeName} · {isHe ? `נסגר בעוד ${timerHours} שעות` : `Closes in ${timerHours} hours`}</Text>
               </View>
-            )}
 
-            {/* WhatsApp share */}
-            <Cta label={isHe ? 'שתף ב-WhatsApp' : 'Invite via WhatsApp'} onPress={handleWhatsApp} green />
+              {/* Share section */}
+              <View style={styles.inviteBox}>
+                <Text style={styles.inviteBoxLabel}>{isHe ? 'שתף עם שכנים' : 'SHARE WITH NEIGHBORS'}</Text>
+                <View style={styles.inviteRow}>
+                  <Text style={styles.inviteLink} numberOfLines={1}>{inviteLink}</Text>
+                  <Pressable onPress={handleCopy} style={styles.copyBtn}>
+                    <Text style={styles.copyBtnText}>{copied ? (isHe ? '✓ הועתק' : '✓ Copied') : (isHe ? '📋 העתק' : '📋 Copy')}</Text>
+                  </Pressable>
+                </View>
+              </View>
 
-            {/* Done */}
-            <Pressable onPress={() => router.replace('/(tabs)/building')} style={styles.doneLink}>
-              <Text style={styles.doneLinkText}>{isHe ? 'סיים — חזור לבית' : 'Done — go to home'}</Text>
-            </Pressable>
-          </View>
+              <Cta label={isHe ? '💬 שלח ב-WhatsApp' : '💬 Invite via WhatsApp'} onPress={handleWhatsApp} green />
+
+              <Pressable onPress={() => router.replace('/(tabs)/building')} style={styles.doneLink}>
+                <Text style={styles.doneLinkText}>{isHe ? 'סיים — צפה בהזמנה ←' : 'Done — view order →'}</Text>
+              </Pressable>
+            </>
+          )}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -647,11 +650,14 @@ const styles = StyleSheet.create({
   inviteLink: { flex: 1, fontFamily: fontFamily.bodyBold, fontSize: 13, color: colors.tx, letterSpacing: 0.3 },
   copyBtn: { backgroundColor: colors.accLight, borderRadius: radii.pill, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: colors.acc },
   copyBtnText: { fontFamily: fontFamily.bodyBold, fontSize: 12, color: colors.acc },
-  launchedBadge: { backgroundColor: '#E8F5E9', borderRadius: radii.xl, padding: 16, alignItems: 'center' },
-  launchedText: { fontFamily: fontFamily.bodyBold, fontSize: 14, color: '#2E7D32' },
-  doneLink: { alignItems: 'center', paddingVertical: 14 },
-  doneLinkText: { fontFamily: fontFamily.body, fontSize: 14, color: colors.mu },
+  inviteNote: { fontFamily: fontFamily.body, fontSize: 12, color: colors.mu2, marginTop: -4 },
+  launchNote: { fontFamily: fontFamily.body, fontSize: 13, color: colors.mu, textAlign: 'center', lineHeight: 19, paddingHorizontal: 8 },
 
-  skipLink: { alignItems: 'center', paddingVertical: 10 },
-  skipLinkText: { fontFamily: fontFamily.body, fontSize: 13, color: colors.mu2 },
+  successCard: { backgroundColor: colors.accLight, borderRadius: radii.xl, padding: 28, alignItems: 'center', gap: 10, borderWidth: 1, borderColor: colors.acc, ...shadow.card },
+  successEmoji: { fontSize: 44, lineHeight: 52 },
+  successTitle: { fontFamily: fontFamily.display, fontSize: 28, color: colors.tx, textAlign: 'center', lineHeight: 32 },
+  successSub: { fontFamily: fontFamily.body, fontSize: 14, color: colors.mu, textAlign: 'center' },
+
+  doneLink: { alignItems: 'center', paddingVertical: 14 },
+  doneLinkText: { fontFamily: fontFamily.bodyBold, fontSize: 14, color: colors.acc },
 });
