@@ -405,9 +405,9 @@ const styles = StyleSheet.create({
   shell: {
     width: '100%',
     maxWidth: 1180,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    gap: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 22,
+    gap: 18,
   },
   wideShell: {
     maxWidth: 1320,
@@ -416,14 +416,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.br,
-    borderRadius: 22,
+    borderRadius: 24,
     ...shadow.card,
   },
   cardPad: {
-    padding: 16,
+    padding: 18,
   },
   button: {
-    minHeight: 54,
+    minHeight: 50,
     borderRadius: 18,
     paddingHorizontal: 18,
     paddingVertical: 14,
@@ -509,22 +509,22 @@ const styles = StyleSheet.create({
   },
   brandPill: {
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: 'rgba(250,246,239,0.08)',
-    borderColor: 'rgba(250,246,239,0.42)',
+    backgroundColor: colors.white,
+    borderColor: colors.br,
     alignSelf: 'flex-start',
   },
   brandPillText: {
-    color: colors.white,
+    color: colors.acc,
     fontFamily: fontFamily.display,
     fontSize: 22,
   },
   productImage: {
     width: '100%',
     aspectRatio: 0.84,
-    borderRadius: 18,
+    borderRadius: 20,
     backgroundColor: colors.s2,
   },
   progressOuter: {

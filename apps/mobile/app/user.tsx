@@ -2342,7 +2342,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: 10,
     padding: 18,
-    backgroundColor: 'rgba(0,0,0,0.22)',
+    backgroundColor: 'rgba(37,32,27,0.34)',
   },
   storeName: {
     color: '#FFFFFF',
@@ -2365,7 +2365,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: 10,
     padding: 18,
-    backgroundColor: 'rgba(0,0,0,0.28)',
+    backgroundColor: 'rgba(37,32,27,0.36)',
   },
   heroTitle: {
     color: '#FFFFFF',
@@ -2802,9 +2802,9 @@ const styles = StyleSheet.create({
   itemPrice: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 15 },
   homeHeroCard: {
     gap: 18,
-    padding: 20,
+    padding: 24,
     backgroundColor: colors.card,
-    borderRadius: 28,
+    borderRadius: 30,
     borderWidth: 1,
     borderColor: colors.brBr,
   },
@@ -2819,8 +2819,8 @@ const styles = StyleSheet.create({
   },
   homeHeroTitle: {
     fontFamily: fontFamily.display,
-    fontSize: 34,
-    lineHeight: 38,
+    fontSize: 38,
+    lineHeight: 42,
     color: colors.tx,
   },
   homeHeroBody: {
