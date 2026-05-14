@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Svg, { Circle, Path } from 'react-native-svg';
 
@@ -13,14 +13,15 @@ import { consumePendingInvite } from '@/lib/deeplinks';
 import { env } from '@/lib/env';
 
 const D = {
-  bg: '#FFFFFF',
+  bg:      '#FFFFFF',
   surface: '#FFFFFF',
-  border: '#E8E8E8',
-  paper: '#000000',
+  border:  '#E8E8E8',
+  paper:   '#000000',
   paperMu: '#767676',
-  acc: '#000000',
-  accSoft: '#F5F5F5',
-  ink: '#000000',
+  acc:     '#000000',
+  hot:     '#FF2D55',
+  hotSoft: '#FFF0F3',
+  ink:     '#000000',
 } as const;
 
 function ShakanaLogoFull({ size = 36 }: { size?: number }) {
@@ -29,10 +30,10 @@ function ShakanaLogoFull({ size = 36 }: { size?: number }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
       <Svg width={size} height={size} viewBox="0 0 36 36">
-        <Circle cx={c} cy={c} r={r - 1} fill="none" stroke={D.acc} strokeWidth={1.5} />
-        <Circle cx={c} cy={c} r={r * 0.72} fill="none" stroke={D.acc} strokeWidth={1.5} />
-        <Circle cx={c} cy={c} r={r * 0.44} fill="none" stroke={D.acc} strokeWidth={1.5} />
-        <Circle cx={c} cy={c} r={r * 0.16} fill={D.acc} />
+        <Circle cx={c} cy={c} r={r - 1} fill="none" stroke={D.hot} strokeWidth={1.5} />
+        <Circle cx={c} cy={c} r={r * 0.72} fill="none" stroke={D.hot} strokeWidth={1.5} />
+        <Circle cx={c} cy={c} r={r * 0.44} fill="none" stroke={D.hot} strokeWidth={1.5} />
+        <Circle cx={c} cy={c} r={r * 0.16} fill={D.hot} />
       </Svg>
       <Text style={{ fontFamily: fontFamily.display, fontSize: size * 0.72, color: D.paper, lineHeight: size * 0.86, letterSpacing: -0.3 }}>
         shakana
@@ -142,6 +143,28 @@ export default function LoginScreen() {
         </View>
       </View>
 
+      {/* Story video — web only */}
+      {Platform.OS === 'web' ? (
+        <View style={s.storyWrap}>
+          <View style={s.storyHeader}>
+            <Text style={s.storyKicker}>{isHebrew ? 'איך זה עובד' : 'HOW IT WORKS'}</Text>
+            <Text style={s.storyTitle}>{isHebrew ? 'ראו את הזרימה בפעולה' : 'See the flow in action'}</Text>
+          </View>
+          {/* @ts-ignore – iframe is valid on web */}
+          <iframe
+            src="/shakana-story.html"
+            title="Shakana story"
+            style={{
+              width: '100%',
+              height: 420,
+              border: 'none',
+              borderRadius: 20,
+              display: 'block',
+            } as any}
+          />
+        </View>
+      ) : null}
+
       {/* Auth */}
       <View style={s.authGroup}>
         <Pressable
@@ -205,13 +228,13 @@ const s = StyleSheet.create({
   langBtnTxOn: { color: '#FFFFFF' },
 
   hero:         { gap: 10 },
-  heroKicker:   { fontFamily: fontFamily.bodyBold, fontSize: 11, letterSpacing: 2.4, color: D.acc },
+  heroKicker:   { fontFamily: fontFamily.bodyBold, fontSize: 11, letterSpacing: 2.4, color: D.hot },
   heroHeadline: { fontFamily: fontFamily.display, fontSize: 40, lineHeight: 46, color: D.paper },
   heroSub:      { fontFamily: fontFamily.body, fontSize: 15, lineHeight: 22, color: D.paperMu },
 
   savingsCard:      { flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: D.ink, borderRadius: 24, padding: 20, ...shadow.cta },
   savingsLeft:      { gap: 4 },
-  savingsAmount:    { fontFamily: fontFamily.display, fontSize: 42, lineHeight: 44, color: '#FFFFFF', letterSpacing: -1 },
+  savingsAmount:    { fontFamily: fontFamily.display, fontSize: 42, lineHeight: 44, color: D.hot, letterSpacing: -1 },
   savingsLabel:     { fontFamily: fontFamily.bodyBold, fontSize: 10, letterSpacing: 1.4, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' },
   savingsDivider:   { width: 1, height: 48, backgroundColor: 'rgba(255,255,255,0.15)' },
   savingsRight:     { flex: 1, gap: 5 },
@@ -220,10 +243,15 @@ const s = StyleSheet.create({
 
   bento:     { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   bentoCard: { flexGrow: 1, flexBasis: 180, minHeight: 128, gap: 8, padding: 16, borderRadius: 24, backgroundColor: D.surface, borderWidth: 1, borderColor: D.border, ...shadow.card },
-  bentoWide: { flexBasis: 300, backgroundColor: D.accSoft },
+  bentoWide: { flexBasis: 300, backgroundColor: D.hotSoft, borderColor: '#FFCCD6' },
   bentoEmoji:{ fontSize: 22, lineHeight: 28 },
   bentoTitle:{ fontFamily: fontFamily.bodyBold, fontSize: 15, color: D.paper },
   bentoBody: { fontFamily: fontFamily.body, fontSize: 13, lineHeight: 19, color: D.paperMu },
+
+  storyWrap:   { gap: 14, borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: D.border },
+  storyHeader: { gap: 4, paddingHorizontal: 20, paddingTop: 18 },
+  storyKicker: { fontFamily: fontFamily.bodyBold, fontSize: 11, letterSpacing: 2.2, color: D.hot },
+  storyTitle:  { fontFamily: fontFamily.display, fontSize: 22, lineHeight: 26, color: D.paper },
 
   authGroup:     { gap: 10 },
   googleBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: D.acc, borderRadius: radii.pill, paddingVertical: 17, ...shadow.cta },
