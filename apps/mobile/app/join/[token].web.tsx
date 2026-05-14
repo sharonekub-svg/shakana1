@@ -22,16 +22,16 @@ import { demoStores } from '@/demo/catalog';
 import { formatAgorotMoney, formatMoney } from '@/utils/money';
 
 const C = {
-  bg: '#F7F1E8',
-  tx: '#2B2118',
-  mu: '#6F6257',
-  acc: '#B35C37',
-  accLight: '#F6E4D6',
-  lime: '#E9D3BF',
-  br: '#E3D5C6',
-  white: '#FFFCF7',
-  err: '#C84D3A',
-  skel: '#F1E7DA',
+  bg: '#FFFFFF',
+  tx: '#222222',
+  mu: '#767676',
+  acc: '#FE3F61',
+  accLight: '#FFF0F2',
+  lime: '#F5F5F5',
+  br: '#E8E8E8',
+  white: '#FFFFFF',
+  err: '#E53935',
+  skel: '#F5F5F5',
 };
 
 type OrderPreview = {
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 8,
     borderWidth: 1,
-    borderColor: '#24211D',
+    borderColor: '#222222',
   },
   storeSignKicker: {
     color: 'rgba(255,255,255,0.68)',

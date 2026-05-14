@@ -13,14 +13,14 @@ import { consumePendingInvite } from '@/lib/deeplinks';
 import { env } from '@/lib/env';
 
 const D = {
-  bg: '#F7F4EE',
+  bg: '#FFFFFF',
   surface: '#FFFFFF',
-  border: '#E3DDD3',
-  paper: '#25201B',
-  paperMu: '#746B61',
-  acc: '#5F7F72',
-  accSoft: '#F0F6F2',
-  ink: '#25201B',
+  border: '#E8E8E8',
+  paper: '#222222',
+  paperMu: '#767676',
+  acc: '#FE3F61',
+  accSoft: '#FFF0F2',
+  ink: '#222222',
 } as const;
 
 function ShakanaLogoFull({ size = 36 }: { size?: number }) {
