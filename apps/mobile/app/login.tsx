@@ -86,30 +86,42 @@ export default function LoginScreen() {
       <View style={s.heroText}>
         <Text style={s.kicker}>שכנה · neighbors</Text>
         <Text style={s.headline}>
-          {isHebrew ? 'קנייה קבוצתית\nלשכנים בבניין' : 'Group buying\nfor building neighbors'}
+          {isHebrew ? 'למה לשלם ₪45 משלוח\nלבד?' : 'Why pay ₪45 shipping\nalone?'}
         </Text>
         <Text style={s.subline}>
           {isHebrew
-            ? 'שתפו הזמנה עם השכנים, חלקו את דמי המשלוח, חסכו ביחד.'
-            : 'Share an order with neighbors, split shipping, save together.'}
+            ? 'פתח הזמנה קבוצתית, הזמן שכנים, וחלקו את המשלוח — כולם חוסכים.'
+            : 'Start a group order, invite your neighbors, split the shipping — everyone saves.'}
         </Text>
+      </View>
+
+      <View style={s.savingsHero}>
+        <View style={s.savingsLeft}>
+          <Text style={s.savingsAmount}>₪30+</Text>
+          <Text style={s.savingsLabel}>{isHebrew ? 'חסכון ממוצע להזמנה' : 'avg. saved per order'}</Text>
+        </View>
+        <View style={s.savingsDivider} />
+        <View style={s.savingsRight}>
+          <Text style={s.socialProof}>{isHebrew ? '🏠 שכנים כבר חוסכים ביחד' : '🏠 Neighbors already saving together'}</Text>
+          <Text style={s.socialProofSub}>{isHebrew ? 'זרא, H&M, איקאה, Amazon ועוד' : 'Zara, H&M, IKEA, Amazon & more'}</Text>
+        </View>
       </View>
 
       <View style={s.bentoGrid}>
         <View style={[s.bentoCard, s.bentoWide]}>
-          <Text style={s.bentoNumber}>01</Text>
-          <Text style={s.bentoTitle}>{isHebrew ? 'חנות אחת להזמנה' : 'One store per order'}</Text>
-          <Text style={s.bentoBody}>{isHebrew ? 'הקטלוג ננעל לחנות שבחרתם כדי שההזמנה תישאר ברורה.' : 'The catalog locks to the chosen store so the order stays clear.'}</Text>
+          <Text style={s.bentoNumber}>💸</Text>
+          <Text style={s.bentoTitle}>{isHebrew ? 'חוסכים ₪20–60 להזמנה' : 'Save ₪20–60 per order'}</Text>
+          <Text style={s.bentoBody}>{isHebrew ? '4 שכנים = משלוח אחד. כל אחד משלם רבע.' : '4 neighbors share one shipment. Each pays a quarter.'}</Text>
         </View>
         <View style={s.bentoCard}>
-          <Text style={s.bentoNumber}>02</Text>
-          <Text style={s.bentoTitle}>{isHebrew ? 'שיתוף מהיר' : 'Fast invite'}</Text>
-          <Text style={s.bentoBody}>{isHebrew ? 'חברים נכנסים מהקישור ורואים את אותה הזמנה.' : 'Friends join from the link and see the same cart.'}</Text>
+          <Text style={s.bentoNumber}>⚡</Text>
+          <Text style={s.bentoTitle}>{isHebrew ? '15 שניות לשיתוף' : '15 sec to invite'}</Text>
+          <Text style={s.bentoBody}>{isHebrew ? 'קישור ישיר לוואטסאפ — שכנים מצטרפים בלחיצה.' : 'One WhatsApp link — neighbors join in one tap.'}</Text>
         </View>
         <View style={s.bentoCard}>
-          <Text style={s.bentoNumber}>03</Text>
-          <Text style={s.bentoTitle}>{isHebrew ? 'מעקב מסודר' : 'Clear tracking'}</Text>
-          <Text style={s.bentoBody}>{isHebrew ? 'החנות רואה פריטים, משתתפים, כתובת וסטטוס.' : 'Stores see items, members, address, and status.'}</Text>
+          <Text style={s.bentoNumber}>🔒</Text>
+          <Text style={s.bentoTitle}>{isHebrew ? 'כסף בנאמנות' : 'Money in escrow'}</Text>
+          <Text style={s.bentoBody}>{isHebrew ? 'Stripe מחזיק את הכסף עד לאישור קבלת ההזמנה.' : 'Stripe holds funds until everyone confirms delivery.'}</Text>
         </View>
       </View>
 
@@ -188,6 +200,18 @@ const s = StyleSheet.create({
   kicker: { fontFamily: fontFamily.bodyBold, fontSize: 11, letterSpacing: 2.4, color: D.acc },
   headline: { fontFamily: fontFamily.display, fontSize: 38, lineHeight: 44, color: D.paper },
   subline: { fontFamily: fontFamily.body, fontSize: 15, lineHeight: 22, color: D.paperMu },
+  savingsHero: {
+    flexDirection: 'row', alignItems: 'center', gap: 16,
+    backgroundColor: D.paper, borderRadius: 24, padding: 18, marginBottom: 18,
+    ...shadow.cta,
+  },
+  savingsLeft: { gap: 3 },
+  savingsAmount: { fontFamily: fontFamily.display, fontSize: 40, lineHeight: 42, color: colors.white, letterSpacing: -1 },
+  savingsLabel: { fontFamily: fontFamily.bodyBold, fontSize: 10, letterSpacing: 1.4, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' },
+  savingsDivider: { width: 1, height: 48, backgroundColor: 'rgba(255,255,255,0.15)' },
+  savingsRight: { flex: 1, gap: 4 },
+  socialProof: { fontFamily: fontFamily.bodyBold, fontSize: 13, color: colors.white, lineHeight: 18 },
+  socialProofSub: { fontFamily: fontFamily.body, fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 17 },
   bentoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 18 },
   bentoCard: {
     flexGrow: 1,
