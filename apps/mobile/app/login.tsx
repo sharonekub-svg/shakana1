@@ -16,11 +16,11 @@ const D = {
   bg: '#FFFFFF',
   surface: '#FFFFFF',
   border: '#E8E8E8',
-  paper: '#222222',
+  paper: '#000000',
   paperMu: '#767676',
-  acc: '#FE3F61',
-  accSoft: '#FFF0F2',
-  ink: '#222222',
+  acc: '#000000',
+  accSoft: '#F5F5F5',
+  ink: '#000000',
 } as const;
 
 function ShakanaLogoFull({ size = 36 }: { size?: number }) {
