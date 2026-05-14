@@ -23,10 +23,10 @@ import { formatAgorotMoney, formatMoney } from '@/utils/money';
 
 const C = {
   bg: '#FFFFFF',
-  tx: '#222222',
+  tx: '#000000',
   mu: '#767676',
-  acc: '#FE3F61',
-  accLight: '#FFF0F2',
+  acc: '#000000',
+  accLight: '#F5F5F5',
   lime: '#F5F5F5',
   br: '#E8E8E8',
   white: '#FFFFFF',
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 8,
     borderWidth: 1,
-    borderColor: '#222222',
+    borderColor: '#000000',
   },
   storeSignKicker: {
     color: 'rgba(255,255,255,0.68)',

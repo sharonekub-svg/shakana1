@@ -61,7 +61,7 @@ export default function Html({ children }: PropsWithChildren) {
                 width: 7px;
                 height: 7px;
                 border-radius: 50%;
-                background: #FE3F61;
+                background: #000000;
                 margin-bottom: 14px;
               }
               .shakana-fallback-logo {
@@ -70,7 +70,7 @@ export default function Html({ children }: PropsWithChildren) {
                 font-weight: 700;
                 letter-spacing: 0.18em;
                 text-transform: uppercase;
-                color: #FE3F61;
+                color: #000000;
               }
               .shakana-fallback-text {
                 margin: 0;
