@@ -8,7 +8,7 @@ export default function Html({ children }: PropsWithChildren) {
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-        <meta name="theme-color" content="#1B1612" />
+        <meta name="theme-color" content="#FFFFFF" />
         <title>Shakana – הזמנות שכנים</title>
         <meta name="description" content="Shakana – הזמנות קבוצתיות לשכנים. מדביקים קישור למוצר, שכנים מצטרפים ומשלמים, המייסד קונה מהחנות." />
         <meta property="og:type" content="website" />
@@ -26,7 +26,7 @@ export default function Html({ children }: PropsWithChildren) {
             __html: `
               body {
                 margin: 0;
-                background: #1B1612;
+                background: #FFFFFF;
                 font-family: 'Rubik', Arial, sans-serif;
               }
               #root {
@@ -41,7 +41,7 @@ export default function Html({ children }: PropsWithChildren) {
                 align-items: center;
                 justify-content: center;
                 padding: 24px;
-                background: #1B1612;
+                background: #FFFFFF;
                 text-align: center;
                 animation: shakana-fade-out 0.4s ease 8s forwards;
               }
@@ -50,18 +50,18 @@ export default function Html({ children }: PropsWithChildren) {
               }
               .shakana-fallback-card {
                 width: min(400px, 100%);
-                border: 1px solid #E3D5C6;
+                border: 1px solid #E8E8E8;
                 border-radius: 20px;
-                background: #241D18;
+                background: #FFFFFF;
                 padding: 32px 28px;
-                box-shadow: 0 18px 48px rgba(0,0,0,0.24);
+                box-shadow: 0 18px 48px rgba(0,0,0,0.08);
               }
               .shakana-fallback-dot {
                 display: inline-block;
                 width: 7px;
                 height: 7px;
                 border-radius: 50%;
-                background: #C96442;
+                background: #FE3F61;
                 margin-bottom: 14px;
               }
               .shakana-fallback-logo {
@@ -70,11 +70,11 @@ export default function Html({ children }: PropsWithChildren) {
                 font-weight: 700;
                 letter-spacing: 0.18em;
                 text-transform: uppercase;
-                color: #B35C37;
+                color: #FE3F61;
               }
               .shakana-fallback-text {
                 margin: 0;
-                color: #CBBEAD;
+                color: #767676;
                 font-size: 14px;
                 line-height: 1.7;
               }
