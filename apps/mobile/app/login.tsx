@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 
 import { useGoogleSignIn } from '@/api/auth';
 import { initDemoCommerceSync, useDemoCommerceStore } from '@/stores/demoCommerceStore';
@@ -10,20 +10,35 @@ import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { useLocale } from '@/i18n/locale';
 import { env } from '@/lib/env';
-import { ShakanaLogoHero, ShakanaLogoCompact } from '@/components/ShakanaLogo';
 
 const D = {
   bg: '#F7F4EE',
   surface: '#FFFFFF',
-  surfaceSoft: '#EEE8DD',
   border: '#E3DDD3',
-  borderStrong: '#CEC3B6',
   paper: '#25201B',
   paperMu: '#746B61',
   acc: '#5F7F72',
   accSoft: '#F0F6F2',
+  ink: '#25201B',
 } as const;
 
+function ShakanaLogoFull({ size = 36 }: { size?: number }) {
+  const c = size / 2;
+  const r = size / 2;
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+      <Svg width={size} height={size} viewBox="0 0 36 36">
+        <Circle cx={c} cy={c} r={r - 1} fill="none" stroke={D.acc} strokeWidth={1.5} />
+        <Circle cx={c} cy={c} r={r * 0.72} fill="none" stroke={D.acc} strokeWidth={1.5} />
+        <Circle cx={c} cy={c} r={r * 0.44} fill="none" stroke={D.acc} strokeWidth={1.5} />
+        <Circle cx={c} cy={c} r={r * 0.16} fill={D.acc} />
+      </Svg>
+      <Text style={{ fontFamily: fontFamily.display, fontSize: size * 0.72, color: D.paper, lineHeight: size * 0.86, letterSpacing: -0.3 }}>
+        shakana
+      </Text>
+    </View>
+  );
+}
 
 function GoogleIcon() {
   return (
@@ -50,82 +65,78 @@ export default function LoginScreen() {
 
   const continueAsUser = () => {
     if (!env.enableDemo) return;
-    setDemoMode(true);
-    setDemoRole('user');
-    router.replace('/user');
+    setDemoMode(true); setDemoRole('user'); router.replace('/user');
   };
-
   const continueAsStore = () => {
     if (!env.enableDemo) return;
-    setDemoMode(true);
-    setDemoRole('store');
-    router.replace('/store');
+    setDemoMode(true); setDemoRole('store'); router.replace('/store');
   };
 
   return (
     <ScrollView style={s.bg} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
 
-      <View style={s.header}>
-        <ShakanaLogoCompact size={26} />
-        <View style={s.langRow}>
+      {/* Top bar */}
+      <View style={s.topBar}>
+        <ShakanaLogoFull size={32} />
+        <View style={s.langPill}>
           <Pressable onPress={() => void setLanguage('en')} accessibilityRole="button"
-            style={[s.langBtn, language === 'en' && s.langBtnActive]}>
-            <Text style={[s.langBtnText, language === 'en' && s.langBtnTextActive]}>EN</Text>
+            style={[s.langBtn, language === 'en' && s.langBtnOn]}>
+            <Text style={[s.langBtnTx, language === 'en' && s.langBtnTxOn]}>EN</Text>
           </Pressable>
           <Pressable onPress={() => void setLanguage('he')} accessibilityRole="button"
-            style={[s.langBtn, language === 'he' && s.langBtnActive]}>
-            <Text style={[s.langBtnText, language === 'he' && s.langBtnTextActive]}>עב</Text>
+            style={[s.langBtn, language === 'he' && s.langBtnOn]}>
+            <Text style={[s.langBtnTx, language === 'he' && s.langBtnTxOn]}>עב</Text>
           </Pressable>
         </View>
       </View>
 
-      <View style={s.logoHeroWrap}>
-        <ShakanaLogoHero width={300} />
-      </View>
-
-      <View style={s.heroText}>
-        <Text style={s.kicker}>שכנה · neighbors</Text>
-        <Text style={s.headline}>
-          {isHebrew ? 'למה לשלם ₪45 משלוח\nלבד?' : 'Why pay ₪45 shipping\nalone?'}
+      {/* Hero */}
+      <View style={s.hero}>
+        <Text style={s.heroKicker}>שכנה · neighbors</Text>
+        <Text style={s.heroHeadline}>
+          {isHebrew ? 'למה לשלם ₪45\nמשלוח לבד?' : 'Why pay ₪45\nshipping alone?'}
         </Text>
-        <Text style={s.subline}>
+        <Text style={s.heroSub}>
           {isHebrew
             ? 'פתח הזמנה קבוצתית, הזמן שכנים, וחלקו את המשלוח — כולם חוסכים.'
             : 'Start a group order, invite your neighbors, split the shipping — everyone saves.'}
         </Text>
       </View>
 
-      <View style={s.savingsHero}>
+      {/* Dark savings card */}
+      <View style={s.savingsCard}>
         <View style={s.savingsLeft}>
           <Text style={s.savingsAmount}>₪30+</Text>
           <Text style={s.savingsLabel}>{isHebrew ? 'חסכון ממוצע להזמנה' : 'avg. saved per order'}</Text>
         </View>
         <View style={s.savingsDivider} />
         <View style={s.savingsRight}>
-          <Text style={s.socialProof}>{isHebrew ? '🏠 שכנים כבר חוסכים ביחד' : '🏠 Neighbors already saving together'}</Text>
-          <Text style={s.socialProofSub}>{isHebrew ? 'זרא, H&M, איקאה, Amazon ועוד' : 'Zara, H&M, IKEA, Amazon & more'}</Text>
+          <Text style={s.savingsSocial}>🏠 {isHebrew ? 'שכנים כבר חוסכים ביחד' : 'Neighbors saving together'}</Text>
+          <Text style={s.savingsSocialSub}>{isHebrew ? 'זרא · H&M · איקאה · Amazon' : 'Zara · H&M · IKEA · Amazon'}</Text>
         </View>
       </View>
 
-      <View style={s.bentoGrid}>
+      {/* Bento grid */}
+      <View style={s.bento}>
         <View style={[s.bentoCard, s.bentoWide]}>
-          <Text style={s.bentoNumber}>💸</Text>
+          <Text style={s.bentoEmoji}>💸</Text>
           <Text style={s.bentoTitle}>{isHebrew ? 'חוסכים ₪20–60 להזמנה' : 'Save ₪20–60 per order'}</Text>
-          <Text style={s.bentoBody}>{isHebrew ? '4 שכנים = משלוח אחד. כל אחד משלם רבע.' : '4 neighbors share one shipment. Each pays a quarter.'}</Text>
+          <Text style={s.bentoBody}>{isHebrew ? '4 שכנים = משלוח אחד. כל אחד משלם רבע.' : '4 neighbors, one shipment. Each pays a quarter.'}</Text>
         </View>
         <View style={s.bentoCard}>
-          <Text style={s.bentoNumber}>⚡</Text>
+          <Text style={s.bentoEmoji}>⚡</Text>
           <Text style={s.bentoTitle}>{isHebrew ? '15 שניות לשיתוף' : '15 sec to invite'}</Text>
-          <Text style={s.bentoBody}>{isHebrew ? 'קישור ישיר לוואטסאפ — שכנים מצטרפים בלחיצה.' : 'One WhatsApp link — neighbors join in one tap.'}</Text>
+          <Text style={s.bentoBody}>{isHebrew ? 'קישור ישיר לוואטסאפ.' : 'One WhatsApp link.'}</Text>
         </View>
         <View style={s.bentoCard}>
-          <Text style={s.bentoNumber}>🔒</Text>
-          <Text style={s.bentoTitle}>{isHebrew ? 'כסף בנאמנות' : 'Money in escrow'}</Text>
-          <Text style={s.bentoBody}>{isHebrew ? 'Stripe מחזיק את הכסף עד לאישור קבלת ההזמנה.' : 'Stripe holds funds until everyone confirms delivery.'}</Text>
+          <Text style={s.bentoEmoji}>🔒</Text>
+          <Text style={s.bentoTitle}>{isHebrew ? 'כסף בנאמנות' : 'Escrow protected'}</Text>
+          <Text style={s.bentoBody}>{isHebrew ? 'Stripe מחזיק עד לאישור קבלה.' : 'Stripe holds until delivery confirmed.'}</Text>
         </View>
       </View>
 
-      <View style={s.authCard}>
+      {/* Auth */}
+      <View style={s.authGroup}>
         <Pressable
           accessibilityRole="button"
           onPress={() => googleSignIn.mutate(undefined, {
@@ -135,13 +146,13 @@ export default function LoginScreen() {
           style={({ pressed }) => [s.googleBtn, pressed && { opacity: 0.9 }]}
         >
           <GoogleIcon />
-          <Text style={s.googleBtnText}>
+          <Text style={s.googleBtnTx}>
             {googleSignIn.isPending ? (isHebrew ? 'פותח...' : 'Opening...') : (isHebrew ? 'המשך עם Google' : 'Continue with Google')}
           </Text>
         </Pressable>
         <Pressable accessibilityRole="button" onPress={() => router.push('/(auth)/phone')}
           style={({ pressed }) => [s.phoneBtn, pressed && { opacity: 0.88 }]}>
-          <Text style={s.phoneBtnText}>{isHebrew ? 'המשך עם טלפון' : 'Continue with phone'}</Text>
+          <Text style={s.phoneBtnTx}>{isHebrew ? 'המשך עם טלפון' : 'Continue with phone'}</Text>
         </Pressable>
       </View>
 
@@ -151,16 +162,16 @@ export default function LoginScreen() {
           <View style={s.demoRow}>
             <Pressable accessibilityRole="button" onPress={continueAsUser}
               style={({ pressed }) => [s.demoBtn, s.demoBtnAccent, pressed && { opacity: 0.9 }]}>
-              <Text style={s.demoBtnAccentText}>{isHebrew ? 'כניסה כמשתמש' : 'Enter as User'}</Text>
+              <Text style={s.demoBtnAccentTx}>{isHebrew ? 'כניסה כמשתמש' : 'Enter as User'}</Text>
             </Pressable>
             <Pressable accessibilityRole="button" onPress={continueAsStore}
               style={({ pressed }) => [s.demoBtn, pressed && { opacity: 0.9 }]}>
-              <Text style={s.demoBtnText}>{isHebrew ? 'כניסה כחנות' : 'Enter as Store'}</Text>
+              <Text style={s.demoBtnTx}>{isHebrew ? 'כניסה כחנות' : 'Enter as Store'}</Text>
             </Pressable>
           </View>
           <Pressable accessibilityRole="button"
             onPress={() => { resetDemo(); router.replace('/login'); }} style={s.resetLink}>
-            <Text style={s.resetText}>{isHebrew ? 'איפוס דמו' : 'Reset demo'}</Text>
+            <Text style={s.resetTx}>{isHebrew ? 'איפוס דמו' : 'Reset demo'}</Text>
           </Pressable>
         </View>
       ) : null}
@@ -176,88 +187,52 @@ export default function LoginScreen() {
 }
 
 const s = StyleSheet.create({
-  bg: { flex: 1, backgroundColor: D.bg },
-  content: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 56, gap: 0, maxWidth: 920, width: '100%', alignSelf: 'center' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 56,
-    paddingBottom: 8,
-  },
-  wordmark: { fontFamily: fontFamily.display, fontSize: 22, color: D.paper, letterSpacing: 0.5 },
-  langRow: {
-    flexDirection: 'row', gap: 4, backgroundColor: D.surface, borderRadius: radii.pill,
-    padding: 3, borderWidth: 1, borderColor: D.border,
-    ...shadow.glass,
-  },
-  langBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: radii.pill },
-  langBtnActive: { backgroundColor: colors.acc },
-  langBtnText: { fontFamily: fontFamily.bodyBold, fontSize: 12, color: D.paperMu },
-  langBtnTextActive: { color: D.paper },
-  logoHeroWrap: { alignItems: 'center', marginTop: 20, marginBottom: 16 },
-  heroText: { gap: 10, marginBottom: 22 },
-  kicker: { fontFamily: fontFamily.bodyBold, fontSize: 11, letterSpacing: 2.4, color: D.acc },
-  headline: { fontFamily: fontFamily.display, fontSize: 38, lineHeight: 44, color: D.paper },
-  subline: { fontFamily: fontFamily.body, fontSize: 15, lineHeight: 22, color: D.paperMu },
-  savingsHero: {
-    flexDirection: 'row', alignItems: 'center', gap: 16,
-    backgroundColor: D.paper, borderRadius: 24, padding: 18, marginBottom: 18,
-    ...shadow.cta,
-  },
-  savingsLeft: { gap: 3 },
-  savingsAmount: { fontFamily: fontFamily.display, fontSize: 40, lineHeight: 42, color: colors.white, letterSpacing: -1 },
-  savingsLabel: { fontFamily: fontFamily.bodyBold, fontSize: 10, letterSpacing: 1.4, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' },
-  savingsDivider: { width: 1, height: 48, backgroundColor: 'rgba(255,255,255,0.15)' },
-  savingsRight: { flex: 1, gap: 4 },
-  socialProof: { fontFamily: fontFamily.bodyBold, fontSize: 13, color: colors.white, lineHeight: 18 },
-  socialProofSub: { fontFamily: fontFamily.body, fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 17 },
-  bentoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 18 },
-  bentoCard: {
-    flexGrow: 1,
-    flexBasis: 190,
-    minHeight: 136,
-    gap: 8,
-    padding: 16,
-    borderRadius: 24,
-    backgroundColor: D.surface,
-    borderWidth: 1,
-    borderColor: D.border,
-    ...shadow.card,
-  },
+  bg:      { flex: 1, backgroundColor: D.bg },
+  content: { flexGrow: 1, paddingHorizontal: 22, paddingBottom: 56, gap: 22, maxWidth: 920, width: '100%', alignSelf: 'center' },
+
+  topBar:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 52, paddingBottom: 4 },
+  langPill:    { flexDirection: 'row', gap: 2, backgroundColor: D.surface, borderRadius: radii.pill, padding: 3, borderWidth: 1, borderColor: D.border, ...shadow.glass },
+  langBtn:     { paddingHorizontal: 12, paddingVertical: 6, borderRadius: radii.pill },
+  langBtnOn:   { backgroundColor: D.ink },
+  langBtnTx:   { fontFamily: fontFamily.bodyBold, fontSize: 12, color: D.paperMu },
+  langBtnTxOn: { color: '#FFFFFF' },
+
+  hero:         { gap: 10 },
+  heroKicker:   { fontFamily: fontFamily.bodyBold, fontSize: 11, letterSpacing: 2.4, color: D.acc },
+  heroHeadline: { fontFamily: fontFamily.display, fontSize: 40, lineHeight: 46, color: D.paper },
+  heroSub:      { fontFamily: fontFamily.body, fontSize: 15, lineHeight: 22, color: D.paperMu },
+
+  savingsCard:      { flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: D.ink, borderRadius: 24, padding: 20, ...shadow.cta },
+  savingsLeft:      { gap: 4 },
+  savingsAmount:    { fontFamily: fontFamily.display, fontSize: 42, lineHeight: 44, color: '#FFFFFF', letterSpacing: -1 },
+  savingsLabel:     { fontFamily: fontFamily.bodyBold, fontSize: 10, letterSpacing: 1.4, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' },
+  savingsDivider:   { width: 1, height: 48, backgroundColor: 'rgba(255,255,255,0.15)' },
+  savingsRight:     { flex: 1, gap: 5 },
+  savingsSocial:    { fontFamily: fontFamily.bodyBold, fontSize: 13, color: '#FFFFFF', lineHeight: 18 },
+  savingsSocialSub: { fontFamily: fontFamily.body, fontSize: 12, color: 'rgba(255,255,255,0.55)' },
+
+  bento:     { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  bentoCard: { flexGrow: 1, flexBasis: 180, minHeight: 128, gap: 8, padding: 16, borderRadius: 24, backgroundColor: D.surface, borderWidth: 1, borderColor: D.border, ...shadow.card },
   bentoWide: { flexBasis: 300, backgroundColor: D.accSoft },
-  bentoNumber: { fontFamily: fontFamily.bodyBold, fontSize: 12, color: D.acc },
-  bentoTitle: { fontFamily: fontFamily.bodyBold, fontSize: 16, color: D.paper },
+  bentoEmoji:{ fontSize: 22, lineHeight: 28 },
+  bentoTitle:{ fontFamily: fontFamily.bodyBold, fontSize: 15, color: D.paper },
   bentoBody: { fontFamily: fontFamily.body, fontSize: 13, lineHeight: 19, color: D.paperMu },
-  authCard: { gap: 10, marginBottom: 16 },
-  googleBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
-    backgroundColor: colors.acc, borderRadius: radii.pill, paddingVertical: 16,
-    ...shadow.cta,
-  },
-  googleBtnText: { fontFamily: fontFamily.bodyBold, fontSize: 15, color: colors.white },
-  phoneBtn: {
-    alignItems: 'center', justifyContent: 'center', borderRadius: radii.pill,
-    paddingVertical: 16, backgroundColor: D.surface, borderWidth: 1, borderColor: D.border,
-  },
-  phoneBtnText: { fontFamily: fontFamily.bodyBold, fontSize: 15, color: D.paper },
-  demoCard: {
-    gap: 12, backgroundColor: D.surface, borderRadius: 24, borderWidth: 1,
-    borderColor: D.border, padding: 18, marginBottom: 24,
-  },
-  demoLabel: { fontFamily: fontFamily.bodyBold, fontSize: 10, letterSpacing: 2, color: D.paperMu },
-  demoRow: { flexDirection: 'row', gap: 10 },
-  demoBtn: {
-    flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 14,
-    borderRadius: radii.pill, borderWidth: 1, borderColor: D.border,
-  },
-  demoBtnAccent: { backgroundColor: colors.acc, borderColor: colors.acc },
-  demoBtnText: { fontFamily: fontFamily.bodyBold, fontSize: 13, color: D.paper },
-  demoBtnAccentText: { fontFamily: fontFamily.bodyBold, fontSize: 13, color: colors.white },
-  resetLink: { alignItems: 'center', paddingVertical: 4 },
-  resetText: { fontFamily: fontFamily.body, fontSize: 12, color: D.paperMu },
-  terms: {
-    fontFamily: fontFamily.body, fontSize: 11, color: D.paperMu,
-    textAlign: 'center', lineHeight: 17, paddingHorizontal: 16,
-  },
+
+  authGroup:     { gap: 10 },
+  googleBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: D.acc, borderRadius: radii.pill, paddingVertical: 17, ...shadow.cta },
+  googleBtnTx:   { fontFamily: fontFamily.bodyBold, fontSize: 15, color: '#FFFFFF' },
+  phoneBtn:      { alignItems: 'center', justifyContent: 'center', borderRadius: radii.pill, paddingVertical: 17, backgroundColor: D.surface, borderWidth: 1, borderColor: D.border },
+  phoneBtnTx:    { fontFamily: fontFamily.bodyBold, fontSize: 15, color: D.paper },
+
+  demoCard:        { gap: 12, backgroundColor: D.surface, borderRadius: 24, borderWidth: 1, borderColor: D.border, padding: 18 },
+  demoLabel:       { fontFamily: fontFamily.bodyBold, fontSize: 10, letterSpacing: 2, color: D.paperMu },
+  demoRow:         { flexDirection: 'row', gap: 10 },
+  demoBtn:         { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: radii.pill, borderWidth: 1, borderColor: D.border },
+  demoBtnAccent:   { backgroundColor: D.acc, borderColor: D.acc },
+  demoBtnTx:       { fontFamily: fontFamily.bodyBold, fontSize: 13, color: D.paper },
+  demoBtnAccentTx: { fontFamily: fontFamily.bodyBold, fontSize: 13, color: '#FFFFFF' },
+  resetLink:       { alignItems: 'center', paddingVertical: 4 },
+  resetTx:         { fontFamily: fontFamily.body, fontSize: 12, color: D.paperMu },
+
+  terms: { fontFamily: fontFamily.body, fontSize: 11, color: D.paperMu, textAlign: 'center', lineHeight: 17, paddingHorizontal: 16 },
 });
