@@ -300,6 +300,9 @@ export default function NewOrder() {
 
           <View style={styles.ctaWrap}>
             <Cta label={isHe ? '← הבא' : '→ Next'} onPress={() => setStep(2)} />
+            <Pressable onPress={() => setStep(2)} style={styles.skipLink} accessibilityRole="button">
+              <Text style={styles.skipLinkText}>{isHe ? 'דלג על כתובת' : 'Skip for now'}</Text>
+            </Pressable>
           </View>
         </ScrollView>
       )}
@@ -365,7 +368,10 @@ export default function NewOrder() {
           </View>
 
           <View style={styles.ctaWrap}>
-            <Cta label={isHe ? '← הבא' : '→ Next'} onPress={() => setStep(3)} disabled={!selectedStore} />
+            <Cta label={isHe ? '← הבא' : '→ Next'} onPress={() => setStep(3)} />
+            <Pressable onPress={() => setStep(3)} style={styles.skipLink} accessibilityRole="button">
+              <Text style={styles.skipLinkText}>{isHe ? 'דלג על בחירת חנות' : 'Skip for now'}</Text>
+            </Pressable>
           </View>
         </ScrollView>
       )}
@@ -396,8 +402,10 @@ export default function NewOrder() {
           </View>
 
           <View style={styles.ctaWrap}>
-            <Cta label={isHe ? '← הבא' : '→ Next'} onPress={handleNameNext}
-              disabled={firstName.trim().length < 2} loading={upsertProfile.isPending} />
+            <Cta label={isHe ? '← הבא' : '→ Next'} onPress={handleNameNext} loading={upsertProfile.isPending} />
+            <Pressable onPress={() => setStep(4)} style={styles.skipLink} accessibilityRole="button">
+              <Text style={styles.skipLinkText}>{isHe ? 'דלג על שם' : 'Skip for now'}</Text>
+            </Pressable>
           </View>
         </ScrollView>
       )}
@@ -643,4 +651,7 @@ const styles = StyleSheet.create({
   launchedText: { fontFamily: fontFamily.bodyBold, fontSize: 14, color: '#2E7D32' },
   doneLink: { alignItems: 'center', paddingVertical: 14 },
   doneLinkText: { fontFamily: fontFamily.body, fontSize: 14, color: colors.mu },
+
+  skipLink: { alignItems: 'center', paddingVertical: 10 },
+  skipLinkText: { fontFamily: fontFamily.body, fontSize: 13, color: colors.mu2 },
 });
