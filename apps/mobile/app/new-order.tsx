@@ -294,7 +294,14 @@ export default function NewOrderScreen() {
     }
   };
 
+  const currentStepValid =
+    currentStep === 'address' ? completeAddress :
+    currentStep === 'store'   ? brand !== null :
+    currentStep === 'name'    ? leadName.trim().length >= 2 :
+    true;
+
   const goNext = async () => {
+    if (!currentStepValid) return;
     if (currentStep === 'copy') {
       await createOrderIfNeeded();
       openCatalog();
@@ -331,7 +338,12 @@ export default function NewOrderScreen() {
 
         <View style={styles.stepRail}>
           {STEP_KEYS.map((key, index) => (
-            <Pressable key={key} accessibilityRole="button" onPress={() => setStepIndex(index)} style={styles.stepItem}>
+            <Pressable
+              key={key}
+              accessibilityRole="button"
+              onPress={() => { if (index < stepIndex) setStepIndex(index); }}
+              style={styles.stepItem}
+            >
               <View style={[styles.stepDot, index <= stepIndex && styles.stepDotActive]}>
                 <Text style={[styles.stepDotText, index <= stepIndex && styles.stepDotTextActive]}>{index + 1}</Text>
               </View>
@@ -499,10 +511,24 @@ export default function NewOrderScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Pressable accessibilityRole="button" onPress={goNext} style={({ pressed }) => [styles.primaryButton, pressed && demoStyles.pressed]}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={goNext}
+            disabled={!currentStepValid}
+            style={({ pressed }) => [styles.primaryButton, !currentStepValid && styles.primaryButtonOff, pressed && currentStepValid && demoStyles.pressed]}
+          >
             <Text style={styles.primaryButtonText}>{currentStep === 'copy' ? copy.create : copy.next}</Text>
           </Pressable>
         </View>
+        {!currentStepValid && (
+          <Text style={styles.validationHint}>
+            {currentStep === 'address'
+              ? (isHebrew ? 'יש להזין כתובת מלאה עם מספר בית ועיר' : 'Enter a full address with street number and city')
+              : currentStep === 'store'
+              ? (isHebrew ? 'יש לבחור חנות' : 'Please choose a store')
+              : (isHebrew ? 'יש להזין שם' : 'Please enter your name')}
+          </Text>
+        )}
 
         {createdOrder ? (
           <Pressable accessibilityRole="button" onPress={openCatalog} style={({ pressed }) => [styles.catalogButton, pressed && demoStyles.pressed]}>
@@ -951,5 +977,15 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontFamily: fontFamily.bodyBold,
     fontSize: 15,
+  },
+  primaryButtonOff: {
+    opacity: 0.35,
+  },
+  validationHint: {
+    textAlign: 'center',
+    color: colors.mu,
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    marginTop: -8,
   },
 });
