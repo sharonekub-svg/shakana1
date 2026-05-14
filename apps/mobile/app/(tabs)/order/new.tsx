@@ -173,17 +173,18 @@ export default function NewOrder() {
     finally { setLaunching(false); }
   };
 
+  const shareMsg = isHe
+    ? `קניתי ב-${storeName} ופותח/ת הזמנה קבוצתית — ביחד חוסכים בדמי שליח! יש לך ${timerHours} שעות להצטרף 👇\n${inviteFullUrl || inviteLink}`
+    : `I'm doing a group order from ${storeName} — join me and we split the shipping! You have ${timerHours}h to join 👇\n${inviteFullUrl || inviteLink}`;
+
   const handleCopy = async () => {
-    await Clipboard.setStringAsync(inviteFullUrl || inviteLink);
+    await Clipboard.setStringAsync(shareMsg);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleWhatsApp = () => {
-    const msg = isHe
-      ? `קניתי ב-${storeName} ופותח/ת הזמנה קבוצתית — ביחד חוסכים בדמי שליח! יש לך ${timerHours} שעות להצטרף 👇\n${inviteFullUrl || inviteLink}`
-      : `I'm doing a group order from ${storeName} — join me and we split the shipping! You have ${timerHours}h to join 👇\n${inviteFullUrl || inviteLink}`;
-    Linking.openURL(`whatsapp://send?text=${encodeURIComponent(msg)}`).catch(() => {});
+    Linking.openURL(`whatsapp://send?text=${encodeURIComponent(shareMsg)}`).catch(() => {});
   };
 
   const goBack = () => {
@@ -378,13 +379,16 @@ export default function NewOrder() {
               </View>
 
               <View style={styles.inviteBox}>
-                <Text style={styles.inviteLabel}>{isHe ? 'קישור לשיתוף' : 'SHARE LINK'}</Text>
+                <Text style={styles.inviteLabel}>{isHe ? 'העתק הודעה + קישור' : 'COPY MESSAGE + LINK'}</Text>
                 <View style={styles.inviteRow}>
                   <Text style={styles.inviteLink} numberOfLines={1}>{inviteLink}</Text>
                   <Pressable onPress={handleCopy} style={styles.copyBtn}>
-                    <Text style={styles.copyText}>{copied ? '✓' : (isHe ? 'העתק' : 'Copy')}</Text>
+                    <Text style={styles.copyText}>{copied ? '✓ ' + (isHe ? 'הועתק' : 'Copied') : (isHe ? 'העתק' : 'Copy')}</Text>
                   </Pressable>
                 </View>
+                <Text style={styles.inviteHint}>
+                  {isHe ? 'מעתיק את ההודעה המלאה עם הקישור — מוכן להדבקה בכל מקום.' : 'Copies the full message with link — ready to paste anywhere.'}
+                </Text>
               </View>
 
               <Cta label={isHe ? '💬 שלח ב-WhatsApp' : '💬 Invite via WhatsApp'} onPress={handleWhatsApp} green />
@@ -474,6 +478,7 @@ const styles = StyleSheet.create({
   inviteLink:  { flex: 1, fontFamily: fontFamily.bodyBold, fontSize: 13, color: colors.tx, letterSpacing: 0.3 },
   copyBtn:     { backgroundColor: colors.accLight, borderRadius: radii.pill, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: colors.acc },
   copyText:    { fontFamily: fontFamily.bodyBold, fontSize: 12, color: colors.acc },
+  inviteHint:  { fontFamily: fontFamily.body, fontSize: 11, color: colors.mu, lineHeight: 16 },
 
   doneBtn:     { alignItems: 'center', paddingVertical: 16 },
   doneBtnText: { fontFamily: fontFamily.bodyBold, fontSize: 14, color: colors.acc },
