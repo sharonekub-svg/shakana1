@@ -91,8 +91,8 @@ export default function NewOrder() {
   const [step, setStep] = useState(1);
 
   // ── Step 1: Name ──────────────────────────────────────────────────────
-  const [firstName, setFirstName] = useState(() => profile?.first_name ?? '');
-  const [lastName,  setLastName]  = useState(() => profile?.last_name  ?? '');
+  const [firstName, setFirstName] = useState('');
+  const [lastName,  setLastName]  = useState('');
   const nameValid = firstName.trim().length >= 2;
 
   // ── Step 2: Store ─────────────────────────────────────────────────────
