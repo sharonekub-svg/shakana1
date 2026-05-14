@@ -20,6 +20,7 @@ import { useGenerateInvite } from '@/api/invites';
 import { useAuthStore } from '@/stores/authStore';
 import { useLocale } from '@/i18n/locale';
 import { track } from '@/lib/posthog';
+import { buildInviteUrl } from '@/lib/deeplinks';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TIMER_ITEM_WIDTH = 88;
@@ -112,8 +113,8 @@ export default function NewOrder() {
   const storeInfo   = STORES.find((st) => st.id === selectedStore);
   const storeName   = storeInfo?.name ?? '';
   const addressLine = [profile?.street, profile?.building, profile?.city].filter(Boolean).join(', ');
-  const shortLink   = inviteToken ? `SHAKANA.APP/G/${inviteToken.toUpperCase().slice(0, 8)}` : '';
-  const fullUrl     = inviteToken ? `https://shakana.app/g/${inviteToken}` : '';
+  const fullUrl     = inviteToken ? buildInviteUrl(inviteToken) : '';
+  const shortLink   = inviteToken ? fullUrl.replace('https://', '').toUpperCase().slice(0, 28) : '';
 
   // Create order + generate draft invite when step 4 first appears
   useEffect(() => {
