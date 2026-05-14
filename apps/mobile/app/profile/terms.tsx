@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
   kicker: { fontFamily: fontFamily.bodyBold, fontSize: 10, letterSpacing: 2.4, color: colors.acc, marginBottom: 4 },
   title: { fontFamily: fontFamily.display, fontSize: 30, color: colors.tx },
   subtitle: { marginTop: 8, fontFamily: fontFamily.body, fontSize: 13, lineHeight: 20, color: colors.mu },
-  card: { gap: 14, padding: 16, borderWidth: 1, borderColor: colors.br, borderRadius: radii.xl, backgroundColor: colors.white, ...shadow.card },
+  card: { gap: 14, padding: 16, borderWidth: 1, borderColor: colors.br, borderRadius: radii.xl, backgroundColor: colors.s1, ...shadow.card },
   point: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   check: { color: colors.err, fontFamily: fontFamily.bodyBold, fontSize: 18, lineHeight: 23 },
   body: { flex: 1, fontFamily: fontFamily.body, fontSize: 14, lineHeight: 22, color: colors.tx },

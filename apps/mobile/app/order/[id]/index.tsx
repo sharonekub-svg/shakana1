@@ -577,7 +577,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   emptyItemsCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.br,
@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
   },
   itemsList: { gap: 10 },
   itemCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.br,
@@ -635,7 +635,7 @@ const styles = StyleSheet.create({
     color: colors.tx,
   },
   neighborsCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.br,
@@ -693,7 +693,7 @@ const styles = StyleSheet.create({
     color: colors.acc,
   },
   addCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     borderRadius: 26,
     borderWidth: 1,
     borderColor: colors.br,
@@ -770,7 +770,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   inviteCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     borderRadius: 26,
     borderWidth: 1,
     borderColor: colors.br,
@@ -865,7 +865,7 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   cartCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.br,

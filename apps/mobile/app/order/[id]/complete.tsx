@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
   title: { fontFamily: fontFamily.display, fontSize: 28, color: colors.tx },
   sub: { fontFamily: fontFamily.body, fontSize: 15, color: colors.mu, textAlign: 'center' },
   receipt: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     borderColor: colors.br,
     borderWidth: 1,
     borderRadius: radii.md,

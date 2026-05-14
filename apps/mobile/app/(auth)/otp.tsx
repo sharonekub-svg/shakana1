@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     gap: 16,
     padding: 18,
     borderRadius: 28,
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     borderWidth: 1,
     borderColor: colors.br,
     ...shadow.card,

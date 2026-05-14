@@ -86,7 +86,7 @@ export default function ProfileScreen() {
   const latestOrder = visibleDemoOrders[0] ?? null;
   const savingsThisYear = Math.round(stats.totalSavings);
   const initial = displayName.charAt(0).toUpperCase() || 'S';
-  const copy = isHebrew
+  let copy = isHebrew
     ? {
         title: 'הפרופיל שלי',
         subtitle: 'הזמנות, תשלומים, התראות ותמיכה במקום אחד ברור.',
@@ -191,6 +191,60 @@ export default function ProfileScreen() {
         on: 'ON',
         off: 'OFF',
       };
+  if (isHebrew) {
+    copy = {
+      title: 'הפרופיל שלי',
+      subtitle: 'הזמנות, תשלומים, התראות ותמיכה במקום אחד ברור.',
+      guestEmail: 'התחברו כדי לשייך הזמנות לחשבון שלכם',
+      verified: 'משתמש מאומת',
+      guestMode: 'מצב אורח',
+      signOut: 'התנתקות',
+      signIn: 'כניסה',
+      signingOut: 'מתנתק...',
+      opening: 'פותח...',
+      startHere: 'התחילו כאן',
+      mainActions: 'פעולות ראשיות',
+      openMeta: 'פתוחות',
+      newOrder: 'הזמנה חדשה',
+      newOrderBody: 'חנות, טיימר וכתובת.',
+      myOrders: 'ההזמנות שלי',
+      myOrdersBody: 'סלים פתוחים והיסטוריה.',
+      copyInvite: 'העתקת קישור',
+      copyInviteBody: 'שתפו את ההזמנה האחרונה.',
+      storeView: 'תצוגת חנות',
+      storeViewBody: 'דשבורד סוחר.',
+      joinTitle: 'הצטרפות להזמנה',
+      joinBody: 'הכניסו את הקוד מ-WhatsApp. קישורי הזמנה עדיין נפתחים ישירות.',
+      join: 'הצטרף',
+      enterCode: 'הכניסו קודם קוד בן 4 ספרות.',
+      createFirst: 'צרו הזמנה קודם, ואז העתיקו את הקישור.',
+      inviteCopied: 'קישור ההזמנה הועתק',
+      open: 'פתוחות',
+      completed: 'הושלמו',
+      mySaves: 'חסכתי',
+      savedYear: 'חיסכון השנה',
+      wallets: 'ארנקים',
+      savingsTracker: 'מעקב חיסכון אישי',
+      savingsBody: 'הזמנות קבוצתיות שהושלמו מעדכנות את המספר הזה אוטומטית.',
+      notifications: 'התראות',
+      notificationsBody: 'כל התראה מסומנת בבירור כדי לדעת מה משנים.',
+      orderUpdates: 'עדכוני הזמנה',
+      orderUpdatesBody: 'אריזה, מוכנה, נשלחה ושינויי חנות.',
+      paymentReminders: 'תזכורות תשלום',
+      paymentRemindersBody: 'תזכורת למשתתפים לפני שהטיימר נסגר.',
+      buildingOrders: 'הזמנות בבניין',
+      buildingOrdersBody: 'התראות כשמישהו בבניין פותח הזמנה.',
+      walletTitle: 'ארנקים ותשלום',
+      walletBody: 'בחרו איך אנשים יוכלו לשלם לכם.',
+      helpTitle: 'עזרה, משפטי ואבטחה',
+      helpBody: 'תמיכה, אבטחה ועמודים משפטיים במקום מסודר.',
+      deleteAccount: 'מחיקת חשבון',
+      resetDemo: 'איפוס דמו למשקיעים',
+      demoReset: 'הדמו אופס. אפשר להתחיל זרימה חדשה.',
+      on: 'פעיל',
+      off: 'כבוי',
+    };
+  }
   const email = session?.user.email ?? copy.guestEmail;
 
   const savePulse = (message: string) => {
@@ -231,31 +285,11 @@ export default function ProfileScreen() {
     }
   };
 
-  const { setLanguage } = useLocale();
-
   return (
     <ScreenBase padded={false}>
-      <View style={styles.topBar}>
-        <Text style={styles.brand}>SHAKANA</Text>
-        <View style={styles.langPill}>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => void setLanguage('he')}
-            style={[styles.langOpt, language === 'he' && styles.langOptActive]}
-          >
-            <Text style={[styles.langText, language === 'he' && styles.langTextActive]}>עברית</Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => void setLanguage('en')}
-            style={[styles.langOpt, language === 'en' && styles.langOptActive]}
-          >
-            <Text style={[styles.langText, language === 'en' && styles.langTextActive]}>EN</Text>
-          </Pressable>
-        </View>
-      </View>
       <ScrollView contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
+          <Text style={styles.brand}>SHAKANA</Text>
           <Text style={styles.title}>{copy.title}</Text>
           <Text style={styles.subtitle}>{copy.subtitle}</Text>
         </View>
@@ -321,13 +355,21 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Dark stats strip */}
-        <View style={styles.statsStrip}>
-          <StatBig value={String(openOrders)} label={copy.open} />
-          <View style={styles.statsDivider} />
-          <StatBig value={formatMoney(savingsThisYear, language)} label={copy.savedYear} />
-          <View style={styles.statsDivider} />
-          <StatBig value={String(personalSaves)} label={copy.mySaves} />
+        <View style={styles.statsGrid}>
+          <Stat icon="OP" label={copy.open} value={String(openOrders)} />
+          <Stat icon="CP" label={copy.completed} value={String(stats.shippedOrders)} />
+          <Stat icon="SV" label={copy.mySaves} value={String(personalSaves)} />
+          <Stat icon="IL" label={copy.savedYear} value={formatMoney(savingsThisYear, language)} />
+          <Stat icon="WL" label={copy.wallets} value={String(readyPayments)} />
+        </View>
+
+        <View style={styles.savingsHero}>
+          <IconBadge label="IL" large />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.savingsHeroValue}>{formatMoney(savingsThisYear, language)}</Text>
+            <Text style={styles.savingsHeroTitle}>{copy.savingsTracker}</Text>
+            <Text style={styles.sectionBody}>{copy.savingsBody}</Text>
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -393,19 +435,9 @@ export default function ProfileScreen() {
         </View>
 
         {session ? (
-          <View style={styles.accountActions}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={onSignOut}
-              disabled={signOut.isPending}
-              style={({ pressed }) => [styles.signOutButton, pressed && styles.pressed]}
-            >
-              <Text style={styles.signOutText}>{signOut.isPending ? copy.signingOut : copy.signOut}</Text>
-            </Pressable>
-            <Pressable accessibilityRole="button" onPress={() => router.push('/profile/delete')} style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed]}>
-              <Text style={styles.deleteText}>{copy.deleteAccount}</Text>
-            </Pressable>
-          </View>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/profile/delete')} style={styles.deleteButton}>
+            <Text style={styles.deleteText}>{copy.deleteAccount}</Text>
+          </Pressable>
         ) : null}
         <Pressable
           accessibilityRole="button"
@@ -471,15 +503,6 @@ function Stat({ icon, label, value }: { icon: string; label: string; value: stri
   );
 }
 
-function StatBig({ value, label }: { value: string; label: string }) {
-  return (
-    <View style={styles.statBig}>
-      <Text style={styles.statBigValue}>{value}</Text>
-      <Text style={styles.statBigLabel}>{label}</Text>
-    </View>
-  );
-}
-
 function ToggleRow({
   icon,
   label,
@@ -512,54 +535,10 @@ function ToggleRow({
 }
 
 const styles = StyleSheet.create({
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingTop: 16,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.br,
-    backgroundColor: colors.s1,
-  },
-  langPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.br,
-    backgroundColor: colors.s2,
-    padding: 2,
-  },
-  langOpt: {
-    minWidth: 36,
-    minHeight: 28,
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 8,
-  },
-  langOptActive: { backgroundColor: colors.tx },
-  langText: { color: colors.mu, fontFamily: fontFamily.bodyBold, fontSize: 11 },
-  langTextActive: { color: colors.white },
-  accountActions: {
-    gap: 10,
-  },
-  signOutButton: {
-    minHeight: 52,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: colors.br,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.s1,
-  },
-  signOutText: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 14 },
-  screen: { flexGrow: 1, width: '100%', maxWidth: 780, alignSelf: 'center', paddingHorizontal: 14, paddingTop: 14, paddingBottom: 104, gap: 14 },
+  screen: { flexGrow: 1, width: '100%', maxWidth: 430, alignSelf: 'center', paddingHorizontal: 14, paddingTop: 14, paddingBottom: 104, gap: 14 },
   header: { gap: 5, paddingTop: 4 },
   brand: { color: colors.acc, fontFamily: fontFamily.bodyBold, fontSize: 11, letterSpacing: 2 },
-  title: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 36, lineHeight: 40 },
+  title: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 30, lineHeight: 34 },
   subtitle: { color: colors.mu, fontFamily: fontFamily.body, fontSize: 14, lineHeight: 21, maxWidth: 520 },
   identityCard: {
     flexDirection: 'row',
@@ -567,23 +546,20 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 12,
     padding: 16,
-    borderRadius: radii.xl,
-    backgroundColor: colors.s1,
-    borderWidth: 1,
-    borderColor: colors.br,
-    ...shadow.card,
+    borderRadius: 28,
+    backgroundColor: 'transparent',
   },
   avatar: {
-    width: 62,
-    height: 62,
-    borderRadius: 22,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.accLight,
+    backgroundColor: '#817A6B',
     borderWidth: 1,
     borderColor: colors.br,
   },
-  avatarText: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 24 },
+  avatarText: { color: colors.ink, fontFamily: fontFamily.display, fontSize: 24 },
   identityCopy: { flex: 1, minWidth: 0 },
   name: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 18 },
   email: { marginTop: 3, color: colors.mu, fontFamily: fontFamily.body, fontSize: 13 },
@@ -592,7 +568,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     overflow: 'hidden',
     borderRadius: radii.pill,
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
     color: colors.acc,
     fontFamily: fontFamily.bodyBold,
     fontSize: 11,
@@ -601,7 +577,7 @@ const styles = StyleSheet.create({
   },
   authPill: {
     minHeight: 42,
-    borderRadius: radii.lg,
+    borderRadius: 999,
     paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
@@ -612,7 +588,7 @@ const styles = StyleSheet.create({
   toast: {
     padding: 12,
     borderRadius: radii.lg,
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
     borderWidth: 1,
     borderColor: colors.br,
   },
@@ -681,7 +657,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
     borderWidth: 1,
     borderColor: colors.br,
   },
@@ -714,68 +690,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   joinButtonText: { color: colors.white, fontFamily: fontFamily.bodyBold, fontSize: 14 },
-  statsStrip: {
+  statsGrid: {
     flexDirection: 'row',
-    backgroundColor: colors.ink,
-    borderRadius: radii.xl,
-    paddingVertical: 20,
-    paddingHorizontal: 4,
-    overflow: 'hidden',
-    ...shadow.cta,
-  },
-  statBig: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 6,
-  },
-  statBigValue: {
-    fontFamily: fontFamily.display,
-    fontSize: 34,
-    lineHeight: 34,
-    letterSpacing: -1,
-    color: colors.white,
-    fontStyle: 'italic',
-  },
-  statBigLabel: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 9,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
-    color: 'rgba(255,255,255,0.5)',
-  },
-  statsDivider: {
-    width: 1,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    marginVertical: 4,
-  },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
-  statCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 9,
-    flexGrow: 1,
-    flexBasis: 150,
-    minHeight: 78,
-    borderRadius: radii.lg,
+    flexWrap: 'nowrap',
+    gap: 0,
     padding: 12,
-    backgroundColor: colors.s1,
-    borderWidth: 1,
-    borderColor: colors.br,
-    ...shadow.card,
+    borderRadius: 24,
+    backgroundColor: colors.ink,
   },
-  statValue: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 21, lineHeight: 24 },
-  statLabel: { marginTop: 3, color: colors.mu, fontFamily: fontFamily.bodyBold, fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' },
+  statCard: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    flex: 1,
+    minHeight: 78,
+    borderRadius: 16,
+    padding: 8,
+    backgroundColor: 'transparent',
+  },
+  statValue: { color: colors.white, fontFamily: fontFamily.display, fontSize: 22, lineHeight: 25, textAlign: 'center' },
+  statLabel: { marginTop: 0, color: 'rgba(255,255,255,0.66)', fontFamily: fontFamily.bodyBold, fontSize: 8, letterSpacing: 1, textTransform: 'uppercase', textAlign: 'center' },
   savingsHero: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
     padding: 16,
     borderRadius: radii.xl,
-    backgroundColor: colors.ink,
-    borderWidth: 0,
+    backgroundColor: colors.goldLight,
+    borderWidth: 1,
+    borderColor: colors.br,
   },
-  savingsHeroValue: { color: colors.white, fontFamily: fontFamily.display, fontSize: 34, lineHeight: 38 },
-  savingsHeroTitle: { color: 'rgba(255,255,255,0.7)', fontFamily: fontFamily.bodyBold, fontSize: 13, textTransform: 'uppercase' },
+  savingsHeroValue: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 34, lineHeight: 38 },
+  savingsHeroTitle: { color: colors.acc, fontFamily: fontFamily.bodyBold, fontSize: 13, textTransform: 'uppercase' },
   paymentList: { gap: 10 },
   paymentCard: {
     gap: 10,

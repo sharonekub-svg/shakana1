@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
     color: colors.mu,
   },
   card: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     borderWidth: 1,
     borderColor: colors.br,
     borderRadius: 28,
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.br,
     borderRadius: 28,
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     ...shadow.card,
   },
   friendTitle: {

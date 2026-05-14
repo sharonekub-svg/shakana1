@@ -13,14 +13,15 @@ import { env } from '@/lib/env';
 import { ShakanaLogoHero, ShakanaLogoCompact } from '@/components/ShakanaLogo';
 
 const D = {
-  bg: '#1B1612',
-  surface: 'rgba(255,255,255,0.06)',
-  border: 'rgba(255,255,255,0.14)',
-  borderStrong: 'rgba(255,255,255,0.22)',
-  paper: '#FAF6EF',
-  paperMu: 'rgba(255,255,255,0.55)',
-  acc: '#C5654B',
-  gold: '#D29A4A',
+  bg: '#F7F4EE',
+  surface: '#FFFFFF',
+  surfaceSoft: '#EEE8DD',
+  border: '#E3DDD3',
+  borderStrong: '#CEC3B6',
+  paper: '#25201B',
+  paperMu: '#746B61',
+  acc: '#5F7F72',
+  accSoft: '#F0F6F2',
 } as const;
 
 
@@ -65,7 +66,7 @@ export default function LoginScreen() {
     <ScrollView style={s.bg} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
 
       <View style={s.header}>
-        <ShakanaLogoCompact light size={26} />
+        <ShakanaLogoCompact size={26} />
         <View style={s.langRow}>
           <Pressable onPress={() => void setLanguage('en')} accessibilityRole="button"
             style={[s.langBtn, language === 'en' && s.langBtnActive]}>
@@ -92,6 +93,24 @@ export default function LoginScreen() {
             ? 'שתפו הזמנה עם השכנים, חלקו את דמי המשלוח, חסכו ביחד.'
             : 'Share an order with neighbors, split shipping, save together.'}
         </Text>
+      </View>
+
+      <View style={s.bentoGrid}>
+        <View style={[s.bentoCard, s.bentoWide]}>
+          <Text style={s.bentoNumber}>01</Text>
+          <Text style={s.bentoTitle}>{isHebrew ? 'חנות אחת להזמנה' : 'One store per order'}</Text>
+          <Text style={s.bentoBody}>{isHebrew ? 'הקטלוג ננעל לחנות שבחרתם כדי שההזמנה תישאר ברורה.' : 'The catalog locks to the chosen store so the order stays clear.'}</Text>
+        </View>
+        <View style={s.bentoCard}>
+          <Text style={s.bentoNumber}>02</Text>
+          <Text style={s.bentoTitle}>{isHebrew ? 'שיתוף מהיר' : 'Fast invite'}</Text>
+          <Text style={s.bentoBody}>{isHebrew ? 'חברים נכנסים מהקישור ורואים את אותה הזמנה.' : 'Friends join from the link and see the same cart.'}</Text>
+        </View>
+        <View style={s.bentoCard}>
+          <Text style={s.bentoNumber}>03</Text>
+          <Text style={s.bentoTitle}>{isHebrew ? 'מעקב מסודר' : 'Clear tracking'}</Text>
+          <Text style={s.bentoBody}>{isHebrew ? 'החנות רואה פריטים, משתתפים, כתובת וסטטוס.' : 'Stores see items, members, address, and status.'}</Text>
+        </View>
       </View>
 
       <View style={s.authCard}>
@@ -146,7 +165,7 @@ export default function LoginScreen() {
 
 const s = StyleSheet.create({
   bg: { flex: 1, backgroundColor: D.bg },
-  content: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 56, gap: 0 },
+  content: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 56, gap: 0, maxWidth: 920, width: '100%', alignSelf: 'center' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -158,23 +177,41 @@ const s = StyleSheet.create({
   langRow: {
     flexDirection: 'row', gap: 4, backgroundColor: D.surface, borderRadius: radii.pill,
     padding: 3, borderWidth: 1, borderColor: D.border,
+    ...shadow.glass,
   },
   langBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: radii.pill },
   langBtnActive: { backgroundColor: colors.acc },
   langBtnText: { fontFamily: fontFamily.bodyBold, fontSize: 12, color: D.paperMu },
   langBtnTextActive: { color: D.paper },
   logoHeroWrap: { alignItems: 'center', marginTop: 20, marginBottom: 16 },
-  heroText: { gap: 10, marginBottom: 32 },
+  heroText: { gap: 10, marginBottom: 22 },
   kicker: { fontFamily: fontFamily.bodyBold, fontSize: 11, letterSpacing: 2.4, color: D.acc },
   headline: { fontFamily: fontFamily.display, fontSize: 38, lineHeight: 44, color: D.paper },
   subline: { fontFamily: fontFamily.body, fontSize: 15, lineHeight: 22, color: D.paperMu },
+  bentoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 18 },
+  bentoCard: {
+    flexGrow: 1,
+    flexBasis: 190,
+    minHeight: 136,
+    gap: 8,
+    padding: 16,
+    borderRadius: 24,
+    backgroundColor: D.surface,
+    borderWidth: 1,
+    borderColor: D.border,
+    ...shadow.card,
+  },
+  bentoWide: { flexBasis: 300, backgroundColor: D.accSoft },
+  bentoNumber: { fontFamily: fontFamily.bodyBold, fontSize: 12, color: D.acc },
+  bentoTitle: { fontFamily: fontFamily.bodyBold, fontSize: 16, color: D.paper },
+  bentoBody: { fontFamily: fontFamily.body, fontSize: 13, lineHeight: 19, color: D.paperMu },
   authCard: { gap: 10, marginBottom: 16 },
   googleBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
-    backgroundColor: D.paper, borderRadius: radii.pill, paddingVertical: 16,
+    backgroundColor: colors.acc, borderRadius: radii.pill, paddingVertical: 16,
     ...shadow.cta,
   },
-  googleBtnText: { fontFamily: fontFamily.bodyBold, fontSize: 15, color: '#1B1612' },
+  googleBtnText: { fontFamily: fontFamily.bodyBold, fontSize: 15, color: colors.white },
   phoneBtn: {
     alignItems: 'center', justifyContent: 'center', borderRadius: radii.pill,
     paddingVertical: 16, backgroundColor: D.surface, borderWidth: 1, borderColor: D.border,
@@ -192,7 +229,7 @@ const s = StyleSheet.create({
   },
   demoBtnAccent: { backgroundColor: colors.acc, borderColor: colors.acc },
   demoBtnText: { fontFamily: fontFamily.bodyBold, fontSize: 13, color: D.paper },
-  demoBtnAccentText: { fontFamily: fontFamily.bodyBold, fontSize: 13, color: D.paper },
+  demoBtnAccentText: { fontFamily: fontFamily.bodyBold, fontSize: 13, color: colors.white },
   resetLink: { alignItems: 'center', paddingVertical: 4 },
   resetText: { fontFamily: fontFamily.body, fontSize: 12, color: D.paperMu },
   terms: {

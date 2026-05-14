@@ -45,6 +45,7 @@ const messages = {
       noActiveOrdersBody: 'התחל סל משותף והעבר הכול לזרימה אחת מסודרת.',
     },
     landing: {
+      appName: 'Shakana',
       brand: 'SHAKANA',
       title: 'קניות יחד, בלי בלאגן.',
       subtitle: 'יוצרים סל, מזמינים שכנים, ומחזיקים את כל ההזמנה במקום אחד.',
@@ -215,6 +216,7 @@ const messages = {
       noActiveOrdersBody: 'Start a shared basket and keep everything in one clean flow.',
     },
     landing: {
+      appName: 'Shakana',
       brand: 'SHAKANA',
       title: 'Shopping, but cleaner.',
       subtitle: 'Create a basket, invite neighbors, and keep every order in one place.',
@@ -619,6 +621,9 @@ export async function applyLanguageDirection(language: Language): Promise<void> 
   if (Platform.OS === 'web' && typeof document !== 'undefined') {
     document.documentElement.lang = language;
     document.documentElement.dir = shouldBeRtl ? 'rtl' : 'ltr';
+    document.body.lang = language;
+    document.body.dir = shouldBeRtl ? 'rtl' : 'ltr';
+    document.body.style.direction = shouldBeRtl ? 'rtl' : 'ltr';
   }
 
   if (Platform.OS !== 'web' && current !== shouldBeRtl) {

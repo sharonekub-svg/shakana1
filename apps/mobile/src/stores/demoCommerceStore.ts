@@ -130,7 +130,7 @@ function getParticipantName(participantId: string, order?: DemoOrder) {
 
 function normalizeOrderTimerMinutes(minutes?: number) {
   if (!minutes || !Number.isFinite(minutes)) return 30;
-  return Math.max(1, Math.min(720, Math.round(minutes)));
+  return Math.max(1, Math.min(60 * 24 * 7, Math.round(minutes)));
 }
 
 function createOrder(brand: DemoBrandId, creator = primaryDemoParticipant, timerMinutes?: number): DemoOrder {
@@ -642,7 +642,7 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
     }),
   updateTimer: (orderId, minutes) =>
     set((state) => {
-      const safeMinutes = Math.max(1, Math.min(720, Math.round(minutes)));
+      const safeMinutes = Math.max(1, Math.min(60 * 24 * 7, Math.round(minutes)));
       const updatedAt = now();
       const closesAt = updatedAt + safeMinutes * 60 * 1000;
       const orders = state.orders.map((order) =>

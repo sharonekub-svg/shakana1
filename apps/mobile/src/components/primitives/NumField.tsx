@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodyBold,
   },
   input: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     borderWidth: 1,
     borderRadius: radii.pill,
     paddingHorizontal: 12,

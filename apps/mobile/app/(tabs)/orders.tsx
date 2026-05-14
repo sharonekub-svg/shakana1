@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     minHeight: 84,
     padding: 14,
     borderRadius: 22,
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     borderWidth: 1,
     borderColor: colors.br,
     justifyContent: 'space-between',
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   },
   newBtnText: { color: colors.white, fontSize: 12, fontFamily: fontFamily.bodyBold, letterSpacing: 1.2 },
   row: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     borderRadius: 26,
     padding: 16,
     borderColor: colors.br,

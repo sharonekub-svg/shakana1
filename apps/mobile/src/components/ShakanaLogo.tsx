@@ -2,10 +2,10 @@ import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Path, Ellipse } from 'react-native-svg';
 import { fontFamily } from '@/theme/fonts';
 
-const CLAY = '#C5654B';
-const LEAF = '#3D6B3E';
-const FIELD_GREEN = '#4A7A4B';
-const FIELD_ORANGE = '#E07A2F';
+const CLAY = '#5F7F72';
+const LEAF = '#3F5F54';
+const FIELD_GREEN = '#5F7F72';
+const FIELD_ORANGE = '#CAAA98';
 
 export function PlantMark({ size = 44, grainColor = CLAY, leafColor = LEAF }: { size?: number; grainColor?: string; leafColor?: string }) {
   return (

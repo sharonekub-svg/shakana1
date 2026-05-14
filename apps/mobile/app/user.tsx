@@ -24,6 +24,7 @@ import {
   type DemoParticipant,
   getOrderItemCount,
   getOrderTotal,
+  getGroupSavings,
   getProductLine,
   getVisibleOrdersForParticipant,
   initDemoCommerceSync,
@@ -32,8 +33,6 @@ import {
 } from '@/stores/demoCommerceStore';
 import { fontFamily } from '@/theme/fonts';
 import { colors } from '@/theme/tokens';
-import { BuildingSections } from '@/components/demo/BuildingSections';
-import { ShakanaLogoCompact } from '@/components/ShakanaLogo';
 import { useLocale } from '@/i18n/locale';
 import { formatMoney } from '@/utils/money';
 import { useAuthStore } from '@/stores/authStore';
@@ -285,7 +284,7 @@ const tourStyles = StyleSheet.create({
     width: '100%',
     maxWidth: 480,
     borderRadius: 24,
-    backgroundColor: colors.white,
+    backgroundColor: colors.s2,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOpacity: 0.35,
@@ -335,7 +334,7 @@ const tourStyles = StyleSheet.create({
   statValue: {
     fontFamily: fontFamily.display,
     fontSize: 36,
-    color: colors.acc,
+    color: colors.gold,
     lineHeight: 40,
   },
   statLabel: {
@@ -514,6 +513,13 @@ export default function DemoUserScreen() {
       ? visibleOrders
       : [joinedOrder, ...visibleOrders];
   }, [joinedOrder, visibleOrders]);
+  const homeStats = useMemo(() => {
+    const participantIds = new Set(visibleOrJoinedOrders.flatMap((candidate) => candidate.participants.map((participant) => participant.id)));
+    return {
+      totalSavings: visibleOrJoinedOrders.reduce((total, candidate) => total + getGroupSavings(candidate), 0),
+      totalParticipants: participantIds.size,
+    };
+  }, [visibleOrJoinedOrders]);
 
   useEffect(() => {
     if (joinedOrder && !joinedOrder.participants.some((participant) => participant.id === activeParticipantId)) {
@@ -586,6 +592,62 @@ export default function DemoUserScreen() {
     () => pendingCheckoutItems.filter((item) => item.orderId === order?.id && item.participantId === activeParticipantId),
     [activeParticipantId, order?.id, pendingCheckoutItems],
   );
+  const homeSetupCopy = language === 'he'
+    ? {
+        title: 'פתיחת הזמנה חדשה',
+        kicker: 'כתובת, חנות, שם ואז הזמנה',
+        cardTitle: 'זרימה אחת ברורה',
+        cardBody: 'בחרו חנות למעלה ושקנה תפתח את עמוד ההזמנה המודרך.',
+        cta: 'פתח הגדרה מלאה',
+        steps: [
+          ['1', 'כתובת קודם', 'רחוב, מספר בית ועיר'],
+          ['2', 'חנות נעולה', 'Amazon, Zara או H&M'],
+          ['3', 'השם שלך', 'יופיע לחברים ולחנות'],
+          ['4', 'פתיחת קטלוג', 'קישור או קוד להצטרפות'],
+        ],
+      }
+    : {
+        title: 'Start a new order',
+        kicker: 'Address, store, name, then invite',
+        cardTitle: 'One clean setup flow',
+        cardBody: 'Choose any store above and Shakana opens the guided order page.',
+        cta: 'Open full setup',
+        steps: [
+          ['1', 'Address first', 'Street, number, city'],
+          ['2', 'Store locked', 'Amazon, Zara, or H&M'],
+          ['3', 'Your name', 'Shown to friends and store'],
+          ['4', 'Open catalog', 'Share link or code'],
+        ],
+      };
+  const homeDashboardCopy = language === 'he'
+    ? {
+        title: 'לוח ההזמנות שלך',
+        subtitle: 'פתחו הזמנה חדשה, בחרו חנות אחת, שתפו חברים, ועקבו אחרי הכל ממקום אחד.',
+        newOrder: 'הזמנה חדשה',
+        profile: 'פרופיל',
+        store: 'חנות',
+        openOrders: 'הזמנות פתוחות',
+        saved: 'נחסך בקבוצה',
+        neighbors: 'משתתפים',
+        joinTitle: 'קיבלתם קישור מחבר?',
+        joinBody: 'התחברו, פתחו את הקישור או הקוד, ותראו את אותה הזמנה עם אותה חנות נעולה.',
+        presentationTitle: 'כלי הצגה',
+        presentationBody: 'אפסו את הדמו לפני פגישה או פתחו את התסריט הקצר.',
+      }
+    : {
+        title: 'Your order hub',
+        subtitle: 'Open a new order, lock one store, invite friends, and track everything from one clean place.',
+        newOrder: 'New order',
+        profile: 'Profile',
+        store: 'Store',
+        openOrders: 'Open orders',
+        saved: 'Group saved',
+        neighbors: 'Participants',
+        joinTitle: 'Joining from a friend?',
+        joinBody: 'Sign in, open the invite link or code, and you will see the same shared order with the store locked.',
+        presentationTitle: 'Presentation tools',
+        presentationBody: 'Reset the demo before a meeting or open the short founder script.',
+      };
   const orderLocked = order ? order.closesAt <= nowMs || order.status !== 'collecting' : false;
   const addressMissing = order ? !isCompleteDeliveryAddress(order.deliveryAddress) : false;
   const isFounder = order?.createdBy === activeParticipantId;
@@ -725,7 +787,7 @@ export default function DemoUserScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <DemoPage>
           <View style={styles.topBar}>
-            <ShakanaLogoCompact size={24} />
+            <Text style={styles.logo}>shakana</Text>
             <View style={styles.topActions}>
               <DemoButton label="New order" onPress={() => openNewOrderSetup()} tone="accent" style={styles.smallBtn} />
               <DemoButton label="How it works" onPress={() => router.push('/how-it-works')} tone="light" style={styles.smallBtn} />
@@ -752,6 +814,53 @@ export default function DemoUserScreen() {
               </View>
             </Card>
           ) : null}
+          <Card style={styles.homeHeroCard}>
+            <View style={styles.homeHeroCopy}>
+              <Text style={styles.homeHeroKicker}>SHAKANA</Text>
+              <Text style={styles.homeHeroTitle}>{homeDashboardCopy.title}</Text>
+              <Text style={styles.homeHeroBody}>{homeDashboardCopy.subtitle}</Text>
+            </View>
+            <View style={styles.homeHeroStats}>
+              <View style={styles.homeHeroStatBox}>
+                <Text style={styles.homeHeroStatValue}>{visibleOrJoinedOrders.length}</Text>
+                <Text style={styles.homeHeroStatLabel}>{homeDashboardCopy.openOrders}</Text>
+              </View>
+              <View style={styles.homeHeroStatBox}>
+                <Text style={styles.homeHeroStatValue}>{formatMoney(Math.round(homeStats.totalSavings), language)}</Text>
+                <Text style={styles.homeHeroStatLabel}>{homeDashboardCopy.saved}</Text>
+              </View>
+              <View style={styles.homeHeroStatBox}>
+                <Text style={styles.homeHeroStatValue}>{homeStats.totalParticipants}</Text>
+                <Text style={styles.homeHeroStatLabel}>{homeDashboardCopy.neighbors}</Text>
+              </View>
+            </View>
+            <View style={styles.homeActionGrid}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => openNewOrderSetup()}
+                style={({ pressed }) => [styles.homeActionCard, styles.homeActionPrimary, pressed && demoStyles.pressed]}
+              >
+                <Text style={styles.homeActionIcon}>+</Text>
+                <Text style={styles.homeActionTitlePrimary}>{homeDashboardCopy.newOrder}</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push('/profile')}
+                style={({ pressed }) => [styles.homeActionCard, pressed && demoStyles.pressed]}
+              >
+                <Text style={styles.homeActionIcon}>ID</Text>
+                <Text style={styles.homeActionTitle}>{homeDashboardCopy.profile}</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push('/store')}
+                style={({ pressed }) => [styles.homeActionCard, pressed && demoStyles.pressed]}
+              >
+                <Text style={styles.homeActionIcon}>ST</Text>
+                <Text style={styles.homeActionTitle}>{homeDashboardCopy.store}</Text>
+              </Pressable>
+            </View>
+          </Card>
           <Card style={styles.savingsHero}>
             <View style={styles.savingsHeroTop}>
               <View style={styles.savingsHeroAmountBlock}>
@@ -801,32 +910,17 @@ export default function DemoUserScreen() {
               ) : null}
             </View>
           </Card>
-          <BuildingSections
-            orders={visibleOrders}
-            onOpenStore={() => router.push('/store')}
-            onOpenLogin={() => router.push('/login')}
-            onChooseBrand={(brand) => {
-              if (newOrderMode) {
-                setSetupBrand(brand);
-              } else {
-                selectBrand(brand);
-              }
-              setCategory('Best Sellers');
-            }}
-          />
           <Card style={styles.whatsappCard}>
-            <Text style={styles.whatsappTitle}>{language === 'he' ? 'Join from WhatsApp' : 'Join from WhatsApp'}</Text>
+            <Text style={styles.whatsappTitle}>{homeDashboardCopy.joinTitle}</Text>
             <Text style={styles.muted}>
-              {language === 'he'
-                ? 'Open the invite link from WhatsApp and the shared cart loads directly, with no code and no paste field.'
-                : 'Open the invite link from WhatsApp and the shared cart loads directly, with no code and no paste field.'}
+              {homeDashboardCopy.joinBody}
             </Text>
           </Card>
           {(session || params.founder === '1') ? (
           <Card style={styles.demoScriptCard}>
             <View style={styles.demoScriptCopy}>
-              <Text style={styles.whatsappTitle}>Presentation controls</Text>
-              <Text style={styles.muted}>Reset before a meeting, then follow the short founder demo script.</Text>
+              <Text style={styles.whatsappTitle}>{homeDashboardCopy.presentationTitle}</Text>
+              <Text style={styles.muted}>{homeDashboardCopy.presentationBody}</Text>
             </View>
             <View style={styles.lockActions}>
               <DemoButton label="View script" onPress={() => router.push('/how-it-works')} tone="light" style={styles.lockActionBtn} />
@@ -842,7 +936,7 @@ export default function DemoUserScreen() {
             </View>
           </Card>
           ) : null}
-          <SectionTitle title="Choose your store" kicker="User flow" />
+          <SectionTitle title={homeSetupCopy.title} kicker={homeSetupCopy.kicker} />
           {newOrderMode ? (
             <Card style={styles.setupCard}>
               <Text style={styles.setupTitle}>Set up the order first</Text>
@@ -889,16 +983,11 @@ export default function DemoUserScreen() {
                   key={brandId}
                   accessibilityRole="button"
                   onPress={() => {
-                    if (newOrderMode) {
-                      setSetupBrand(brandId);
-                    } else {
-                      selectBrand(brandId);
-                    }
+                    openNewOrderSetup(brandId);
                     setCategory('Best Sellers');
                   }}
                   style={({ pressed }) => [
                     styles.storeChoice,
-                    newOrderMode && setupBrand === brandId && styles.storeChoiceSelected,
                     pressed && demoStyles.pressed,
                   ]}
                 >
@@ -913,6 +1002,24 @@ export default function DemoUserScreen() {
               );
             })}
           </View>
+          <Card style={styles.homeStepperCard}>
+            <View style={styles.homeStepperHeader}>
+              <Text style={styles.homeStepperTitle}>{homeSetupCopy.cardTitle}</Text>
+              <Text style={styles.muted}>{homeSetupCopy.cardBody}</Text>
+            </View>
+            <View style={styles.homeStepperSteps}>
+              {homeSetupCopy.steps.map(([num, title, body]) => (
+                <View key={num} style={styles.homeStepperStep}>
+                  <Text style={styles.homeStepperNum}>{num}</Text>
+                  <View style={styles.homeStepperCopy}>
+                    <Text style={styles.homeStepperStepTitle}>{title}</Text>
+                    <Text style={styles.homeStepperStepBody}>{body}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+            <DemoButton label={homeSetupCopy.cta} onPress={() => openNewOrderSetup()} tone="accent" />
+          </Card>
           {newOrderMode ? (
             <Card style={styles.setupCard}>
               <Text style={styles.timerTitle}>3. Delivery address</Text>
@@ -976,7 +1083,7 @@ export default function DemoUserScreen() {
       <DemoPage wide>
         <View style={styles.topBar}>
           <Pressable onPress={goToOrderHome} accessibilityRole="button">
-            <ShakanaLogoCompact size={24} />
+            <Text style={styles.logo}>shakana demo</Text>
           </Pressable>
           <View style={styles.topActions}>
             <DemoButton label="Home" onPress={goToOrderHome} tone="light" style={styles.smallBtn} />
@@ -1805,7 +1912,7 @@ const payStyles = StyleSheet.create({
     marginTop: 1,
   },
   savingsRow: {
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
     borderRadius: 14,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -1826,9 +1933,9 @@ const payStyles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 9,
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
     borderWidth: 1,
-    borderColor: colors.acc,
+    borderColor: colors.brBr,
   },
   paidBadgeText: {
     color: colors.acc,
@@ -1908,7 +2015,7 @@ const payStyles = StyleSheet.create({
     fontSize: 14,
   },
   modalSavingsBanner: {
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -1933,7 +2040,7 @@ const payStyles = StyleSheet.create({
   },
   demoNotice: {
     borderRadius: 14,
-    backgroundColor: colors.s2,
+    backgroundColor: colors.goldLight,
     borderWidth: 1,
     borderColor: colors.brBr,
     paddingHorizontal: 12,
@@ -2032,7 +2139,7 @@ const payStyles = StyleSheet.create({
     flex: 1,
   },
   savingsBadge: {
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -2078,7 +2185,7 @@ const payStyles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2113,24 +2220,86 @@ const styles = StyleSheet.create({
   },
   topActions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   logo: {
-    color: colors.tx,
-    fontFamily: fontFamily.display,
-    fontSize: 22,
+    color: colors.acc,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 15,
+    textTransform: 'uppercase',
   },
   smallBtn: { flexGrow: 1, flexBasis: 136, minHeight: 40 },
   storeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
+  homeStepperCard: {
+    gap: 16,
+    backgroundColor: colors.s1,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: colors.br,
+  },
+  homeStepperHeader: {
+    gap: 4,
+  },
+  homeStepperTitle: {
+    color: colors.tx,
+    fontFamily: fontFamily.display,
+    fontSize: 28,
+    lineHeight: 32,
+  },
+  homeStepperSteps: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  homeStepperStep: {
+    flexGrow: 1,
+    flexBasis: 190,
+    minHeight: 82,
+    borderRadius: 20,
+    backgroundColor: colors.s2,
+    borderWidth: 1,
+    borderColor: colors.br,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  homeStepperNum: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    overflow: 'hidden',
+    backgroundColor: colors.ink,
+    color: colors.white,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
+    lineHeight: 34,
+    textAlign: 'center',
+  },
+  homeStepperCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  homeStepperStepTitle: {
+    color: colors.tx,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+  },
+  homeStepperStepBody: {
+    color: colors.mu,
+    fontFamily: fontFamily.body,
+    fontSize: 12,
+    lineHeight: 17,
+  },
   whatsappCard: {
     gap: 8,
     marginTop: 4,
     padding: 16,
     borderRadius: 22,
-    backgroundColor: colors.s2,
+    backgroundColor: colors.goldLight,
     borderWidth: 1,
     borderColor: colors.br,
   },
   joinStateCard: {
     gap: 10,
-    borderColor: colors.br,
+    borderColor: colors.gold,
     backgroundColor: colors.s2,
   },
   joinStateTitle: {
@@ -2172,7 +2341,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: 10,
     padding: 18,
-    backgroundColor: 'rgba(0,0,0,0.22)',
+    backgroundColor: 'rgba(37,32,27,0.34)',
   },
   storeName: {
     color: '#FFFFFF',
@@ -2195,7 +2364,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: 10,
     padding: 18,
-    backgroundColor: 'rgba(0,0,0,0.28)',
+    backgroundColor: 'rgba(37,32,27,0.36)',
   },
   heroTitle: {
     color: '#FFFFFF',
@@ -2226,56 +2395,54 @@ const styles = StyleSheet.create({
   categoryRow: { gap: 8, paddingVertical: 4 },
   categoryPill: {
     borderRadius: 999,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.br,
+    backgroundColor: colors.s2,
   },
   categoryText: { color: colors.mu, fontFamily: fontFamily.bodyBold, fontSize: 13 },
   categoryTextActive: { color: '#FFFFFF' },
   productSearchInput: {
     minHeight: 48,
-    borderRadius: 999,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.br,
-    backgroundColor: colors.white,
+    borderColor: colors.brBr,
+    backgroundColor: colors.s2,
     color: colors.tx,
     fontFamily: fontFamily.bodySemi,
     fontSize: 14,
-    paddingHorizontal: 18,
+    paddingHorizontal: 14,
   },
-  productGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
-  productCard: { flexGrow: 1, flexBasis: 280, overflow: 'hidden', padding: 0, borderRadius: 24 },
-  productInfo: { padding: 16, gap: 10 },
-  productName: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 16, flex: 1 },
-  price: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 20 },
-  sku: { color: colors.mu2, fontFamily: fontFamily.body, fontSize: 11 },
-  selectorLabel: { color: colors.mu, fontFamily: fontFamily.bodyBold, fontSize: 11, letterSpacing: 0.8, textTransform: 'uppercase' as const },
-  optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  productGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  productCard: { flexGrow: 1, flexBasis: 155, maxWidth: 320, overflow: 'hidden', padding: 0, borderRadius: 22 },
+  productInfo: { padding: 12, gap: 8 },
+  productName: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 15, flex: 1 },
+  price: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 15 },
+  sku: { color: colors.acc, fontFamily: fontFamily.bodyBold, fontSize: 12 },
+  selectorLabel: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 13 },
+  optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   option: {
-    borderRadius: 999,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.br,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    backgroundColor: colors.s1,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: colors.s2,
   },
-  optionActive: { backgroundColor: colors.tx, borderColor: colors.tx },
-  optionText: { color: colors.mu, fontFamily: fontFamily.bodySemi, fontSize: 12 },
+  optionActive: { backgroundColor: colors.ink, borderColor: colors.ink },
+  optionText: { color: colors.tx, fontFamily: fontFamily.bodySemi, fontSize: 12 },
   optionTextActive: { color: '#FFFFFF' },
   qtyRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  qtyBtn: { width: 40, minHeight: 36, paddingHorizontal: 0 },
-  qtyText: { color: colors.tx, fontFamily: fontFamily.bodyBold, minWidth: 50, textAlign: 'center' },
+  qtyBtn: { width: 44, minHeight: 38, paddingHorizontal: 0 },
+  qtyText: { color: colors.tx, fontFamily: fontFamily.bodyBold, minWidth: 54, textAlign: 'center' },
   privateToggle: {
-    borderRadius: 999,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.br,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    backgroundColor: colors.s1,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    backgroundColor: colors.s2,
   },
-  privateToggleActive: { backgroundColor: colors.accLight, borderColor: colors.acc },
+  privateToggleActive: { backgroundColor: colors.goldLight, borderColor: colors.acc },
   privateText: { color: colors.mu, fontFamily: fontFamily.bodyBold, fontSize: 12 },
   privateTextActive: { color: colors.acc },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
@@ -2285,7 +2452,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.acc,
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
     padding: 12,
   },
   pendingTitle: {
@@ -2306,8 +2473,8 @@ const styles = StyleSheet.create({
   },
   authGate: {
     gap: 10,
-    borderColor: colors.br,
-    backgroundColor: colors.s2,
+    borderColor: 'rgba(201,168,76,0.45)',
+    backgroundColor: colors.goldLight,
   },
   authTitle: {
     color: colors.tx,
@@ -2344,7 +2511,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.br,
-    backgroundColor: colors.s2,
+    backgroundColor: colors.goldLight,
     padding: 12,
   },
   timerTitle: {
@@ -2366,7 +2533,7 @@ const styles = StyleSheet.create({
   preLaunchTimer: {
     flexBasis: '100%',
     gap: 12,
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
     borderColor: colors.acc,
     borderWidth: 1,
     marginBottom: 8,
@@ -2399,7 +2566,7 @@ const styles = StyleSheet.create({
   },
   setupStepDone: {
     borderColor: colors.acc,
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
   },
   setupStepNumber: {
     width: 24,
@@ -2436,7 +2603,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.brBr,
-    backgroundColor: colors.white,
+    backgroundColor: colors.s2,
     color: colors.tx,
     fontFamily: fontFamily.bodyBold,
     fontSize: 15,
@@ -2457,14 +2624,14 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.br,
-    backgroundColor: colors.white,
+    backgroundColor: colors.s2,
     padding: 12,
   },
   addressRequirementBox: {
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.acc,
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 4,
@@ -2485,7 +2652,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.brBr,
-    backgroundColor: colors.white,
+    backgroundColor: colors.s2,
     color: colors.tx,
     fontFamily: fontFamily.bodySemi,
     fontSize: 14,
@@ -2493,7 +2660,7 @@ const styles = StyleSheet.create({
   },
   addressInputMissing: {
     borderColor: colors.acc,
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
   },
   addressSuggestionList: {
     gap: 6,
@@ -2528,28 +2695,28 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: colors.s2,
   },
-  joinedPill: { backgroundColor: colors.accLight },
+  joinedPill: { backgroundColor: colors.goldLight },
   activePill: { backgroundColor: colors.ink },
   participantRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   participantText: { color: colors.mu, fontFamily: fontFamily.bodyBold, fontSize: 12 },
   activePillText: { color: '#FFFFFF' },
   lockBadge: {
-    backgroundColor: colors.s2,
+    backgroundColor: colors.ink,
     borderWidth: 1,
-    borderColor: colors.br,
-    borderRadius: 14,
-    padding: 10,
+    borderColor: colors.ink,
+    borderRadius: 18,
+    padding: 13,
     marginBottom: 12,
   },
   lockBadgeText: {
-    color: colors.mu,
-    fontFamily: fontFamily.bodySemi,
-    fontSize: 12,
+    color: colors.white,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
     textAlign: 'center',
   },
   participantBadge: {
     color: colors.acc,
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.goldLight,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 999,
@@ -2562,7 +2729,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     minWidth: 140,
     borderRadius: 16,
-    backgroundColor: colors.s2,
+    backgroundColor: colors.goldLight,
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 2,
@@ -2632,11 +2799,103 @@ const styles = StyleSheet.create({
   },
   itemName: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 14 },
   itemPrice: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 15 },
+  homeHeroCard: {
+    gap: 18,
+    padding: 24,
+    backgroundColor: colors.card,
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: colors.brBr,
+  },
+  homeHeroCopy: {
+    gap: 7,
+  },
+  homeHeroKicker: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 10,
+    letterSpacing: 1.8,
+    color: colors.acc,
+  },
+  homeHeroTitle: {
+    fontFamily: fontFamily.display,
+    fontSize: 38,
+    lineHeight: 42,
+    color: colors.tx,
+  },
+  homeHeroBody: {
+    fontFamily: fontFamily.body,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.mu,
+  },
+  homeHeroStats: {
+    flexDirection: 'row',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  homeHeroStatBox: {
+    flex: 1,
+    minWidth: 96,
+    borderRadius: 18,
+    backgroundColor: colors.s2,
+    borderWidth: 1,
+    borderColor: colors.br,
+    padding: 14,
+    gap: 5,
+  },
+  homeHeroStatValue: {
+    fontFamily: fontFamily.display,
+    fontSize: 25,
+    lineHeight: 29,
+    color: colors.acc,
+  },
+  homeHeroStatLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 11,
+    color: colors.mu,
+  },
+  homeActionGrid: {
+    flexDirection: 'row',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  homeActionCard: {
+    flex: 1,
+    minWidth: 96,
+    borderRadius: 18,
+    backgroundColor: colors.s1,
+    borderWidth: 1,
+    borderColor: colors.br,
+    padding: 14,
+    gap: 10,
+  },
+  homeActionPrimary: {
+    backgroundColor: colors.acc,
+    borderColor: colors.acc,
+  },
+  homeActionIcon: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
+    color: colors.tx,
+  },
+  homeActionTitle: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+    color: colors.tx,
+  },
+  homeActionTitlePrimary: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+    color: colors.ink,
+  },
   savingsHero: {
+    display: 'none',
     gap: 14,
     padding: 20,
-    backgroundColor: colors.ink,
+    backgroundColor: colors.card,
     borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.br,
   },
   savingsHeroTop: {
     flexDirection: 'row',
@@ -2656,7 +2915,7 @@ const styles = StyleSheet.create({
   savingsHeroAmountLabel: {
     fontFamily: fontFamily.body,
     fontSize: 11,
-    color: 'rgba(255,255,255,0.55)',
+    color: colors.mu,
     textAlign: 'center',
     lineHeight: 16,
   },
@@ -2673,24 +2932,24 @@ const styles = StyleSheet.create({
   savingsHeroStatValue: {
     fontFamily: fontFamily.bodyBold,
     fontSize: 18,
-    color: colors.white,
+    color: colors.tx,
   },
   savingsHeroStatLabel: {
     fontFamily: fontFamily.body,
     fontSize: 10,
-    color: 'rgba(255,255,255,0.55)',
+    color: colors.mu,
     textAlign: 'center',
     lineHeight: 14,
   },
   savingsHeroDivider: {
     width: 1,
     height: 32,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: colors.br,
   },
   savingsHeroBody: {
     fontFamily: fontFamily.body,
     fontSize: 13,
-    color: 'rgba(255,255,255,0.65)',
+    color: colors.mu,
     lineHeight: 20,
   },
   tourBtn: {

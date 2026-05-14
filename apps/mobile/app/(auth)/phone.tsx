@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 12,
     borderRadius: 28,
-    backgroundColor: colors.white,
+    backgroundColor: colors.s1,
     borderWidth: 1,
     borderColor: colors.br,
     ...shadow.card,
