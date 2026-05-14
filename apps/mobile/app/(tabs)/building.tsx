@@ -233,11 +233,21 @@ export default function BuildingTab() {
           {/* Dark savings hero */}
           <View style={styles.heroCard}>
             <View style={styles.heroMeta}>
-              <Text style={styles.heroKicker}>{isHebrew ? 'אתה + שכניך חסכתם' : 'You + your neighbors saved'}</Text>
+              <Text style={styles.heroKicker}>
+                {completedOrders > 0
+                  ? (isHebrew ? 'אתה + שכניך חסכתם' : 'You + your neighbors saved')
+                  : (isHebrew ? 'קנה ביחד · חסוך בשליח' : 'Buy together · split shipping')}
+              </Text>
             </View>
             <View style={styles.heroAmountRow}>
-              <Text style={styles.heroAmount}>₪{Math.max(0, Math.round(completedOrders * 42)).toLocaleString()}</Text>
-              <Text style={styles.heroAmountSub}>{isHebrew ? 'השנה' : 'this year'}</Text>
+              {completedOrders > 0 ? (
+                <>
+                  <Text style={styles.heroAmount}>₪{Math.round(completedOrders * 42).toLocaleString()}</Text>
+                  <Text style={styles.heroAmountSub}>{isHebrew ? 'השנה' : 'this year'}</Text>
+                </>
+              ) : (
+                <Text style={styles.heroAmount}>{isHebrew ? 'הזמן ראשון' : 'First order'}</Text>
+              )}
             </View>
             <View style={styles.heroFooter}>
               <View style={styles.heroAvatarRow}>
@@ -247,7 +257,11 @@ export default function BuildingTab() {
                   </View>
                 ))}
               </View>
-              <Text style={styles.heroNeighbors}>{openOrders.length} {isHebrew ? 'שכנים פעילים' : 'active neighbors'}</Text>
+              <Text style={styles.heroNeighbors}>
+                {completedOrders > 0
+                  ? `${openOrders.length} ${isHebrew ? 'שכנים פעילים' : 'active neighbors'}`
+                  : (isHebrew ? 'בחר חנות · קבע טיימר · שתף' : 'pick store · set timer · share')}
+              </Text>
               <Pressable style={styles.heroButton} onPress={() => router.push('/order/new')}>
                 <Text style={styles.heroButtonText}>{t('tabs.home.createOrder')}</Text>
               </Pressable>
@@ -328,10 +342,17 @@ export default function BuildingTab() {
                 />
               ))
             ) : (
-              <View style={styles.emptyBlock}>
-                <Text style={styles.emptyTitle}>{t('tabs.home.noOrdersTitle')}</Text>
-                <Text style={styles.emptyBody}>{t('tabs.home.noOrdersBody')}</Text>
-              </View>
+              <Pressable style={styles.emptyBlock} onPress={() => router.push('/order/new')}>
+                <Text style={styles.emptyTitle}>{isHebrew ? 'אין הזמנות עדיין' : 'No orders yet'}</Text>
+                <Text style={styles.emptyBody}>
+                  {isHebrew
+                    ? 'צור הזמנה קבוצתית ראשונה — שלח קישור לשכנים ויחד תחסכו בדמי שליח.'
+                    : 'Start your first group order — share the link with neighbors and split shipping costs together.'}
+                </Text>
+                <View style={styles.emptyButton}>
+                  <Text style={styles.emptyButtonText}>{isHebrew ? '+ הזמנה חדשה' : '+ New order'}</Text>
+                </View>
+              </Pressable>
             )}
           </View>
 

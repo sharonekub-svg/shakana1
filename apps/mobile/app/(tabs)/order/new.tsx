@@ -181,8 +181,8 @@ export default function NewOrder() {
 
   const handleWhatsApp = () => {
     const msg = isHe
-      ? `הצטרפ/י להזמנה הקבוצתית שלי ב-Shakana! ${inviteFullUrl || inviteLink}`
-      : `Join my group order on Shakana! ${inviteFullUrl || inviteLink}`;
+      ? `קניתי ב-${storeName} ופותח/ת הזמנה קבוצתית — ביחד חוסכים בדמי שליח! יש לך ${timerHours} שעות להצטרף 👇\n${inviteFullUrl || inviteLink}`
+      : `I'm doing a group order from ${storeName} — join me and we split the shipping! You have ${timerHours}h to join 👇\n${inviteFullUrl || inviteLink}`;
     Linking.openURL(`whatsapp://send?text=${encodeURIComponent(msg)}`).catch(() => {});
   };
 
@@ -356,8 +356,8 @@ export default function NewOrder() {
                 )}
                 <Text style={styles.launchNote}>
                   {isHe
-                    ? 'שכנים בבניין שלך יקבלו הודעה ויוכלו להצטרף.'
-                    : 'Neighbors in your building will be notified and can join.'}
+                    ? 'שכנים בבניין שלך יוזמנו — ביחד חוסכים בדמי שליח.'
+                    : 'Your building neighbors get invited — together you split the shipping cost.'}
                 </Text>
               </View>
             </>
@@ -370,6 +370,11 @@ export default function NewOrder() {
                 <Text style={styles.successSub}>
                   {storeName} · {isHe ? `נסגר בעוד ${timerHours} שעות` : `Closes in ${timerHours} hours`}
                 </Text>
+                <View style={styles.successBadge}>
+                  <Text style={styles.successBadgeText}>
+                    {isHe ? '⚡ שתף עכשיו כדי לחסוך בשליח' : '⚡ Share now to split shipping costs'}
+                  </Text>
+                </View>
               </View>
 
               <View style={styles.inviteBox}>
@@ -460,6 +465,8 @@ const styles = StyleSheet.create({
   successEmoji: { fontSize: 48, lineHeight: 56 },
   successTitle: { fontFamily: fontFamily.display, fontSize: 30, color: colors.tx, textAlign: 'center', lineHeight: 34 },
   successSub:   { fontFamily: fontFamily.body, fontSize: 14, color: colors.mu, textAlign: 'center' },
+  successBadge: { backgroundColor: colors.acc, borderRadius: radii.pill, paddingHorizontal: 14, paddingVertical: 7, marginTop: 4 },
+  successBadgeText: { fontFamily: fontFamily.bodyBold, fontSize: 12, color: colors.s1, letterSpacing: 0.2 },
 
   inviteBox:   { backgroundColor: colors.s1, borderRadius: radii.xl, padding: 16, borderWidth: 1, borderColor: colors.br, gap: 8, ...shadow.card },
   inviteLabel: { fontFamily: fontFamily.bodyBold, fontSize: 10, letterSpacing: 2, color: colors.mu, textTransform: 'uppercase' },
