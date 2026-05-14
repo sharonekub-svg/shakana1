@@ -88,10 +88,9 @@ export default function NewOrder() {
 
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
 
-  // Step 1
-  const [firstName, setFirstName] = useState('');
-  const [lastName,  setLastName]  = useState('');
-  const nameValid = firstName.trim().length >= 2;
+  // Step 1 — group order name
+  const [orderName, setOrderName] = useState('');
+  const nameValid = orderName.trim().length >= 2;
 
   // Step 2
   const [selectedStore, setSelectedStore] = useState<string>('');
@@ -111,7 +110,7 @@ export default function NewOrder() {
 
   const createOrder    = useCreateOrder();
   const generateInvite = useGenerateInvite();
-  const upsertProfile  = useUpsertProfile();
+  const upsertProfile  = useUpsertProfile(); // kept for future profile steps
 
   const isHe = language === 'he';
   const storeInfo   = STORES.find((st) => st.id === selectedStore);
@@ -126,7 +125,7 @@ export default function NewOrder() {
     setDraftTriggered(true);
     createOrder.mutateAsync({
       productUrl: '',
-      productTitle: storeName,
+      productTitle: orderName.trim() || storeName,
       productPriceAgorot: 0,
       storeKey: selectedStore,
       storeLabel: storeName,
@@ -145,13 +144,15 @@ export default function NewOrder() {
     }).catch(() => {});
   }, [step, draftTriggered, user?.id, timerHours]);
 
+  const displayName = orderName.trim() || storeName;
+
   const draftMsg = isHe
-    ? `פותח/ת הזמנה קבוצתית מ-${storeName} ב-Shakana — ביחד חוסכים בדמי משלוח! ${fullUrl || shortLink}`
-    : `Starting a group order from ${storeName} on Shakana — we split the shipping! ${fullUrl || shortLink}`;
+    ? `"${displayName}" — הזמנה קבוצתית מ-${storeName} ב-Shakana. ביחד חוסכים בדמי משלוח! ${fullUrl || shortLink}`
+    : `"${displayName}" — group order from ${storeName} on Shakana. We split the shipping! ${fullUrl || shortLink}`;
 
   const liveMsg = isHe
-    ? `קניתי ב-${storeName} ופותח/ת הזמנה קבוצתית — ביחד חוסכים בדמי משלוח! יש לך ${timerHours} שעות להצטרף 👇\n${fullUrl || shortLink}`
-    : `I'm doing a group order from ${storeName} — join me and we split the shipping! You have ${timerHours}h to join 👇\n${fullUrl || shortLink}`;
+    ? `"${displayName}" פעילה! יש לך ${timerHours} שעות להצטרף להזמנה הקבוצתית מ-${storeName} 👇\n${fullUrl || shortLink}`
+    : `"${displayName}" is live! You have ${timerHours}h to join the group order from ${storeName} 👇\n${fullUrl || shortLink}`;
 
   const handleCopy = async (msg: string) => {
     await Clipboard.setStringAsync(msg);
@@ -172,17 +173,8 @@ export default function NewOrder() {
     }
   };
 
-  const handleNameNext = async () => {
+  const handleNameNext = () => {
     if (!nameValid) return;
-    if (user?.id) {
-      const updated = {
-        id: user.id, first_name: firstName.trim(), last_name: lastName.trim(),
-        phone: profile?.phone ?? '', city: profile?.city ?? '',
-        street: profile?.street ?? '', building: profile?.building ?? '',
-        apt: profile?.apt ?? '', floor: profile?.floor ?? null,
-      };
-      upsertProfile.mutateAsync(updated).then(() => setProfile(updated)).catch(() => {});
-    }
     setStep(2);
   };
 
@@ -201,17 +193,19 @@ export default function NewOrder() {
         keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <StepShell onBack={goBack} step={1}>
           <Text style={s.kicker}>SHAKANA</Text>
-          <Text style={s.question}>{isHe ? 'מה שמך?' : "What's your name?"}</Text>
-          <Text style={s.qSub}>{isHe ? 'שכניך יראו את שמך הפרטי בהזמנה.' : 'Your neighbors will see your first name in the order.'}</Text>
+          <Text style={s.question}>{isHe ? 'מה שם ההזמנה?' : 'Name your group order'}</Text>
+          <Text style={s.qSub}>{isHe ? 'השם יופיע בקישור ובהודעת ההזמנה לשכנים.' : 'This name appears in the invite link and message your neighbors receive.'}</Text>
         </StepShell>
 
-        <View style={s.fieldGroup}>
-          <Field label={isHe ? 'שם פרטי *' : 'First name *'} value={firstName} onChange={setFirstName} placeholder="Maya" ltr />
-          <Field label={isHe ? 'שם משפחה' : 'Last name'} value={lastName} onChange={setLastName} placeholder="Cohen" ltr />
-        </View>
+        <Field
+          label={isHe ? 'שם ההזמנה *' : 'Order name *'}
+          value={orderName}
+          onChange={setOrderName}
+          placeholder={isHe ? 'למשל: זרא קומה 3, איקאה ביחד' : 'e.g. Floor 3 Zara Run, IKEA Together'}
+          ltr={language !== 'he'}
+        />
 
-        <BigCta label={isHe ? 'המשך ←' : 'Continue →'} onPress={handleNameNext}
-          disabled={!nameValid} loading={upsertProfile.isPending} />
+        <BigCta label={isHe ? 'המשך ←' : 'Continue →'} onPress={handleNameNext} disabled={!nameValid} />
         {!nameValid && <Text style={s.hint}>{isHe ? 'יש להזין לפחות 2 תווים' : 'At least 2 characters required'}</Text>}
       </ScrollView>
     </SafeAreaView>
