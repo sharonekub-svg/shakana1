@@ -1234,7 +1234,6 @@ export default function DemoUserScreen() {
                   <View style={styles.shareProofRow}>
                     <View style={styles.trustPill}>
                       <Text style={styles.trustValue}>{activeParticipant.name}</Text>
-                      <Text style={styles.trustLabel}>Verified neighbor</Text>
                     </View>
                     <View style={styles.trustPillSoft}>
                       <Text style={styles.trustValue}>{order.participants.length}</Text>
