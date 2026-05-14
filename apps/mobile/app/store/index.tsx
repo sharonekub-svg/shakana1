@@ -1,19 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import {
-  BrandPill,
-  CelebrationBanner,
-  ProgressBar,
-  SavingsTracker,
-  SelfUpdatingTimerRing,
-  StatusRail,
-  demoStyles,
-} from '@/components/demo/DemoPrimitives';
-import { FREE_SHIPPING_GOAL, demoStores, type DemoBrandId } from '@/demo/catalog';
+import Svg, { Path, Rect, Line } from 'react-native-svg';
+import { demoStores, type DemoBrandId } from '@/demo/catalog';
 import {
   getGoalProgress,
-  getGroupSavings,
   getMerchantOrderState,
   getOrderItemCount,
   getOrderTotal,
@@ -26,6 +18,7 @@ import { fontFamily } from '@/theme/fonts';
 import { colors, radii, shadow } from '@/theme/tokens';
 import { useLocale } from '@/i18n/locale';
 import { formatMoney } from '@/utils/money';
+import { formatCompactDuration } from '@/utils/timer';
 
 type QueueFilter = 'needsAction' | 'all' | OrderStatus;
 type StoreFilter = 'all' | DemoBrandId;
@@ -41,6 +34,10 @@ const FILTERS: { label: string; value: QueueFilter }[] = [
   { label: 'Ready', value: 'ready' },
   { label: 'Shipped', value: 'shipped' },
 ];
+
+const WEEK_DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+const WEEK_VALUES = [6, 9, 7, 11, 18, 8, 5];
+const WEEK_MAX = 18;
 
 function isDisplayableMerchantOrder(order: DemoOrder) {
   return (
@@ -64,22 +61,41 @@ function getOrderPriority(order: DemoOrder, nowMs: number) {
   return { label: 'Collecting', tone: 'calm' as const };
 }
 
-const BAR_BUILDINGS = ['Tower A', 'Tower B', 'Tower C', 'Hillside', 'Garden'];
-const BAR_VALUES = [12, 8, 6, 4, 3];
-const BAR_MAX = 14;
+function SearchIcon() {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 20 20" fill="none">
+      <Path
+        d="M9 17A8 8 0 1 0 9 1a8 8 0 0 0 0 16zm6-2.5 3.5 3.5"
+        stroke="#6A5E50"
+        strokeWidth={1.6}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function SettingsIcon() {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 20 20" fill="none">
+      <Line x1="2" y1="5" x2="18" y2="5" stroke="#6A5E50" strokeWidth={1.6} strokeLinecap="round" />
+      <Line x1="2" y1="10" x2="18" y2="10" stroke="#6A5E50" strokeWidth={1.6} strokeLinecap="round" />
+      <Line x1="2" y1="15" x2="18" y2="15" stroke="#6A5E50" strokeWidth={1.6} strokeLinecap="round" />
+      <Rect x="5" y="3" width="3" height="4" rx="1.5" fill="#F4EDE3" stroke="#6A5E50" strokeWidth={1.4} />
+      <Rect x="12" y="8" width="3" height="4" rx="1.5" fill="#F4EDE3" stroke="#6A5E50" strokeWidth={1.4} />
+    </Svg>
+  );
+}
 
 export default function StoreDashboardScreen() {
   const router = useRouter();
   const { language } = useLocale();
   const orders = useDemoCommerceStore((state) => state.orders);
-  const lastPulse = useDemoCommerceStore((state) => state.lastPulse);
   const demoMode = useDemoCommerceStore((state) => state.demoMode);
   const setDemoRole = useDemoCommerceStore((state) => state.setDemoRole);
   const activeParticipantId = useDemoCommerceStore((state) => state.activeParticipantId);
   const [nowMs, setNowMs] = useState(Date.now());
-  const [filter, setFilter] = useState<QueueFilter>('needsAction');
   const [storeFilter, setStoreFilter] = useState<StoreFilter>('all');
-  const [query, setQuery] = useState('');
 
   useEffect(() => {
     initDemoCommerceSync();
@@ -87,7 +103,7 @@ export default function StoreDashboardScreen() {
   }, [demoMode, setDemoRole]);
 
   useEffect(() => {
-    const id = setInterval(() => setNowMs(Date.now()), 60_000);
+    const id = setInterval(() => setNowMs(Date.now()), 1_000);
     return () => clearInterval(id);
   }, []);
 
@@ -97,581 +113,589 @@ export default function StoreDashboardScreen() {
     [merchantOrders, storeFilter],
   );
   const activeOrders = visibleStoreOrders.filter((order) => order.status !== 'shipped');
-  const readyToProcess = activeOrders.filter((order) => order.items.length > 0 || order.closesAt <= nowMs).length;
-  const itemsToPick = activeOrders.reduce((total, order) => total + getOrderItemCount(order), 0);
   const totalGmv = visibleStoreOrders.reduce((total, order) => total + getOrderTotal(order), 0);
-  const totalSavings = Math.round(visibleStoreOrders.reduce((total, order) => total + getGroupSavings(order), 0));
-  const avgGroupSize = merchantOrders.length > 0
-    ? Math.round((merchantOrders.reduce((sum, o) => sum + o.participants.length, 0) / merchantOrders.length) * 10) / 10
-    : 0;
-  const fulfillmentPct = visibleStoreOrders.length > 0
-    ? Math.round((visibleStoreOrders.filter((o) => o.status === 'shipped').length / visibleStoreOrders.length) * 100)
-    : 96;
+  const avgGroupSize =
+    merchantOrders.length > 0
+      ? Math.round(
+          (merchantOrders.reduce((sum, o) => sum + o.participants.length, 0) / merchantOrders.length) * 10,
+        ) / 10
+      : 11.2;
+  const fulfillmentPct =
+    visibleStoreOrders.length > 0
+      ? Math.round(
+          (visibleStoreOrders.filter((o) => o.status === 'shipped').length / visibleStoreOrders.length) * 100,
+        )
+      : 96;
 
-  const filteredOrders = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    return visibleStoreOrders.filter((order) => {
-      const store = demoStores[order.brand];
-      const timerEnded = order.closesAt <= nowMs;
-      const matchesFilter =
-        filter === 'all' ||
-        (filter === 'needsAction' && order.status !== 'shipped' && (timerEnded || order.items.length > 0)) ||
-        order.status === filter;
-      const matchesQuery =
-        !normalizedQuery ||
-        order.id.toLowerCase().includes(normalizedQuery) ||
-        order.inviteCode.includes(normalizedQuery) ||
-        store.name.toLowerCase().includes(normalizedQuery) ||
-        (order.deliveryAddress ?? '').toLowerCase().includes(normalizedQuery);
-      return matchesFilter && matchesQuery;
-    });
-  }, [filter, nowMs, query, visibleStoreOrders]);
+  const displayOrders = activeOrders.slice(0, 5);
 
-  const selectedStore = storeFilter !== 'all' ? demoStores[storeFilter] : null;
-  const hubName = selectedStore ? `${selectedStore.name.toUpperCase()} · TEL AVIV HUB` : 'ALL STORES · TEL AVIV HUB';
+  const firstActiveBrand =
+    activeOrders.length > 0 ? activeOrders[0].brand : storeFilter !== 'all' ? storeFilter : null;
+  const firstStore = firstActiveBrand ? demoStores[firstActiveBrand] : null;
+  const avatarLetter = firstStore ? firstStore.name[0].toUpperCase() : 'Z';
+  const hubName = firstStore
+    ? `${firstStore.name.toUpperCase()} · TEL AVIV HUB`
+    : 'ZARA · TEL AVIV HUB';
+
+  const todayOrders = activeOrders.length || 38;
+  const revenueDisplay = totalGmv > 0 ? formatMoney(Math.round(totalGmv), language) : '₪14,820';
+
+  const todayDayIndex = new Date(nowMs).getDay();
+  const chartCurrentIndex = todayDayIndex === 0 ? 6 : todayDayIndex - 1;
+
+  const totalBuyers = activeOrders.reduce((sum, o) => sum + o.participants.length, 0);
 
   return (
-    <ScrollView style={styles.bg} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-
-      {/* Hero header card */}
-      <View style={styles.heroCard}>
-        <View style={styles.heroTop}>
-          <View style={styles.storeBadge}>
-            <Text style={styles.storeBadgeText}>STORE</Text>
-          </View>
-          <Pressable onPress={() => router.push('/user')} accessibilityRole="button" style={styles.switchBtn}>
-            <Text style={styles.switchBtnText}>User view</Text>
-          </Pressable>
-        </View>
-        <Text style={styles.heroHub}>{hubName}</Text>
-        <Text style={styles.heroSub}>Merchant dashboard · Today</Text>
-
-        {/* Key metrics row */}
-        <View style={styles.heroMetrics}>
-          <View style={styles.heroMetric}>
-            <Text style={styles.heroMetricValue}>{activeOrders.length || 38}</Text>
-            <Text style={styles.heroMetricLabel}>Group orders</Text>
-          </View>
-          <View style={styles.heroMetricDivider} />
-          <View style={styles.heroMetric}>
-            <Text style={styles.heroMetricValue}>{formatMoney(Math.round(totalGmv) || 1482000, language)}</Text>
-            <Text style={styles.heroMetricLabel}>Revenue</Text>
-          </View>
-          <View style={styles.heroMetricDivider} />
-          <View style={styles.heroMetric}>
-            <Text style={styles.heroMetricValue}>{avgGroupSize || 11.2}</Text>
-            <Text style={styles.heroMetricLabel}>Avg group</Text>
-          </View>
-          <View style={styles.heroMetricDivider} />
-          <View style={styles.heroMetric}>
-            <Text style={styles.heroMetricValue}>{fulfillmentPct}%</Text>
-            <Text style={styles.heroMetricLabel}>Fulfillment</Text>
-          </View>
-        </View>
-      </View>
-
-      <CelebrationBanner pulse={lastPulse} />
-
-      {/* Store filter tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.storeTabRow}>
-        {STORE_FILTERS.map((brand) => {
-          const store = brand !== 'all' ? demoStores[brand] : null;
-          const active = storeFilter === brand;
-          return (
-            <Pressable
-              key={brand}
-              accessibilityRole="button"
-              onPress={() => setStoreFilter(brand)}
-              style={[styles.storeTab, active && styles.storeTabActive]}
-            >
-              <Text style={[styles.storeTabText, active && styles.storeTabTextActive]}>
-                {store ? store.name : 'All'}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-
-      {/* Bar chart */}
-      <View style={styles.chartCard}>
-        <Text style={styles.chartTitle}>Group orders by building</Text>
-        <View style={styles.chartBars}>
-          {BAR_BUILDINGS.map((building, i) => (
-            <View key={building} style={styles.chartBarCol}>
-              <Text style={styles.chartBarValue}>{BAR_VALUES[i]}</Text>
-              <View style={styles.chartBarTrack}>
-                <View style={[styles.chartBarFill, { height: `${Math.round(((BAR_VALUES[i] ?? 0) / BAR_MAX) * 100)}%` }]} />
-              </View>
-              <Text style={styles.chartBarLabel}>{building}</Text>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScrollView
+        style={styles.bg}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Top header */}
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{avatarLetter}</Text>
             </View>
-          ))}
-        </View>
-      </View>
-
-      {/* Stats grid */}
-      <View style={styles.statsGrid}>
-        <View style={[styles.statCard, styles.statCardHighlight]}>
-          <Text style={styles.statValueHighlight}>{readyToProcess}</Text>
-          <Text style={styles.statLabelHighlight}>Needs action</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{activeOrders.length}</Text>
-          <Text style={styles.statLabel}>Open orders</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{itemsToPick}</Text>
-          <Text style={styles.statLabel}>Items to pick</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{formatMoney(totalSavings, language)}</Text>
-          <Text style={styles.statLabel}>Group savings</Text>
-        </View>
-      </View>
-
-      {/* Order queue */}
-      <View style={styles.queueSection}>
-        <Text style={styles.queueTitle}>Active orders</Text>
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Search order, code, or building"
-          placeholderTextColor={colors.mu2}
-          style={styles.searchInput}
-          accessibilityLabel="Search merchant orders"
-        />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-          {FILTERS.map((option) => (
-            <Pressable
-              key={option.value}
-              accessibilityRole="button"
-              onPress={() => setFilter(option.value)}
-              style={[styles.filterChip, filter === option.value && styles.filterChipActive]}
-            >
-              <Text style={[styles.filterChipText, filter === option.value && styles.filterChipTextActive]}>
-                {option.label}
-              </Text>
+            <View style={styles.headerMeta}>
+              <Text style={styles.hubLabel}>{hubName}</Text>
+              <Text style={styles.dashTitle}>Store dashboard</Text>
+            </View>
+          </View>
+          <View style={styles.headerIcons}>
+            <Pressable accessibilityRole="button" style={styles.iconBtn}>
+              <SearchIcon />
             </Pressable>
-          ))}
-        </ScrollView>
-      </View>
+            <Pressable accessibilityRole="button" style={styles.iconBtn}>
+              <SettingsIcon />
+            </Pressable>
+          </View>
+        </View>
 
-      {merchantOrders.length === 0 ? (
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>No group orders yet</Text>
-          <Text style={styles.emptyBody}>Create a group order from the user side. It will appear here instantly.</Text>
-        </View>
-      ) : filteredOrders.length === 0 ? (
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>No orders match this view</Text>
-          <Text style={styles.emptyBody}>Clear the search or switch filters.</Text>
-        </View>
-      ) : (
-        <View style={styles.orderList}>
-          {filteredOrders.map((order) => (
-            <OrderQueueCard
-              key={order.id}
-              order={order}
-              nowMs={nowMs}
-              onOpen={() => router.push(`/store/orders/${order.id}`)}
-              onTimerEnd={() => setNowMs(Date.now())}
-              language={language}
-            />
-          ))}
-        </View>
-      )}
+        {/* 2×2 Metric grid */}
+        <View style={styles.metricGrid}>
+          {/* Cell 1 — light cream */}
+          <View style={[styles.metricCell, styles.metricCellCream]}>
+            <Text style={styles.metricCellLabel}>TODAY'S GROUP ORDERS</Text>
+            <Text style={styles.metricCellNumber}>{todayOrders}</Text>
+            <Text style={styles.metricCellGreen}>+12 vs yesterday</Text>
+          </View>
 
-      <SavingsTracker orders={visibleStoreOrders} activeParticipantId={activeParticipantId} />
-    </ScrollView>
+          {/* Cell 2 — dark ink */}
+          <View style={[styles.metricCell, styles.metricCellInk]}>
+            <Text style={styles.metricCellLabelWhite}>REVENUE</Text>
+            <Text style={styles.metricCellNumberWhite}>{revenueDisplay}</Text>
+            <Text style={styles.metricCellMutedWhite}>+₪2,140 this week</Text>
+          </View>
+
+          {/* Cell 3 — light cream */}
+          <View style={[styles.metricCell, styles.metricCellCream]}>
+            <Text style={styles.metricCellLabel}>AVG GROUP SIZE</Text>
+            <Text style={styles.metricCellNumber}>{avgGroupSize}</Text>
+            <Text style={styles.metricCellGreen}>+0.8</Text>
+          </View>
+
+          {/* Cell 4 — clay red */}
+          <View style={[styles.metricCell, styles.metricCellClay]}>
+            <Text style={styles.metricCellLabelWhite}>FULFILLMENT</Text>
+            <Text style={styles.metricCellNumberWhite}>{fulfillmentPct}%</Text>
+          </View>
+        </View>
+
+        {/* Chart section */}
+        <View style={styles.chartSection}>
+          <View style={styles.chartHeader}>
+            <View>
+              <Text style={styles.chartSubLabel}>LAST 7 DAYS</Text>
+              <Text style={styles.chartTitle}>Group orders by building</Text>
+            </View>
+            <View style={styles.weekToggle}>
+              <Text style={styles.weekToggleText}>Week</Text>
+            </View>
+          </View>
+
+          <View style={styles.chartBars}>
+            {WEEK_DAYS.map((day, i) => {
+              const val = WEEK_VALUES[i] ?? 0;
+              const heightPct = (val / WEEK_MAX) * 100;
+              const isCurrent = i === chartCurrentIndex;
+              return (
+                <View key={`${day}-${i}`} style={styles.chartBarCol}>
+                  <View style={styles.chartBarTrack}>
+                    <View
+                      style={[
+                        styles.chartBarFill,
+                        { height: `${heightPct}%` as any },
+                        isCurrent && styles.chartBarFillActive,
+                      ]}
+                    />
+                  </View>
+                  <Text style={[styles.chartBarDay, isCurrent && styles.chartBarDayActive]}>{day}</Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Active group orders header */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>ACTIVE GROUP ORDERS</Text>
+          <Text style={styles.sectionMeta}>
+            {activeOrders.length} open · {totalBuyers || 41} buyers
+          </Text>
+        </View>
+
+        {/* Order cards */}
+        {displayOrders.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>No active group orders</Text>
+            <Text style={styles.emptyBody}>Create a group order from the user side — it will appear here instantly.</Text>
+          </View>
+        ) : (
+          <View style={styles.orderList}>
+            {displayOrders.map((order) => (
+              <DashboardOrderCard
+                key={order.id}
+                order={order}
+                nowMs={nowMs}
+                onOpen={() => router.push(`/store/orders/${order.id}`)}
+                language={language}
+              />
+            ))}
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
-function OrderQueueCard({
+function DashboardOrderCard({
   order,
   nowMs,
   onOpen,
-  onTimerEnd,
   language,
 }: {
   order: DemoOrder;
   nowMs: number;
   onOpen: () => void;
-  onTimerEnd?: () => void;
   language: 'he' | 'en';
 }) {
   const store = demoStores[order.brand];
   if (!store) return null;
+
   const progress = getGoalProgress(order);
-  const minutesLeft = Math.max(0, Math.ceil((order.closesAt - nowMs) / 60000));
-  const merchantState = getMerchantOrderState(order, nowMs);
-  const priority = getOrderPriority(order, nowMs);
+  const timeLeft = Math.max(0, order.closesAt - nowMs);
+  const timerDisplay = formatCompactDuration(timeLeft);
   const totalItems = getOrderItemCount(order);
+  const total = getOrderTotal(order);
+  const isReady = order.status === 'ready';
+
+  const address = order.deliveryAddress ?? 'Ben Yehuda 14';
+  const addressParts = address.split(',');
+  const addressMain = addressParts[0]?.trim() ?? address;
+  const addressSub = `Tel Aviv · ${store.name} · Maya R. · 3B`;
 
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onOpen}
-      style={({ pressed }) => [styles.orderCard, pressed && demoStyles.pressed]}
+      style={({ pressed }) => [styles.orderCard, pressed && styles.orderCardPressed]}
     >
       <View style={styles.orderCardTop}>
-        <BrandPill brand={order.brand} />
-        <View style={styles.orderCardMeta}>
-          <Text style={styles.orderCardId}>{order.id}</Text>
-          <Text style={styles.orderCardSub}>
-            Code {order.inviteCode} · {minutesLeft > 0 ? `${minutesLeft}m left` : 'ended'}
-          </Text>
+        <View style={styles.orderCardAddress}>
+          <Text style={styles.orderCardAddressMain}>{addressMain}</Text>
+          <Text style={styles.orderCardAddressSub}>{addressSub}</Text>
         </View>
-        <View style={[styles.priorityChip, priority.tone === 'hot' && styles.priorityChipHot]}>
-          <Text style={[styles.priorityChipText, priority.tone === 'hot' && styles.priorityChipTextHot]}>
-            {priority.label}
+        <View style={styles.orderCardRight}>
+          {isReady && (
+            <View style={styles.readyBadge}>
+              <Text style={styles.readyBadgeText}>READY</Text>
+            </View>
+          )}
+          <Text style={styles.orderCardTotal}>{formatMoney(total || 284000, language)}</Text>
+        </View>
+      </View>
+
+      <View style={styles.orderCardBottom}>
+        <View style={styles.orderCardStat}>
+          <Text style={styles.orderCardStatIcon}>👥</Text>
+          <Text style={styles.orderCardStatText}>{order.participants.length || 14}</Text>
+        </View>
+        <View style={styles.orderCardDivider} />
+        <View style={styles.orderCardStat}>
+          <Text style={styles.orderCardStatText}>⏱ {timerDisplay}</Text>
+        </View>
+        <View style={styles.orderCardDivider} />
+        <View style={styles.orderCardStat}>
+          <Text style={styles.orderCardStatText}>
+            {totalItems}/{order.participants.length || 14}
           </Text>
         </View>
       </View>
 
-      <View style={styles.orderCardStats}>
-        <View style={styles.orderStat}>
-          <Text style={styles.orderStatValue}>{order.participants.length}</Text>
-          <Text style={styles.orderStatLabel}>Neighbors</Text>
-        </View>
-        <View style={styles.orderStat}>
-          <Text style={styles.orderStatValue}>{totalItems}</Text>
-          <Text style={styles.orderStatLabel}>Items</Text>
-        </View>
-        <View style={styles.orderStat}>
-          <Text style={styles.orderStatValue}>{formatMoney(getOrderTotal(order), language)}</Text>
-          <Text style={styles.orderStatLabel}>Total</Text>
-        </View>
-        <View style={styles.orderStat}>
-          <Text style={styles.orderStatValue}>{progress}%</Text>
-          <Text style={styles.orderStatLabel}>Goal</Text>
-        </View>
+      <View style={styles.progressTrack}>
+        <View style={[styles.progressFill, { width: `${progress}%` as any }]} />
       </View>
-
-      <ProgressBar progress={progress} accent={store.accent} />
-      <StatusRail status={order.status} />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  bg: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingBottom: 60, gap: 16 },
-  heroCard: {
-    backgroundColor: colors.navy,
-    padding: 24,
-    paddingTop: 56,
-    gap: 12,
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F4EDE3',
   },
-  heroTop: {
+  bg: {
+    flex: 1,
+    backgroundColor: '#F4EDE3',
+  },
+  content: {
+    paddingBottom: 60,
+    gap: 20,
+  },
+
+  // Header
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 4,
   },
-  storeBadge: {
-    backgroundColor: colors.acc,
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#8B5A3C',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontFamily: fontFamily.display,
+    fontSize: 16,
+    color: '#FAF6EF',
+  },
+  headerMeta: {
+    flex: 1,
+  },
+  hubLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 10,
+    letterSpacing: 1.5,
+    color: '#6A5E50',
+    textTransform: 'uppercase',
+  },
+  dashTitle: {
+    fontFamily: fontFamily.display,
+    fontSize: 22,
+    color: '#1E1812',
+    lineHeight: 28,
+  },
+  headerIcons: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  iconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FAF6EF',
+    borderWidth: 1,
+    borderColor: '#E1D5C4',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Metric grid
+  metricGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 16,
+    gap: 10,
+  },
+  metricCell: {
+    flexBasis: '47%',
+    flexGrow: 1,
+    borderRadius: 20,
+    padding: 18,
+    gap: 4,
+    minHeight: 130,
+    justifyContent: 'flex-end',
+  },
+  metricCellCream: {
+    backgroundColor: '#FAF6EF',
+    borderWidth: 1,
+    borderColor: '#E1D5C4',
+  },
+  metricCellInk: {
+    backgroundColor: '#1E1812',
+  },
+  metricCellClay: {
+    backgroundColor: '#C5654B',
+  },
+  metricCellLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 9,
+    letterSpacing: 1.4,
+    color: '#6A5E50',
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  metricCellLabelWhite: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 9,
+    letterSpacing: 1.4,
+    color: 'rgba(250,246,239,0.7)',
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  metricCellNumber: {
+    fontFamily: fontFamily.display,
+    fontSize: 44,
+    color: '#1E1812',
+    lineHeight: 50,
+  },
+  metricCellNumberWhite: {
+    fontFamily: fontFamily.display,
+    fontSize: 36,
+    color: '#FAF6EF',
+    lineHeight: 44,
+  },
+  metricCellGreen: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 11,
+    color: '#3A8A5C',
+    marginTop: 2,
+  },
+  metricCellMutedWhite: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 11,
+    color: 'rgba(250,246,239,0.55)',
+    marginTop: 2,
+  },
+
+  // Chart
+  chartSection: {
+    marginHorizontal: 16,
+    backgroundColor: '#FAF6EF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E1D5C4',
+    padding: 18,
+  },
+  chartHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 18,
+  },
+  chartSubLabel: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 9,
+    letterSpacing: 1.4,
+    color: '#6A5E50',
+    textTransform: 'uppercase',
+  },
+  chartTitle: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 14,
+    color: '#1E1812',
+    marginTop: 2,
+  },
+  weekToggle: {
+    backgroundColor: '#1E1812',
     borderRadius: radii.pill,
     paddingHorizontal: 14,
     paddingVertical: 6,
   },
-  storeBadgeText: {
+  weekToggleText: {
     fontFamily: fontFamily.bodyBold,
     fontSize: 11,
-    letterSpacing: 2,
-    color: colors.white,
-  },
-  switchBtn: {
-    borderWidth: 1,
-    borderColor: 'rgba(250,246,239,0.2)',
-    borderRadius: radii.pill,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-  },
-  switchBtnText: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 12,
-    color: 'rgba(250,246,239,0.72)',
-  },
-  heroHub: {
-    fontFamily: fontFamily.display,
-    fontSize: 26,
-    color: colors.white,
-    lineHeight: 32,
-  },
-  heroSub: {
-    fontFamily: fontFamily.body,
-    fontSize: 13,
-    color: 'rgba(250,246,239,0.6)',
-  },
-  heroMetrics: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 20,
-    padding: 16,
-    marginTop: 8,
-  },
-  heroMetric: { flex: 1, alignItems: 'center', gap: 4 },
-  heroMetricDivider: {
-    width: 1,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    marginHorizontal: 2,
-  },
-  heroMetricValue: {
-    fontFamily: fontFamily.display,
-    fontSize: 18,
-    color: colors.white,
-  },
-  heroMetricLabel: {
-    fontFamily: fontFamily.body,
-    fontSize: 10,
-    color: 'rgba(250,246,239,0.6)',
-    textAlign: 'center',
-  },
-  storeTabRow: {
-    paddingHorizontal: 18,
-    gap: 8,
-  },
-  storeTab: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.br,
-    backgroundColor: colors.white,
-  },
-  storeTabActive: {
-    backgroundColor: colors.tx,
-    borderColor: colors.tx,
-  },
-  storeTabText: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 13,
-    color: colors.mu,
-  },
-  storeTabTextActive: { color: colors.white },
-  chartCard: {
-    marginHorizontal: 18,
-    backgroundColor: colors.white,
-    borderRadius: 26,
-    borderWidth: 1,
-    borderColor: colors.br,
-    padding: 20,
-    ...shadow.card,
-  },
-  chartTitle: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 11,
-    letterSpacing: 1.6,
-    color: colors.mu,
-    textTransform: 'uppercase',
-    marginBottom: 16,
+    color: '#FAF6EF',
   },
   chartBars: {
     flexDirection: 'row',
-    gap: 8,
-    height: 100,
+    gap: 6,
+    height: 90,
     alignItems: 'flex-end',
   },
   chartBarCol: {
     flex: 1,
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
     height: '100%',
     justifyContent: 'flex-end',
   },
-  chartBarValue: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 11,
-    color: colors.tx,
-  },
   chartBarTrack: {
     width: '100%',
-    height: 64,
-    backgroundColor: colors.s2,
-    borderRadius: 8,
+    flex: 1,
+    backgroundColor: '#E1D5C4',
+    borderRadius: 6,
     justifyContent: 'flex-end',
     overflow: 'hidden',
   },
   chartBarFill: {
     width: '100%',
-    backgroundColor: colors.acc,
-    borderRadius: 8,
+    backgroundColor: '#A89B89',
+    borderRadius: 6,
   },
-  chartBarLabel: {
-    fontFamily: fontFamily.body,
-    fontSize: 9,
-    color: colors.mu2,
+  chartBarFillActive: {
+    backgroundColor: '#C5654B',
+  },
+  chartBarDay: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 10,
+    color: '#A89B89',
     textAlign: 'center',
   },
-  statsGrid: {
+  chartBarDayActive: {
+    color: '#C5654B',
+  },
+
+  // Section header
+  sectionHeader: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    paddingHorizontal: 18,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
   },
-  statCard: {
-    flexGrow: 1,
-    flexBasis: '45%',
-    backgroundColor: colors.white,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: colors.br,
-    padding: 16,
-    gap: 4,
-    ...shadow.card,
-  },
-  statCardHighlight: {
-    backgroundColor: colors.acc,
-    borderColor: colors.acc,
-  },
-  statValue: {
-    fontFamily: fontFamily.display,
-    fontSize: 26,
-    color: colors.tx,
-  },
-  statLabel: {
+  sectionTitle: {
     fontFamily: fontFamily.bodyBold,
-    fontSize: 10,
-    letterSpacing: 1,
-    color: colors.mu,
+    fontSize: 11,
+    letterSpacing: 1.5,
+    color: '#1E1812',
     textTransform: 'uppercase',
   },
-  statValueHighlight: {
-    fontFamily: fontFamily.display,
-    fontSize: 26,
-    color: colors.white,
-  },
-  statLabelHighlight: {
+  sectionMeta: {
     fontFamily: fontFamily.bodyBold,
-    fontSize: 10,
-    letterSpacing: 1,
-    color: 'rgba(250,246,239,0.8)',
-    textTransform: 'uppercase',
+    fontSize: 11,
+    color: '#6A5E50',
   },
-  queueSection: {
-    paddingHorizontal: 18,
-    gap: 12,
-  },
-  queueTitle: {
-    fontFamily: fontFamily.display,
-    fontSize: 22,
-    color: colors.tx,
-  },
-  searchInput: {
-    height: 46,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.br,
-    backgroundColor: colors.white,
-    color: colors.tx,
-    fontFamily: fontFamily.bodySemi,
-    fontSize: 14,
-    paddingHorizontal: 14,
-  },
-  filterRow: { gap: 8, paddingVertical: 2 },
-  filterChip: {
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.br,
-    backgroundColor: colors.white,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  filterChipActive: { backgroundColor: colors.navy, borderColor: colors.navy },
-  filterChipText: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 12,
-    color: colors.mu,
-  },
-  filterChipTextActive: { color: colors.white },
+
+  // Empty
   emptyCard: {
-    marginHorizontal: 18,
-    backgroundColor: colors.white,
-    borderRadius: 22,
+    marginHorizontal: 16,
+    backgroundColor: '#FAF6EF',
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: colors.br,
-    padding: 24,
+    borderColor: '#E1D5C4',
+    padding: 28,
     alignItems: 'center',
     gap: 8,
   },
   emptyTitle: {
     fontFamily: fontFamily.display,
-    fontSize: 18,
-    color: colors.tx,
+    fontSize: 17,
+    color: '#1E1812',
     textAlign: 'center',
   },
   emptyBody: {
     fontFamily: fontFamily.body,
     fontSize: 13,
-    color: colors.mu,
+    color: '#6A5E50',
     textAlign: 'center',
     lineHeight: 20,
   },
+
+  // Order list
   orderList: {
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
     gap: 12,
   },
   orderCard: {
-    backgroundColor: colors.white,
-    borderRadius: 26,
+    backgroundColor: '#FAF6EF',
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: colors.br,
+    borderColor: '#E1D5C4',
     padding: 18,
     gap: 14,
-    ...shadow.card,
+  },
+  orderCardPressed: {
+    opacity: 0.85,
   },
   orderCardTop: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
     gap: 12,
   },
-  orderCardMeta: { flex: 1 },
-  orderCardId: {
+  orderCardAddress: {
+    flex: 1,
+    gap: 3,
+  },
+  orderCardAddressMain: {
     fontFamily: fontFamily.bodyBold,
     fontSize: 16,
-    color: colors.tx,
+    color: '#1E1812',
   },
-  orderCardSub: {
+  orderCardAddressSub: {
     fontFamily: fontFamily.body,
     fontSize: 12,
-    color: colors.mu,
-    marginTop: 2,
+    color: '#6A5E50',
   },
-  priorityChip: {
-    backgroundColor: colors.s2,
+  orderCardRight: {
+    alignItems: 'flex-end',
+    gap: 6,
+  },
+  readyBadge: {
+    backgroundColor: '#2F7A50',
     borderRadius: radii.pill,
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 4,
   },
-  priorityChipHot: {
-    backgroundColor: colors.accLight,
-  },
-  priorityChipText: {
+  readyBadgeText: {
     fontFamily: fontFamily.bodyBold,
-    fontSize: 11,
-    color: colors.mu,
-  },
-  priorityChipTextHot: {
-    color: colors.acc,
-  },
-  orderCardStats: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  orderStat: {
-    flex: 1,
-    backgroundColor: colors.s1,
-    borderRadius: 14,
-    padding: 10,
-    alignItems: 'center',
-    gap: 2,
-  },
-  orderStatValue: {
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 16,
-    color: colors.tx,
-  },
-  orderStatLabel: {
-    fontFamily: fontFamily.body,
     fontSize: 10,
-    color: colors.mu,
+    letterSpacing: 1,
+    color: '#FAF6EF',
+    textTransform: 'uppercase',
+  },
+  orderCardTotal: {
+    fontFamily: fontFamily.display,
+    fontSize: 17,
+    color: '#1E1812',
+  },
+  orderCardBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  orderCardStat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  orderCardStatIcon: {
+    fontSize: 13,
+  },
+  orderCardStatText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
+    color: '#6A5E50',
+  },
+  orderCardDivider: {
+    width: 1,
+    height: 14,
+    backgroundColor: '#E1D5C4',
+    marginHorizontal: 2,
+  },
+  progressTrack: {
+    height: 4,
+    backgroundColor: '#E1D5C4',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#C5654B',
+    borderRadius: 4,
   },
 });
