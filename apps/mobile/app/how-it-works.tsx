@@ -1,187 +1,224 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import Svg, { Circle, Line, Path } from 'react-native-svg';
 
-import { BrandPill, Card, DemoButton, DemoPage, SectionTitle } from '@/components/demo/DemoPrimitives';
-import { useDemoCommerceStore } from '@/stores/demoCommerceStore';
-import { colors } from '@/theme/tokens';
+import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
+import { useLocale } from '@/i18n/locale';
 
-const DEMO_STEPS = [
+const STEPS_EN = [
   {
-    title: 'Founder opens one store order',
-    body: 'Choose Amazon, Zara, or H&M, set the timer, add the delivery address, then create the group order.',
+    number: '1',
+    title: 'Enter your address',
+    body: 'Tell us where you live. We\'ll show you active group orders in your building.',
   },
   {
-    title: 'Friends join from the invite link',
-    body: 'A friend logs in, lands in the same shared cart, and can add products only from the locked store catalog.',
+    number: '2',
+    title: 'Choose a store',
+    body: 'Pick from Zara, Amazon, H&M and more. One order per store, per building.',
   },
   {
-    title: 'Timer closes the cart',
-    body: 'When the timer ends, users can still track the cart but cannot add new items.',
+    number: '3',
+    title: 'Add your name',
+    body: 'Your neighbors see your first name when they join. Nothing else is shared.',
   },
   {
-    title: 'Merchant fulfills by store',
-    body: 'Agent M selects Amazon, Zara, or H&M, sees only that store queue, then accepts, packs, readies, and ships.',
+    number: '4',
+    title: 'Browse & add items',
+    body: 'Open the store catalog, pick what you want, and add items to the shared cart.',
+  },
+  {
+    number: '5',
+    title: 'Launch & share',
+    body: 'Set a timer. Send the invite link to your stairwell. When the timer ends, the order is placed together.',
   },
 ];
 
+const STEPS_HE = [
+  {
+    number: '1',
+    title: 'הכנס את הכתובת שלך',
+    body: 'ספר לנו איפה אתה גר. נציג לך הזמנות קבוצתיות פעילות בבניין שלך.',
+  },
+  {
+    number: '2',
+    title: 'בחר חנות',
+    body: 'בחר מזארה, אמזון, H&M ועוד. הזמנה אחת לחנות, לבניין.',
+  },
+  {
+    number: '3',
+    title: 'הוסף את שמך',
+    body: 'השכנים שלך רואים את שמך הפרטי כשהם מצטרפים. שום דבר אחר לא משותף.',
+  },
+  {
+    number: '4',
+    title: 'גלוש והוסף פריטים',
+    body: 'פתח את קטלוג החנות, בחר מה שתרצה, והוסף פריטים לסל המשותף.',
+  },
+  {
+    number: '5',
+    title: 'השק ושתף',
+    body: 'הגדר טיימר. שלח את קישור ההצטרפות לשכניך. כשהטיימר מסתיים — ההזמנה מתבצעת יחד.',
+  },
+];
+
+const WHY_EN = [
+  { icon: 'ship', title: 'Split shipping', body: 'Everyone shares the delivery cost equally — often just ₪5–15 each.' },
+  { icon: 'shield', title: 'Safe payments', body: 'Money is held in escrow and released only when all items are confirmed received.' },
+  { icon: 'users', title: 'Real neighbors', body: 'Only verified residents of your building can join your group order.' },
+];
+
+const WHY_HE = [
+  { icon: 'ship', title: 'פיצול משלוח', body: 'כולם חולקים את עלות המשלוח שווה בשווה — לרוב רק ₪5–15 לאחד.' },
+  { icon: 'shield', title: 'תשלומים בטוחים', body: 'הכסף מוחזק בנאמנות ומשוחרר רק כשכל הפריטים אושרו כהתקבלו.' },
+  { icon: 'users', title: 'שכנים אמיתיים', body: 'רק דיירים מאומתים בבניין שלך יכולים להצטרף להזמנה הקבוצתית שלך.' },
+];
+
+function ShipIcon() {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={colors.acc} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M3 17h18M5 17l1-7h12l1 7M9 17V9M15 17V9M12 3v6" />
+    </Svg>
+  );
+}
+
+function ShieldIcon() {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={colors.acc} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M12 2L3 6v6c0 5 4 9 9 10 5-1 9-5 9-10V6l-9-4z" />
+      <Path d="M9 12l2 2 4-4" />
+    </Svg>
+  );
+}
+
+function UsersIcon() {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={colors.acc} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+      <Circle cx={9} cy={7} r={4} />
+      <Path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+    </Svg>
+  );
+}
+
+function StepDot({ number, active }: { number: string; active?: boolean }) {
+  return (
+    <View style={[styles.stepDot, active && styles.stepDotActive]}>
+      <Text style={[styles.stepDotText, active && styles.stepDotTextActive]}>{number}</Text>
+    </View>
+  );
+}
+
 export default function HowItWorksScreen() {
   const router = useRouter();
-  const resetDemo = useDemoCommerceStore((state) => state.resetDemo);
+  const { language } = useLocale();
+  const isHe = language === 'he';
+
+  const steps = isHe ? STEPS_HE : STEPS_EN;
+  const why = isHe ? WHY_HE : WHY_EN;
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-      <DemoPage wide>
-        <View style={styles.topBar}>
-          <View>
-            <Text style={styles.logo}>shakana</Text>
-            <Text style={styles.title}>Founder demo script</Text>
-            <Text style={styles.subtitle}>Run this exact flow before a meeting so the app feels calm, clear, and real.</Text>
-          </View>
-          <View style={styles.actions}>
-            <DemoButton label="User app" onPress={() => router.push('/user')} tone="accent" style={styles.actionBtn} />
-            <DemoButton label="Merchant" onPress={() => router.push('/store')} tone="light" style={styles.actionBtn} />
-            <DemoButton label="Login" onPress={() => router.push('/login')} tone="light" style={styles.actionBtn} />
-          </View>
-        </View>
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      {/* Back */}
+      <Pressable onPress={() => router.back()} style={styles.back} accessibilityRole="button">
+        <Text style={styles.backText}>‹ {isHe ? 'חזרה' : 'Back'}</Text>
+      </Pressable>
 
-        <Card style={styles.resetCard}>
-          <View style={styles.resetCopy}>
-            <Text style={styles.resetTitle}>Before presenting</Text>
-            <Text style={styles.muted}>Reset the demo, open a fresh Amazon order, share the link, join as another account, then process it in Merchant.</Text>
-          </View>
-          <DemoButton
-            label="Reset demo state"
-            onPress={() => {
-              resetDemo();
-              router.replace('/login');
-            }}
-            tone="danger"
-            style={styles.resetButton}
-          />
-        </Card>
+      {/* Hero */}
+      <View style={styles.hero}>
+        <Text style={styles.kicker}>SHAKANA</Text>
+        <Text style={styles.heroTitle}>{isHe ? 'איך זה עובד' : 'How it works'}</Text>
+        <Text style={styles.heroSub}>{isHe
+          ? 'הזמנה קבוצתית בבניין שלך — פשוטה, חסכונית ובטוחה.'
+          : 'Group ordering in your building — simple, affordable and safe.'}</Text>
+      </View>
 
-        <SectionTitle title="End-to-end flow" kicker="What investors should see" />
-        <View style={styles.stepGrid}>
-          {DEMO_STEPS.map((step, index) => (
-            <Card key={step.title} style={styles.stepCard}>
-              <Text style={styles.stepNumber}>{index + 1}</Text>
-              <Text style={styles.stepTitle}>{step.title}</Text>
-              <Text style={styles.muted}>{step.body}</Text>
-            </Card>
+      {/* Steps */}
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>{isHe ? 'שלבים' : 'THE STEPS'}</Text>
+        <View style={styles.stepsCard}>
+          {steps.map((step, i) => (
+            <View key={step.number}>
+              <View style={styles.stepRow}>
+                <View style={styles.stepLeft}>
+                  <StepDot number={step.number} active={i === 0} />
+                  {i < steps.length - 1 && <View style={styles.stepLine} />}
+                </View>
+                <View style={styles.stepBody}>
+                  <Text style={styles.stepTitle}>{step.title}</Text>
+                  <Text style={styles.stepBodyText}>{step.body}</Text>
+                  {i < steps.length - 1 && <View style={{ height: 20 }} />}
+                </View>
+              </View>
+            </View>
           ))}
         </View>
+      </View>
 
-        <SectionTitle title="Store scope" kicker="Merchant preview" />
-        <Card style={styles.storeCard}>
-          <View style={styles.brandRow}>
-            <BrandPill brand="amazon" />
-            <BrandPill brand="zara" />
-            <BrandPill brand="hm" />
-          </View>
-          <Text style={styles.stepTitle}>Each merchant sees only their selected store queue.</Text>
-          <Text style={styles.muted}>
-            Amazon orders stay in Amazon, Zara orders stay in Zara, and H&M orders stay in H&M. The order detail keeps the exact item photos, variants, master picking list, user breakdown, timer, and status actions.
-          </Text>
-        </Card>
-      </DemoPage>
+      {/* Why Shakana */}
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>{isHe ? 'למה שכנה' : 'WHY SHAKANA'}</Text>
+        <View style={styles.whyGrid}>
+          {why.map((item) => (
+            <View key={item.icon} style={styles.whyCard}>
+              <View style={styles.whyIcon}>
+                {item.icon === 'ship' && <ShipIcon />}
+                {item.icon === 'shield' && <ShieldIcon />}
+                {item.icon === 'users' && <UsersIcon />}
+              </View>
+              <Text style={styles.whyTitle}>{item.title}</Text>
+              <Text style={styles.whyBody}>{item.body}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {/* CTA */}
+      <Pressable onPress={() => router.push('/order/new')} style={styles.ctaBtn} accessibilityRole="button">
+        <Text style={styles.ctaBtnText}>{isHe ? 'התחל הזמנה קבוצתית' : 'Start a group order'}</Text>
+      </Pressable>
+
+      <View style={{ height: 40 }} />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: colors.bg },
-  content: { flexGrow: 1 },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: 14,
-  },
-  logo: {
-    color: colors.acc,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 13,
-    letterSpacing: 1.1,
-    textTransform: 'uppercase',
-  },
-  title: {
-    color: colors.tx,
-    fontFamily: fontFamily.display,
-    fontSize: 36,
-    lineHeight: 40,
-  },
-  subtitle: {
-    color: colors.mu,
-    fontFamily: fontFamily.body,
-    fontSize: 16,
-    lineHeight: 24,
-    maxWidth: 620,
-  },
-  actions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  actionBtn: {
-    flexGrow: 1,
-    flexBasis: 120,
-    minHeight: 40,
-  },
-  resetCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  resetCopy: {
-    flex: 1,
-    minWidth: 240,
-  },
-  resetTitle: {
-    color: colors.tx,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 18,
-  },
-  resetButton: {
-    flexBasis: 180,
-    minHeight: 44,
-  },
-  stepGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  stepCard: {
-    flexGrow: 1,
-    flexBasis: 230,
-    gap: 8,
-  },
-  stepNumber: {
-    color: colors.acc,
-    fontFamily: fontFamily.display,
-    fontSize: 28,
-  },
-  stepTitle: {
-    color: colors.tx,
-    fontFamily: fontFamily.bodyBold,
-    fontSize: 17,
-    lineHeight: 23,
-  },
-  storeCard: {
-    gap: 12,
-  },
-  brandRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  muted: {
-    color: colors.mu,
-    fontFamily: fontFamily.body,
-    fontSize: 14,
-    lineHeight: 22,
-  },
+  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 40 },
+
+  back: { marginBottom: 8, alignSelf: 'flex-start' },
+  backText: { fontFamily: fontFamily.bodyBold, fontSize: 15, color: colors.mu },
+
+  hero: { gap: 8, marginBottom: 28 },
+  kicker: { fontFamily: fontFamily.bodyBold, fontSize: 10, letterSpacing: 2.4, color: colors.acc, textTransform: 'uppercase' },
+  heroTitle: { fontFamily: fontFamily.display, fontSize: 36, color: colors.tx, lineHeight: 40 },
+  heroSub: { fontFamily: fontFamily.body, fontSize: 15, color: colors.mu, lineHeight: 23 },
+
+  section: { gap: 12, marginBottom: 28 },
+  sectionLabel: { fontFamily: fontFamily.bodyBold, fontSize: 10, letterSpacing: 2, color: colors.mu, textTransform: 'uppercase' },
+
+  // Steps
+  stepsCard: { backgroundColor: colors.s1, borderRadius: radii.xl, borderWidth: 1, borderColor: colors.br, padding: 20, ...shadow.card },
+  stepRow: { flexDirection: 'row', gap: 14 },
+  stepLeft: { alignItems: 'center', width: 32 },
+  stepDot: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.s2, borderWidth: 1.5, borderColor: colors.br, alignItems: 'center', justifyContent: 'center' },
+  stepDotActive: { backgroundColor: colors.acc, borderColor: colors.acc },
+  stepDotText: { fontFamily: fontFamily.bodyBold, fontSize: 13, color: colors.mu },
+  stepDotTextActive: { color: colors.s1 },
+  stepLine: { flex: 1, width: 1.5, backgroundColor: colors.br, marginTop: 4 },
+  stepBody: { flex: 1, paddingTop: 4 },
+  stepTitle: { fontFamily: fontFamily.bodyBold, fontSize: 15, color: colors.tx, marginBottom: 4 },
+  stepBodyText: { fontFamily: fontFamily.body, fontSize: 13, color: colors.mu, lineHeight: 20 },
+
+  // Why
+  whyGrid: { gap: 12 },
+  whyCard: { backgroundColor: colors.s1, borderRadius: radii.xl, borderWidth: 1, borderColor: colors.br, padding: 18, gap: 8, ...shadow.card },
+  whyIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.accLight, alignItems: 'center', justifyContent: 'center' },
+  whyTitle: { fontFamily: fontFamily.bodyBold, fontSize: 15, color: colors.tx },
+  whyBody: { fontFamily: fontFamily.body, fontSize: 13, color: colors.mu, lineHeight: 20 },
+
+  // CTA
+  ctaBtn: { backgroundColor: colors.acc, borderRadius: radii.pill, minHeight: 54, alignItems: 'center', justifyContent: 'center', ...shadow.cta },
+  ctaBtnText: { fontFamily: fontFamily.bodyBold, fontSize: 16, color: colors.s1 },
 });
