@@ -119,7 +119,7 @@ export default function LoginScreen() {
         </View>
         <View style={s.savingsDivider} />
         <View style={s.savingsRight}>
-          <Text style={s.savingsSocial}>🏠 {isHebrew ? 'שכנים כבר חוסכים ביחד' : 'Neighbors saving together'}</Text>
+          <Text style={s.savingsSocial}>{isHebrew ? 'שכנים כבר חוסכים ביחד' : 'Neighbors saving together'}</Text>
           <Text style={s.savingsSocialSub}>{isHebrew ? 'זרא · H&M · איקאה · Amazon' : 'Zara · H&M · IKEA · Amazon'}</Text>
         </View>
       </View>
@@ -127,17 +127,17 @@ export default function LoginScreen() {
       {/* Bento grid */}
       <View style={s.bento}>
         <View style={[s.bentoCard, s.bentoWide]}>
-          <Text style={s.bentoEmoji}>💸</Text>
+          <Text style={s.bentoEmoji}>₪</Text>
           <Text style={s.bentoTitle}>{isHebrew ? 'חוסכים ₪20–60 להזמנה' : 'Save ₪20–60 per order'}</Text>
           <Text style={s.bentoBody}>{isHebrew ? '4 שכנים = משלוח אחד. כל אחד משלם רבע.' : '4 neighbors, one shipment. Each pays a quarter.'}</Text>
         </View>
         <View style={s.bentoCard}>
-          <Text style={s.bentoEmoji}>⚡</Text>
+          <Text style={s.bentoEmoji}>15"</Text>
           <Text style={s.bentoTitle}>{isHebrew ? '15 שניות לשיתוף' : '15 sec to invite'}</Text>
           <Text style={s.bentoBody}>{isHebrew ? 'קישור ישיר לוואטסאפ.' : 'One WhatsApp link.'}</Text>
         </View>
         <View style={s.bentoCard}>
-          <Text style={s.bentoEmoji}>🔒</Text>
+          <Text style={s.bentoEmoji}>§</Text>
           <Text style={s.bentoTitle}>{isHebrew ? 'כסף בנאמנות' : 'Escrow protected'}</Text>
           <Text style={s.bentoBody}>{isHebrew ? 'Stripe מחזיק עד לאישור קבלה.' : 'Stripe holds until delivery confirmed.'}</Text>
         </View>

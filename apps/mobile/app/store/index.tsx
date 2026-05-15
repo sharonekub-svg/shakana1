@@ -319,7 +319,7 @@ function DashboardOrderCard({
 
       <View style={styles.orderCardBottom}>
         <View style={styles.orderCardStat}>
-          <Text style={styles.orderCardStatIcon}>👥</Text>
+          <Text style={styles.orderCardStatIcon}>#</Text>
           <Text style={styles.orderCardStatText}>{order.participants.length || 14}</Text>
         </View>
         <View style={styles.orderCardDivider} />

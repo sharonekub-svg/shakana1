@@ -235,7 +235,7 @@ export default function NewOrderScreen() {
           </View>
           {currentStep === 'launched' ? (
             <View style={[styles.iconButton, styles.livePip]}>
-              <Text style={styles.livePipText}>🟢</Text>
+              <Text style={styles.livePipText}>LIVE</Text>
             </View>
           ) : (
             <View style={styles.iconButton}>
@@ -424,7 +424,7 @@ export default function NewOrderScreen() {
             <View style={styles.draftShareRow}>
               <Pressable onPress={handleWhatsApp} disabled={!createdOrder}
                 style={[styles.outlineBtn, !createdOrder && { opacity: 0.35 }]}>
-                <Text style={styles.outlineBtnTx}>💬 {isHe ? 'שתף טיוטה' : 'Share Draft'}</Text>
+                <Text style={styles.outlineBtnTx}>{isHe ? 'שתף טיוטה' : 'Share Draft'}</Text>
               </Pressable>
               <Pressable onPress={handleCopy} disabled={!createdOrder}
                 style={[styles.outlineBtn, !createdOrder && { opacity: 0.35 }]}>
@@ -432,7 +432,6 @@ export default function NewOrderScreen() {
               </Pressable>
             </View>
             <View style={styles.lockNote}>
-              <Text style={styles.lockNoteIcon}>🔒</Text>
               <Text style={styles.lockNoteTx}>{isHe ? 'לאחר ההשקה הטיימר מתחיל ולא ניתן לשנות חנות, זמן או פרטים.' : 'After launch the timer starts. Store, timer, and details are locked.'}</Text>
             </View>
           </View>
@@ -442,11 +441,11 @@ export default function NewOrderScreen() {
         {currentStep === 'launched' ? (
           <View style={styles.card}>
             <View style={styles.liveCard}>
-              <Text style={styles.liveEmoji}>🎉</Text>
+              <Text style={styles.liveEmoji} />
               <Text style={styles.liveTitle}>{isHe ? 'ההזמנה פעילה!' : 'Order is live!'}</Text>
               <Text style={styles.liveSub}>{storeName} · {isHe ? `נסגר בעוד ${timerHours} שעות` : `Closes in ${timerHours} hours`}</Text>
               <View style={styles.liveLockBadge}>
-                <Text style={styles.liveLockTx}>🔒 {isHe ? 'נעול — לא ניתן לשנות' : 'Locked — nothing can be changed'}</Text>
+                <Text style={styles.liveLockTx}>{isHe ? 'נעול — לא ניתן לשנות' : 'Locked — nothing can be changed'}</Text>
               </View>
             </View>
             {createdOrder ? (
@@ -468,13 +467,13 @@ export default function NewOrderScreen() {
           {currentStep === 'launched' ? (
             <Pressable accessibilityRole="button" onPress={handleWhatsApp}
               style={({ pressed }) => [styles.primaryButton, styles.primaryButtonDark, pressed && demoStyles.pressed]}>
-              <Text style={styles.primaryButtonText}>💬 {isHe ? 'שלח ב-WhatsApp' : 'Invite via WhatsApp'}</Text>
+              <Text style={styles.primaryButtonText}>{isHe ? 'שלח ב-WhatsApp' : 'Invite via WhatsApp'}</Text>
             </Pressable>
           ) : (
             <Pressable accessibilityRole="button" onPress={goNext} disabled={!currentStepValid}
               style={({ pressed }) => [styles.primaryButton, !currentStepValid && styles.primaryButtonOff, pressed && currentStepValid && demoStyles.pressed]}>
               <Text style={styles.primaryButtonText}>
-                {currentStep === 'draft' ? (isHe ? '🚀 השק עכשיו' : '🚀 Launch Order') :
+                {currentStep === 'draft' ? (isHe ? 'השק עכשיו' : 'Launch Order') :
                  currentStep === 'name' ? (isHe ? 'המשך לטיוטה ←' : 'Continue to Draft →') :
                  (isHe ? 'המשך' : 'Next')}
               </Text>

@@ -256,7 +256,7 @@ export default function AccountTab() {
           </View>
           <Text style={styles.profileName}>{fullName}</Text>
           {addressLine ? (
-            <Text style={styles.profileAddress}>📍 {addressLine}</Text>
+            <Text style={styles.profileAddress}>{addressLine}</Text>
           ) : null}
           {memberSince ? (
             <Text style={styles.profileMember}>{memberSince}</Text>
