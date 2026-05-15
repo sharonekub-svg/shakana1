@@ -1,4 +1,5 @@
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Svg, { Path, Rect } from 'react-native-svg';
 
@@ -7,7 +8,7 @@ import { BackBtn } from '@/components/primitives/BackBtn';
 import { PrimaryBtn } from '@/components/primitives/Button';
 import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
-import { useConfirmDelivery, useOrder, useUpdateDelivery, type DeliveryAction } from '@/api/orders';
+import { useConfirmDelivery, useOrder, useRefundOrder, useUpdateDelivery, type DeliveryAction } from '@/api/orders';
 import { useAuthStore } from '@/stores/authStore';
 import { useUiStore } from '@/stores/uiStore';
 import { formatAgorot } from '@/utils/format';
@@ -44,7 +45,9 @@ export default function Escrow() {
   const userId = useAuthStore((s) => s.user?.id);
   const confirm = useConfirmDelivery();
   const updateDelivery = useUpdateDelivery();
+  const refund = useRefundOrder();
   const pushToast = useUiStore((s) => s.pushToast);
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   const order = data?.order;
   const participants = data?.participants ?? [];
@@ -81,6 +84,17 @@ export default function Escrow() {
       }
     } catch (e) {
       pushToast(e instanceof Error ? e.message : 'Could not confirm received.', 'error');
+    }
+  };
+
+  const onCancelOrder = async () => {
+    if (!order) return;
+    try {
+      await refund.mutateAsync(order.id);
+      pushToast('Order cancelled. Refunds are being processed.', 'success');
+      router.replace('/(tabs)/orders');
+    } catch (e) {
+      pushToast(e instanceof Error ? e.message : 'Could not cancel order.', 'error');
     }
   };
 
@@ -141,6 +155,35 @@ export default function Escrow() {
             <Text style={styles.body}>Only the order creator or pickup manager can update delivery status.</Text>
           ) : null}
         </View>
+
+        {isCreator && order.status !== 'completed' && order.status !== 'cancelled' && shippingStatus === 'not_shipped' ? (
+          <View style={styles.card}>
+            <Text style={styles.kicker}>Cancel order</Text>
+            <Text style={styles.cardTitle}>Cancel & refund all</Text>
+            <Text style={styles.body}>
+              This will cancel the order and release all held funds back to participants. This cannot be undone.
+            </Text>
+            {!confirmCancel ? (
+              <Pressable style={styles.cancelBtn} onPress={() => setConfirmCancel(true)}>
+                <Text style={styles.cancelBtnText}>Cancel order</Text>
+              </Pressable>
+            ) : (
+              <View style={{ gap: 10 }}>
+                <Text style={[styles.body, { color: colors.err }]}>
+                  Are you sure? All participants will be refunded.
+                </Text>
+                <PrimaryBtn
+                  label="Yes, cancel & refund"
+                  onPress={onCancelOrder}
+                  loading={refund.isPending}
+                />
+                <Pressable style={styles.cancelBtn} onPress={() => setConfirmCancel(false)}>
+                  <Text style={styles.cancelBtnText}>Keep order</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+        ) : null}
 
         {shippingStatus === 'ready_for_distribution' ? (
           <View style={styles.card}>
@@ -336,4 +379,17 @@ const styles = StyleSheet.create({
   },
   participantTitle: { fontFamily: fontFamily.bodyBold, fontSize: 14, color: colors.tx },
   participantState: { fontFamily: fontFamily.body, fontSize: 12, color: colors.mu, marginTop: 3 },
+  cancelBtn: {
+    borderWidth: 1,
+    borderColor: colors.br,
+    borderRadius: radii.pill,
+    paddingVertical: 13,
+    alignItems: 'center',
+    backgroundColor: colors.s1,
+  },
+  cancelBtnText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 15,
+    color: colors.mu,
+  },
 });

@@ -174,6 +174,22 @@ export function useUpdateDelivery() {
   });
 }
 
+export function useRefundOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (orderId: string) =>
+      invokeFn<{ ok: true }>('refund-escrow', {
+        orderId,
+        idempotency_key: newIdempotencyKey(),
+      }),
+    onSuccess: (_d, orderId) => {
+      qc.invalidateQueries({ queryKey: ['order', orderId] });
+      qc.invalidateQueries({ queryKey: ['userOrders'] });
+      track('order_cancelled', { orderId });
+    },
+  });
+}
+
 export function useAddOrderItem() {
   const qc = useQueryClient();
   return useMutation({

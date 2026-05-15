@@ -18,6 +18,10 @@ export default function Html({ children }: PropsWithChildren) {
         <meta name="twitter:card" content="summary" />
         <meta name="twitter:title" content="Shakana – הזמנות שכנים" />
         <meta name="twitter:description" content="הזמנות קבוצתיות פשוטות לשכנים. מדביקים קישור, קובעים טיימר, שכנים מצטרפים." />
+        <meta property="og:image" content="https://shakana1.vercel.app/og-image.png" />
+        <meta name="twitter:image" content="https://shakana1.vercel.app/og-image.png" />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://shakana1.vercel.app" />
         <ScrollViewStyleReset />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
