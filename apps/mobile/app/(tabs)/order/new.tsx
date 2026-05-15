@@ -20,9 +20,22 @@ import { useLocale } from '@/i18n/locale';
 import { track } from '@/lib/posthog';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const TIMER_PRESETS = [6, 12, 24, 48, 72] as const;
-const TIMER_CHIP_W = 82;
+const TIMER_CHIP_W = 72;
 const TIMER_SLOT = TIMER_CHIP_W + 8;
+
+type TimerUnit = 'minutes' | 'hours' | 'days';
+
+function getTimerRange(unit: TimerUnit): number[] {
+  if (unit === 'minutes') return Array.from({ length: 60 }, (_, i) => i + 1);
+  if (unit === 'hours')   return Array.from({ length: 24 }, (_, i) => i + 1);
+  return Array.from({ length: 10 }, (_, i) => i + 1);
+}
+
+function timerToMinutes(value: number, unit: TimerUnit): number {
+  if (unit === 'minutes') return value;
+  if (unit === 'hours')   return value * 60;
+  return value * 24 * 60;
+}
 
 type StoreId = 'zara' | 'hm' | 'amazon' | 'superpharm' | 'ikea';
 const STORES: { id: StoreId; he: string; en: string }[] = [
@@ -54,8 +67,9 @@ export default function NewOrder() {
   // ── Create fields ────────────────────────────────────────────────────
   const [myName,    setMyName]    = useState(profile ? `${profile.first_name} ${profile.last_name}`.trim() : '');
   const [groupName, setGroupName] = useState('');
-  const [store,     setStore]     = useState<StoreId | ''>('');
-  const [timerHours, setTimerHours] = useState<number>(24);
+  const [store,      setStore]      = useState<StoreId | ''>('');
+  const [timerUnit,  setTimerUnit]  = useState<TimerUnit>('hours');
+  const [timerValue, setTimerValue] = useState<number>(24);
 
   // ── Address fields ───────────────────────────────────────────────────
   const [addrCity,     setAddrCity]     = useState(profile?.city     ?? '');
@@ -72,16 +86,13 @@ export default function NewOrder() {
   const createOrder    = useCreateOrder();
   const generateInvite = useGenerateInvite();
 
-  // Scroll timer to initial position after mount
+  // Re-scroll to the selected value whenever the unit changes
   useEffect(() => {
-    const idx = TIMER_PRESETS.indexOf(timerHours as typeof TIMER_PRESETS[number]);
-    if (idx >= 0) {
-      globalThis.requestAnimationFrame(() => {
-        timerRef.current?.scrollTo({ x: idx * TIMER_SLOT, animated: false });
-      });
-    }
+    globalThis.requestAnimationFrame(() => {
+      timerRef.current?.scrollTo({ x: (timerValue - 1) * TIMER_SLOT, animated: false });
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [timerUnit]);
 
   const step1Valid =
     myName.trim().length >= 2 &&
@@ -116,12 +127,12 @@ export default function NewOrder() {
         storeLabel: storeName,
         estimatedShippingAgorot: 0,
         freeShippingThresholdAgorot: 0,
-        timerMinutes: timerHours * 60,
+        timerMinutes: timerToMinutes(timerValue, timerUnit),
         maxParticipants: 20,
         pickupResponsibleUserId: user.id,
         preferredPickupLocation: address,
       });
-      track('order_created', { orderId: order.id, storeKey: store, timerHours });
+      track('order_created', { orderId: order.id, storeKey: store, timerMinutes: timerToMinutes(timerValue, timerUnit) });
       try { await generateInvite.mutateAsync(order.id); } catch { /* non-fatal */ }
       router.replace(`/order/${order.id}` as never);
     } catch { /* errors surfaced by mutation */ }
@@ -224,10 +235,34 @@ export default function NewOrder() {
 
               {/* Timer */}
               <FieldRow label={isHe ? 'כמה זמן פתוחה ההזמנה?' : 'How long is the order open?'}>
-                <View style={s.timerDisplay}>
-                  <Text style={s.timerNum}>{timerHours}</Text>
-                  <Text style={s.timerUnit}>{isHe ? 'שעות' : 'hours'}</Text>
+                {/* Unit selector */}
+                <View style={s.unitRow}>
+                  {(['minutes', 'hours', 'days'] as TimerUnit[]).map((u) => {
+                    const on = timerUnit === u;
+                    const label = u === 'minutes' ? (isHe ? 'דקות' : 'Min') : u === 'hours' ? (isHe ? 'שעות' : 'Hours') : (isHe ? 'ימים' : 'Days');
+                    const defaultVal = u === 'minutes' ? 30 : u === 'hours' ? 24 : 3;
+                    return (
+                      <Pressable
+                        key={u}
+                        onPress={() => {
+                          setTimerUnit(u);
+                          setTimerValue(defaultVal);
+                        }}
+                        style={[s.unitChip, on && s.unitChipOn]}
+                      >
+                        <Text style={[s.unitChipTx, on && s.unitChipTxOn]}>{label}</Text>
+                      </Pressable>
+                    );
+                  })}
                 </View>
+                {/* Value display */}
+                <View style={s.timerDisplay}>
+                  <Text style={s.timerNum}>{timerValue}</Text>
+                  <Text style={s.timerUnitTx}>
+                    {timerUnit === 'minutes' ? (isHe ? 'דקות' : 'min') : timerUnit === 'hours' ? (isHe ? 'שעות' : 'h') : (isHe ? 'ימים' : 'd')}
+                  </Text>
+                </View>
+                {/* Scroll picker */}
                 <View style={s.timerTrack}>
                   <ScrollView
                     ref={timerRef}
@@ -237,23 +272,24 @@ export default function NewOrder() {
                     decelerationRate="fast"
                     contentContainerStyle={s.timerRow}
                     onMomentumScrollEnd={(e) => {
+                      const range = getTimerRange(timerUnit);
                       const idx = Math.round(e.nativeEvent.contentOffset.x / TIMER_SLOT);
-                      setTimerHours(TIMER_PRESETS[Math.max(0, Math.min(idx, TIMER_PRESETS.length - 1))]);
+                      setTimerValue(range[Math.max(0, Math.min(idx, range.length - 1))]);
                     }}
                   >
                     <View style={{ width: (SCREEN_WIDTH - 40 - TIMER_SLOT) / 2 }} />
-                    {TIMER_PRESETS.map((h) => {
-                      const on = timerHours === h;
+                    {getTimerRange(timerUnit).map((v) => {
+                      const on = timerValue === v;
                       return (
                         <Pressable
-                          key={h}
+                          key={v}
                           onPress={() => {
-                            setTimerHours(h);
-                            timerRef.current?.scrollTo({ x: TIMER_PRESETS.indexOf(h) * TIMER_SLOT, animated: true });
+                            setTimerValue(v);
+                            timerRef.current?.scrollTo({ x: (v - 1) * TIMER_SLOT, animated: true });
                           }}
                           style={[s.timerChip, on && s.timerChipOn]}
                         >
-                          <Text style={[s.timerChipTx, on && s.timerChipTxOn]}>{h}h</Text>
+                          <Text style={[s.timerChipTx, on && s.timerChipTxOn]}>{v}</Text>
                         </Pressable>
                       );
                     })}
@@ -337,7 +373,7 @@ export default function NewOrder() {
                 {[
                   { label: isHe ? 'שם' : 'NAME', value: groupName.trim() || '—' },
                   { label: isHe ? 'חנות' : 'STORE', value: store ? (STORES.find((st) => st.id === store)?.[isHe ? 'he' : 'en'] ?? store) : '—' },
-                  { label: isHe ? 'טיימר' : 'TIMER', value: `${timerHours}h` },
+                  { label: isHe ? 'טיימר' : 'TIMER', value: `${timerValue}${timerUnit === 'minutes' ? (isHe ? 'ד' : 'm') : timerUnit === 'hours' ? 'h' : (isHe ? 'י' : 'd')}` },
                 ].map((item, i) => (
                   <View key={i} style={s.summaryItem}>
                     <Text style={s.summaryLabel}>{item.label}</Text>
@@ -536,15 +572,22 @@ const s = StyleSheet.create({
   storeChipTx: { fontFamily: fontFamily.bodyBold, fontSize: 13, color: colors.mu },
   storeChipTxOn: { color: colors.acc },
 
-  // Timer
+  // Timer unit selector
+  unitRow:     { flexDirection: 'row', gap: 8 },
+  unitChip:    { flex: 1, paddingVertical: 10, borderRadius: radii.pill, borderWidth: 1.5, borderColor: colors.br, backgroundColor: colors.s2, alignItems: 'center' },
+  unitChipOn:  { borderColor: colors.acc, backgroundColor: colors.accLight },
+  unitChipTx:  { fontFamily: fontFamily.bodyBold, fontSize: 13, color: colors.mu },
+  unitChipTxOn: { color: colors.acc },
+
+  // Timer scroll picker
   timerDisplay: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, paddingHorizontal: 4 },
   timerNum:     { fontFamily: fontFamily.display, fontSize: 56, color: colors.tx, lineHeight: 60 },
-  timerUnit:    { fontFamily: fontFamily.bodyBold, fontSize: 13, color: colors.mu, paddingBottom: 8, letterSpacing: 0.5 },
+  timerUnitTx:  { fontFamily: fontFamily.bodyBold, fontSize: 13, color: colors.mu, paddingBottom: 8, letterSpacing: 0.5 },
   timerTrack:   { marginHorizontal: -20 },
   timerRow:     { alignItems: 'center' },
   timerChip:    {
     width: TIMER_CHIP_W,
-    height: 52,
+    height: 48,
     borderRadius: radii.xl,
     alignItems: 'center',
     justifyContent: 'center',
@@ -554,7 +597,7 @@ const s = StyleSheet.create({
     marginHorizontal: 4,
   },
   timerChipOn:   { borderColor: colors.acc, backgroundColor: colors.accLight },
-  timerChipTx:   { fontFamily: fontFamily.bodyBold, fontSize: 16, color: colors.mu },
+  timerChipTx:   { fontFamily: fontFamily.bodyBold, fontSize: 15, color: colors.mu },
   timerChipTxOn: { color: colors.acc },
 
   // Summary
