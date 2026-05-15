@@ -8,19 +8,18 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; }
   :root {
-    --orange: #C96442;
-    --orange-dark: #7A351F;
-    --cream: #F8F2EA;
-    --paper: #FFFCF7;
-    --soft: #F1E7DA;
-    --line: #E6DCCE;
-    --ink: #211D19;
-    --muted: #70675F;
+    --hot:    #FF2D55;
+    --hotSoft:#FFF0F3;
+    --bg:     #FFFFFF;
+    --surface:#F5F5F5;
+    --border: #E8E8E8;
+    --ink:    #000000;
+    --muted:  #767676;
   }
   html, body {
     margin: 0;
     min-height: 100%;
-    background: var(--cream);
+    background: var(--surface);
     color: var(--ink);
     font-family: Rubik, Arial, sans-serif;
     overflow: hidden;
@@ -37,9 +36,9 @@
     position: relative;
     overflow: hidden;
     border-radius: 32px;
-    background: var(--paper);
-    border: 1px solid var(--line);
-    box-shadow: 0 34px 90px rgba(33, 29, 25, 0.12);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    box-shadow: 0 34px 90px rgba(0, 0, 0, 0.10);
   }
   .topbar {
     position: absolute;
@@ -56,7 +55,7 @@
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    color: var(--orange-dark);
+    color: var(--ink);
     font-weight: 900;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -67,7 +66,7 @@
     border-radius: 14px;
     display: grid;
     place-items: center;
-    background: var(--orange);
+    background: var(--ink);
     color: #fff;
     letter-spacing: 0;
   }
@@ -76,8 +75,8 @@
     gap: 8px;
   }
   .nav a {
-    border: 1px solid var(--line);
-    background: rgba(255, 252, 247, 0.9);
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.9);
     color: var(--ink);
     border-radius: 999px;
     padding: 10px 15px;
@@ -90,8 +89,8 @@
     left: 0;
     right: 0;
     bottom: 0;
-    height: 5px;
-    background: #E9D9C8;
+    height: 4px;
+    background: var(--border);
     z-index: 30;
   }
   .progress::after {
@@ -99,7 +98,7 @@
     display: block;
     height: 100%;
     width: 100%;
-    background: var(--orange);
+    background: var(--hot);
     transform-origin: left center;
     animation: progress 42s linear infinite;
   }
@@ -133,7 +132,7 @@
   .scene:nth-of-type(5) .copy { animation-delay: 28s; }
   .scene:nth-of-type(6) .copy { animation-delay: 35s; }
   .kicker {
-    color: var(--orange);
+    color: var(--hot);
     font-size: 12px;
     font-weight: 900;
     letter-spacing: 0.16em;
@@ -162,12 +161,12 @@
     min-width: 132px;
     padding: 15px;
     border-radius: 20px;
-    background: var(--soft);
-    border: 1px solid var(--line);
+    background: var(--surface);
+    border: 1px solid var(--border);
   }
   .metric strong {
     display: block;
-    color: var(--orange-dark);
+    color: var(--ink);
     font-size: 28px;
     line-height: 1;
   }
@@ -185,8 +184,8 @@
     width: min(390px, 100%);
     border-radius: 34px;
     background: #fff;
-    border: 1px solid var(--line);
-    box-shadow: 0 28px 70px rgba(33, 29, 25, 0.12);
+    border: 1px solid var(--border);
+    box-shadow: 0 28px 70px rgba(0, 0, 0, 0.10);
     overflow: hidden;
     transform: translateY(20px) scale(0.96);
     animation: deviceIn 42s ease infinite;
@@ -217,19 +216,19 @@
   .scene:nth-of-type(6) .catalog { animation-delay: 35s; }
   .phoneTop {
     padding: 14px 16px;
-    background: var(--soft);
+    background: var(--surface);
     display: flex;
     justify-content: space-between;
     align-items: center;
     font-size: 12px;
     font-weight: 900;
-    color: var(--orange-dark);
+    color: var(--ink);
     letter-spacing: 0.08em;
   }
   .timer {
     background: #fff;
-    color: var(--orange-dark);
-    border: 1px solid var(--line);
+    color: var(--ink);
+    border: 1px solid var(--border);
     border-radius: 999px;
     padding: 5px 9px;
     font-size: 11px;
@@ -244,7 +243,7 @@
     border-radius: 20px;
     display: grid;
     place-items: center;
-    background: var(--orange);
+    background: var(--ink);
     color: #fff;
     font-size: 34px;
     font-weight: 900;
@@ -258,17 +257,17 @@
   .pill {
     border-radius: 999px;
     padding: 8px 10px;
-    background: var(--soft);
+    background: var(--surface);
     color: var(--muted);
     font-size: 11px;
     font-weight: 800;
   }
   .pill.active {
-    background: var(--orange);
+    background: var(--ink);
     color: #fff;
   }
   .field {
-    border: 1px solid var(--line);
+    border: 1px solid var(--border);
     border-radius: 14px;
     padding: 12px;
     display: flex;
@@ -279,7 +278,7 @@
   }
   .button {
     border-radius: 14px;
-    background: var(--orange);
+    background: var(--ink);
     color: #fff;
     padding: 13px;
     text-align: center;
@@ -288,8 +287,8 @@
   .chatBubble {
     padding: 16px;
     border-radius: 6px 22px 22px 22px;
-    background: var(--soft);
-    border: 1px solid var(--line);
+    background: var(--surface);
+    border: 1px solid var(--border);
     color: var(--ink);
     line-height: 1.55;
     font-size: 15px;
@@ -299,16 +298,16 @@
     grid-template-columns: 76px 1fr;
     gap: 12px;
     padding: 12px;
-    border: 1px solid var(--line);
+    border: 1px solid var(--border);
     border-radius: 18px;
   }
   .thumb {
     height: 76px;
     border-radius: 14px;
-    background: var(--soft);
+    background: var(--surface);
     display: grid;
     place-items: center;
-    color: var(--orange-dark);
+    color: var(--muted);
     font-weight: 900;
     font-size: 12px;
   }
@@ -322,15 +321,15 @@
     font-weight: 700;
   }
   .goal {
-    height: 10px;
+    height: 8px;
     border-radius: 999px;
-    background: #E9D9C8;
+    background: var(--border);
     overflow: hidden;
   }
   .goal div {
     height: 100%;
     width: 82%;
-    background: var(--orange);
+    background: var(--hot);
     animation: fillGoal 42s ease infinite;
   }
   .dashboard {
@@ -343,14 +342,14 @@
     gap: 10px;
   }
   .dashTile {
-    background: var(--soft);
-    border: 1px solid var(--line);
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: 18px;
     padding: 13px;
   }
   .dashTile strong {
     display: block;
-    color: var(--orange-dark);
+    color: var(--ink);
     font-size: 24px;
   }
   .dashTile span {
@@ -359,7 +358,7 @@
     font-weight: 800;
   }
   .orderLine {
-    border: 1px solid var(--line);
+    border: 1px solid var(--border);
     border-radius: 16px;
     padding: 12px;
     display: flex;
@@ -369,7 +368,7 @@
   }
   .status {
     border-radius: 999px;
-    background: var(--orange);
+    background: var(--hot);
     color: #fff;
     padding: 7px 10px;
     font-size: 11px;
@@ -382,9 +381,9 @@
     width: min(760px, 100%);
     padding: 46px;
     border-radius: 34px;
-    background: var(--paper);
-    border: 1px solid var(--line);
-    box-shadow: 0 30px 80px rgba(33, 29, 25, 0.12);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.10);
     text-align: center;
     display: grid;
     gap: 18px;
