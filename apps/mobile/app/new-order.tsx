@@ -13,7 +13,6 @@ import {
   useDemoCommerceStore,
 } from '@/stores/demoCommerceStore';
 import { useAuthStore } from '@/stores/authStore';
-import { searchCities, searchStreets } from '@/lib/locationAutocomplete';
 import { useLocale } from '@/i18n/locale';
 import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
@@ -24,54 +23,10 @@ const TIMER_PRESETS = [6, 12, 24, 48, 72] as const;
 const TIMER_CHIP_W = 72;
 const TIMER_SLOT = TIMER_CHIP_W + 8;
 
-const FALLBACK_ADDRESSES = [
-  'Herzl 12, Petah Tikva',
-  'Jabotinsky 42, Petah Tikva',
-  'Dizengoff 88, Tel Aviv',
-  'Rothschild 12, Tel Aviv',
-  'Ben Yehuda 14, Tel Aviv',
-  'Weizmann 17, Givatayim',
-  'Ben Gurion 9, Herzliya',
-  'King George 30, Jerusalem',
-  'HaNassi 45, Haifa',
-];
 
 type StepKey = 'address' | 'store' | 'name' | 'draft' | 'launched';
 const STEP_KEYS: StepKey[] = ['address', 'store', 'name', 'draft', 'launched'];
 const QUESTION_STEPS: StepKey[] = ['address', 'store', 'name'];
-
-function hasAddressNumber(value: string) {
-  return /\d+[֐-׿A-Za-z]?/.test(value);
-}
-
-function isCompleteDeliveryAddress(value: string) {
-  const trimmed = value.trim();
-  return trimmed.length >= 6 && hasAddressNumber(trimmed) && trimmed.includes(',');
-}
-
-function splitAddressQuery(value: string) {
-  const parts = value.split(',').map((part) => part.trim()).filter(Boolean);
-  if (parts.length >= 2) {
-    return { street: parts.slice(0, -1).join(', '), city: parts[parts.length - 1] ?? '', hasCityPart: true };
-  }
-  return { street: value.trim(), city: value.trim(), hasCityPart: false };
-}
-
-function unique(values: string[]) {
-  const seen = new Set<string>();
-  return values.filter((value) => {
-    const key = value.trim().toLowerCase();
-    if (!key || seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-function fallbackAddressSuggestions(value: string) {
-  const query = value.trim().toLowerCase();
-  if (query.length < 2) return [];
-  return FALLBACK_ADDRESSES.filter((address) => address.toLowerCase().includes(query)).slice(0, 5);
-}
 
 function buildInviteMessage(orderName: string, storeName: string, timerHours: number, link: string, inviteCode: string, isHe: boolean) {
   if (isHe) {
@@ -104,11 +59,12 @@ export default function NewOrderScreen() {
     'Sharone Kubovsky';
 
   const [stepIndex, setStepIndex] = useState(0);
-  const [address, setAddress] = useState('');
+  const [addrCity, setAddrCity]         = useState('');
+  const [addrStreet, setAddrStreet]     = useState('');
+  const [addrBuilding, setAddrBuilding] = useState('');
   const [brand, setBrand] = useState<DemoBrandId | null>(initialBrand);
   const [orderName, setOrderName] = useState('');
   const [timerHours, setTimerHours] = useState<number>(24);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -118,7 +74,7 @@ export default function NewOrderScreen() {
   const displayName = orderName.trim() || storeName;
   const createdOrder = createdOrderId ? orders.find((order) => order.id === createdOrderId) ?? null : null;
   const inviteLink = createdOrder ? buildSharedDemoInviteLink(createdOrder) : '';
-  const completeAddress = isCompleteDeliveryAddress(address);
+  const completeAddress = addrCity.trim().length >= 2 && addrStreet.trim().length >= 2 && addrBuilding.trim().length >= 1;
   const nameValid = orderName.trim().length >= 2;
 
   const stepLabels: Record<StepKey, string> = useMemo(
@@ -131,31 +87,17 @@ export default function NewOrderScreen() {
   useEffect(() => { initDemoCommerceSync(); if (demoMode) setDemoRole('user'); }, [demoMode, setDemoRole]);
   useEffect(() => { if (initialBrand) setBrand(initialBrand); }, [initialBrand]);
 
+  // Scroll timer to the initially selected position on mount
   useEffect(() => {
-    const value = address.trim();
-    const fallback = fallbackAddressSuggestions(value);
-    if (value.length < 2) { setSuggestions([]); return; }
-    const controller = new AbortController();
-    const timer = globalThis.setTimeout(() => {
-      const query = splitAddressQuery(value);
-      Promise.all([
-        searchCities(query.city, language, controller.signal),
-        query.street.length >= 2 ? searchStreets(query.street, query.hasCityPart ? query.city : '', language, controller.signal) : Promise.resolve([]),
-      ]).then(([cities, streets]) => {
-        if (controller.signal.aborted) return;
-        const cityPool = cities.slice(0, 4);
-        const streetSuggestions = streets.flatMap((street) => {
-          if (street.includes(',')) return [street];
-          return cityPool.length > 0 ? cityPool.map((city) => `${street}, ${city}`) : [];
-        });
-        const citySuggestions = cityPool.map((city) =>
-          query.hasCityPart && query.street ? `${query.street}, ${city}` : city,
-        );
-        setSuggestions(unique([...streetSuggestions, ...citySuggestions, ...fallback]).slice(0, 6));
-      }).catch(() => { if (!controller.signal.aborted) setSuggestions(fallback); });
-    }, 180);
-    return () => { controller.abort(); globalThis.clearTimeout(timer); };
-  }, [address, language]);
+    const idx = TIMER_PRESETS.indexOf(timerHours as typeof TIMER_PRESETS[number]);
+    if (idx >= 0) {
+      globalThis.requestAnimationFrame(() => {
+        timerRef.current?.scrollTo({ x: idx * TIMER_SLOT, animated: false });
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
 
   const participant: DemoParticipant = useMemo(() => ({
     id: session?.user.id ?? 'user-a',
@@ -167,7 +109,8 @@ export default function NewOrderScreen() {
     if (createdOrderId) return createdOrderId;
     const nextBrand = brand ?? 'amazon';
     const orderId = createNewOrder(nextBrand, participant, timerHours * 60);
-    updateDeliveryAddress(orderId, completeAddress ? address.trim() : '');
+    const fullAddress = completeAddress ? `${addrStreet.trim()} ${addrBuilding.trim()}, ${addrCity.trim()}` : '';
+    updateDeliveryAddress(orderId, fullAddress);
     selectBrand(nextBrand);
     setActiveParticipant(participant.id);
     setCreatedOrderId(orderId);
@@ -268,29 +211,46 @@ export default function NewOrderScreen() {
           <View style={styles.card}>
             <Text style={styles.cardKicker}>{isHe ? 'שלב 1 / 3' : 'Step 1 / 3'}</Text>
             <Text style={styles.cardTitle}>{isHe ? 'כתובת משלוח' : 'Delivery address'}</Text>
-            <Text style={styles.cardBody}>{isHe ? 'רחוב, מספר בית ועיר. החנות צריכה מספר בית.' : 'Street, house number, and city. The store needs the house number.'}</Text>
-            <TextInput
-              value={address}
-              onChangeText={setAddress}
-              placeholder={isHe ? 'לדוגמה: הרצל 12, פתח תקווה' : 'Example: Herzl 12, Petah Tikva'}
-              placeholderTextColor={colors.mu2}
-              style={[styles.input, address.length > 0 && !completeAddress && styles.inputWarning]}
-              autoComplete="street-address"
-              autoCorrect={false}
-            />
-            {address.length > 0 && !completeAddress ? (
-              <Text style={styles.warning}>{isHe ? 'צריך רחוב, מספר בית ועיר.' : 'Street, house number, and city required.'}</Text>
-            ) : null}
-            {suggestions.length > 0 ? (
-              <View style={styles.suggestions}>
-                {suggestions.map((suggestion) => (
-                  <Pressable key={suggestion} accessibilityRole="button" onPress={() => setAddress(suggestion)}
-                    style={({ pressed }) => [styles.suggestionButton, pressed && demoStyles.pressed]}>
-                    <Text style={styles.suggestionText}>{suggestion}</Text>
-                  </Pressable>
-                ))}
+            <Text style={styles.cardBody}>{isHe ? 'מלאו עיר, רחוב ומספר בניין בנפרד.' : 'Fill in city, street, and building number separately.'}</Text>
+
+            <View style={styles.addrRow}>
+              <View style={[styles.addrField, { flex: 2 }]}>
+                <Text style={styles.addrLabel}>{isHe ? 'עיר' : 'City'}</Text>
+                <TextInput
+                  value={addrCity}
+                  onChangeText={setAddrCity}
+                  placeholder={isHe ? 'פתח תקווה' : 'Tel Aviv'}
+                  placeholderTextColor={colors.mu2}
+                  style={[styles.input, styles.inputSm]}
+                  autoCorrect={false}
+                  textAlign={isHe ? 'right' : 'left'}
+                />
               </View>
-            ) : null}
+              <View style={[styles.addrField, { flex: 3 }]}>
+                <Text style={styles.addrLabel}>{isHe ? 'רחוב' : 'Street'}</Text>
+                <TextInput
+                  value={addrStreet}
+                  onChangeText={setAddrStreet}
+                  placeholder={isHe ? 'הרצל' : 'Herzl St'}
+                  placeholderTextColor={colors.mu2}
+                  style={[styles.input, styles.inputSm]}
+                  autoCorrect={false}
+                  textAlign={isHe ? 'right' : 'left'}
+                />
+              </View>
+              <View style={[styles.addrField, { flex: 1 }]}>
+                <Text style={styles.addrLabel}>{isHe ? 'מס׳' : 'No.'}</Text>
+                <TextInput
+                  value={addrBuilding}
+                  onChangeText={setAddrBuilding}
+                  placeholder="12"
+                  placeholderTextColor={colors.mu2}
+                  style={[styles.input, styles.inputSm]}
+                  keyboardType="number-pad"
+                  textAlign="center"
+                />
+              </View>
+            </View>
 
             {/* Timer inside address step */}
             <View style={styles.timerBox}>
@@ -308,12 +268,6 @@ export default function NewOrderScreen() {
                   snapToInterval={TIMER_SLOT}
                   decelerationRate="fast"
                   contentContainerStyle={styles.timerRow}
-                  scrollEventThrottle={16}
-                  onScroll={(e) => {
-                    const idx = Math.round(e.nativeEvent.contentOffset.x / TIMER_SLOT);
-                    const h = TIMER_PRESETS[Math.max(0, Math.min(idx, TIMER_PRESETS.length - 1))];
-                    if (h !== timerHours) setTimerHours(h);
-                  }}
                   onMomentumScrollEnd={(e) => {
                     const idx = Math.round(e.nativeEvent.contentOffset.x / TIMER_SLOT);
                     setTimerHours(TIMER_PRESETS[Math.max(0, Math.min(idx, TIMER_PRESETS.length - 1))]);
@@ -530,9 +484,10 @@ const styles = StyleSheet.create({
   input: { minHeight: 54, borderRadius: 18, borderWidth: 1, borderColor: colors.brBr, backgroundColor: colors.s2, paddingHorizontal: 16, color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 15 },
   inputWarning: { borderColor: colors.acc, backgroundColor: colors.accLight },
   warning: { color: colors.acc, fontFamily: fontFamily.bodyBold, fontSize: 12 },
-  suggestions: { gap: 7 },
-  suggestionButton: { borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: colors.br, backgroundColor: colors.s2 },
-  suggestionText: { color: colors.tx, fontFamily: fontFamily.bodySemi, fontSize: 13 },
+  addrRow:   { flexDirection: 'row', gap: 8 },
+  addrField: { gap: 5 },
+  addrLabel: { fontFamily: fontFamily.bodyBold, fontSize: 10, letterSpacing: 1.2, color: colors.mu, textTransform: 'uppercase' },
+  inputSm:   { minHeight: 46, fontSize: 14, paddingHorizontal: 10 },
 
   timerBox: { borderRadius: 22, backgroundColor: colors.s2, borderWidth: 1, borderColor: colors.br, padding: 12, gap: 10 },
   timerTitle: { color: colors.tx, fontFamily: fontFamily.display, fontSize: 22 },

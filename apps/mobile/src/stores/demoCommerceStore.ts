@@ -657,7 +657,7 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
               ...order,
               createdAt: updatedAt,
               closesAt,
-              lastEvent: `Founder set the cart timer to ${safeMinutes} minutes`,
+              lastEvent: `Founder set the cart timer to ${safeMinutes >= 60 ? `${Math.round(safeMinutes / 60)}h` : `${safeMinutes}m`}`,
             }
           : order,
       );

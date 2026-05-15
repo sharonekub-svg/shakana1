@@ -87,11 +87,11 @@ function splitAddressQuery(value: string) {
   };
 }
 
-function normalizeTimerMinutes(value: string) {
+function normalizeTimerHours(value: string) {
   if (!value.trim()) return null;
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return null;
-  return Math.max(1, Math.min(720, Math.round(parsed)));
+  return Math.max(1, Math.min(72, Math.round(parsed)));
 }
 
 function hasAddressNumber(value: string) {
@@ -442,7 +442,7 @@ export default function DemoUserScreen() {
   const [category, setCategory] = useState<(typeof demoCategories)[number]>('Best Sellers');
   const [copied, setCopied] = useState(false);
   const [nowMs, setNowMs] = useState(Date.now());
-  const [customTimer, setCustomTimer] = useState('45');
+  const [customTimer, setCustomTimer] = useState('24');
   const [newOrderMode, setNewOrderMode] = useState(false);
   const [productSearch, setProductSearch] = useState('');
   const [setupBrand, setSetupBrand] = useState<DemoBrandId | null>(null);
@@ -652,9 +652,10 @@ export default function DemoUserScreen() {
   const addressMissing = order ? !isCompleteDeliveryAddress(order.deliveryAddress) : false;
   const isFounder = order?.createdBy === activeParticipantId;
   const isAuthenticated = !!session?.user;
-  const customTimerMinutes = normalizeTimerMinutes(customTimer);
+  const customTimerHours = normalizeTimerHours(customTimer);
+  const customTimerMinutes = customTimerHours ? customTimerHours * 60 : null;
   const addressQuery = newOrderMode ? setupDeliveryAddress : order?.deliveryAddress ?? '';
-  const setupReady = !!setupBrand && !!customTimerMinutes && isCompleteDeliveryAddress(setupDeliveryAddress);
+  const setupReady = !!setupBrand && !!customTimerHours && isCompleteDeliveryAddress(setupDeliveryAddress);
   useEffect(() => {
     if (!session?.user.id || !order || order.createdBy !== 'user-a') return;
     claimOrderFounder(order.id, accountParticipant);
@@ -725,8 +726,8 @@ export default function DemoUserScreen() {
   };
 
   const createSetupOrder = () => {
-    if (!setupBrand || !customTimerMinutes || !isCompleteDeliveryAddress(setupDeliveryAddress)) return;
-    const orderId = createNewOrder(setupBrand, accountParticipant, customTimerMinutes);
+    if (!setupBrand || !customTimerHours || !isCompleteDeliveryAddress(setupDeliveryAddress)) return;
+    const orderId = createNewOrder(setupBrand, accountParticipant, customTimerHours * 60);
     updateDeliveryAddress(orderId, setupDeliveryAddress.trim());
     selectBrand(setupBrand);
     setNewOrderMode(false);
@@ -944,7 +945,7 @@ export default function DemoUserScreen() {
                 Choose the store, timer, and delivery address. The group order opens only after all three are ready.
               </Text>
               <View style={styles.setupSteps}>
-                <View style={[styles.setupStep, !!customTimerMinutes && styles.setupStepDone]}>
+                <View style={[styles.setupStep, !!customTimerHours && styles.setupStepDone]}>
                   <Text style={styles.setupStepNumber}>1</Text>
                   <Text style={styles.setupStepText}>Timer</Text>
                 </View>
@@ -966,12 +967,12 @@ export default function DemoUserScreen() {
                 <View style={styles.customTimerBox}>
                   <TextInput
                     value={customTimer}
-                    onChangeText={(value) => setCustomTimer(value.replace(/[^\d]/g, '').slice(0, 3))}
+                    onChangeText={(value) => setCustomTimer(value.replace(/[^\d]/g, '').slice(0, 2))}
                     keyboardType="number-pad"
-                    placeholder="45"
+                    placeholder="24"
                     style={styles.customTimerInput}
                   />
-                  <Text style={styles.timerText}>minutes</Text>
+                  <Text style={styles.timerText}>hours</Text>
                 </View>
                 <Text style={styles.muted}>This timer starts only when you press Create order.</Text>
               </Card>
@@ -1252,15 +1253,15 @@ export default function DemoUserScreen() {
                     </View>
                     <View style={styles.timerActions}>
                       <DemoButton
-                        label="30 min"
-                        onPress={() => setOrderTimer(30)}
+                        label="1h"
+                        onPress={() => setOrderTimer(60)}
                         disabled={!isFounder}
                         tone="accent"
                         style={styles.timerBtn}
                       />
                       <DemoButton
-                        label="60 min"
-                        onPress={() => setOrderTimer(60)}
+                        label="2h"
+                        onPress={() => setOrderTimer(120)}
                         disabled={!isFounder}
                         tone="light"
                         style={styles.timerBtn}
@@ -1268,28 +1269,27 @@ export default function DemoUserScreen() {
                       <View style={styles.customTimerBox}>
                         <TextInput
                           value={customTimer}
-                          onChangeText={(value) => setCustomTimer(value.replace(/[^\d]/g, '').slice(0, 3))}
+                          onChangeText={(value) => setCustomTimer(value.replace(/[^\d]/g, '').slice(0, 2))}
                           keyboardType="number-pad"
-                          placeholder="45"
+                          placeholder="24"
                           editable={isFounder}
                           style={styles.customTimerInput}
-                          accessibilityLabel="Custom timer minutes"
+                          accessibilityLabel="Custom timer hours"
                         />
                         <DemoButton
-                          label="Set custom"
+                          label="Set"
                           onPress={() => {
-                            if (!customTimerMinutes) return;
-                            setCustomTimer(String(customTimerMinutes));
-                            setOrderTimer(customTimerMinutes);
+                            if (!customTimerHours) return;
+                            setOrderTimer(customTimerHours * 60);
                           }}
-                          disabled={!isFounder || !customTimerMinutes}
+                          disabled={!isFounder || !customTimerHours}
                           tone="accent"
                           style={styles.customTimerButton}
                         />
                       </View>
                     </View>
-                    {customTimer.trim() && !customTimerMinutes ? (
-                      <Text style={styles.validationText}>Enter a timer from 1 to 720 minutes.</Text>
+                    {customTimer.trim() && !customTimerHours ? (
+                      <Text style={styles.validationText}>Enter hours from 1 to 72.</Text>
                     ) : null}
                   </View>
                   <View style={styles.addressPanel}>
