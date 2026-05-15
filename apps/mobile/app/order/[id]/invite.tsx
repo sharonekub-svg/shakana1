@@ -203,7 +203,7 @@ export default function InviteSheet() {
             disabled={!token}
             style={[styles.whatsappBtn, !token && { opacity: 0.5 }]}
           >
-            <Text style={styles.whatsappBtnText}>💬 {copy.whatsApp}</Text>
+            <Text style={styles.whatsappBtnText}>{copy.whatsApp}</Text>
           </Pressable>
         ) : null}
         <PrimaryBtn label={copy.shareButton} onPress={onShare} disabled={!token} />

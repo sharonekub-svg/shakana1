@@ -148,8 +148,8 @@ export default function NewOrder() {
     : `"${displayName}" — group order from ${storeName} on Shakana. We split the shipping! ${fullUrl || shortLink}`;
 
   const liveMsg = isHe
-    ? `"${displayName}" פעילה! יש לך ${timerHours} שעות להצטרף להזמנה הקבוצתית מ-${storeName} 👇\n${fullUrl || shortLink}`
-    : `"${displayName}" is live! You have ${timerHours}h to join the group order from ${storeName} 👇\n${fullUrl || shortLink}`;
+    ? `"${displayName}" פעילה! יש לך ${timerHours} שעות להצטרף להזמנה הקבוצתית מ-${storeName}\n${fullUrl || shortLink}`
+    : `"${displayName}" is live! You have ${timerHours}h to join the group order from ${storeName}\n${fullUrl || shortLink}`;
 
   const handleCopy = async (msg: string) => {
     await Clipboard.setStringAsync(msg);
@@ -389,7 +389,7 @@ export default function NewOrder() {
               disabled={!inviteToken}
               style={[s.draftShareBtn, !inviteToken && s.ctaOff]}
             >
-              <Text style={s.draftShareBtnTx}>💬 {isHe ? 'שתף טיוטה' : 'Share Draft'}</Text>
+              <Text style={s.draftShareBtnTx}>{isHe ? 'שתף טיוטה' : 'Share Draft'}</Text>
             </Pressable>
             <Pressable
               onPress={() => handleCopy(draftMsg)}
@@ -403,13 +403,12 @@ export default function NewOrder() {
           {/* Launch button */}
           <View style={s.launchSection}>
             <BigCta
-              label={launching ? '···' : (isHe ? '🚀 השק עכשיו' : '🚀 Launch Order')}
+              label={launching ? '···' : (isHe ? 'השק עכשיו' : 'Launch Order')}
               onPress={handleLaunch}
               disabled={!orderId || launching}
               loading={launching}
             />
             <View style={s.lockNote}>
-              <Text style={s.lockNoteIcon}>🔒</Text>
               <Text style={s.lockNoteTx}>
                 {isHe
                   ? 'לאחר ההשקה הטיימר מתחיל ולא ניתן לשנות חנות, זמן או פרטים.'
@@ -432,7 +431,7 @@ export default function NewOrder() {
         <View style={s.stepNav}>
           <View style={s.navBack} />
           <View style={s.liveBadge}>
-            <Text style={s.liveBadgeTx}>{isHe ? '🟢 פעיל' : '🟢 LIVE'}</Text>
+            <Text style={s.liveBadgeTx}>{isHe ? 'פעיל' : 'LIVE'}</Text>
           </View>
           <Pressable onPress={() => router.replace('/(tabs)/building')} style={s.navBack} accessibilityRole="button">
             <Text style={s.navHomeIcon}>⌂</Text>
@@ -440,13 +439,13 @@ export default function NewOrder() {
         </View>
 
         <View style={s.liveCard}>
-          <Text style={s.liveEmoji}>🎉</Text>
+          <Text style={s.liveEmoji} />
           <Text style={s.liveTitle}>{isHe ? 'ההזמנה פעילה!' : 'Order is live!'}</Text>
           <Text style={s.liveSub}>
             {storeName} · {isHe ? `נסגר בעוד ${timerHours ?? '?'} שעות` : `Closes in ${timerHours ?? '?'} hours`}
           </Text>
           <View style={s.liveLockBadge}>
-            <Text style={s.liveLockTx}>🔒 {isHe ? 'נעול — לא ניתן לשנות' : 'Locked — nothing can be changed'}</Text>
+            <Text style={s.liveLockTx}>{isHe ? 'נעול — לא ניתן לשנות' : 'Locked — nothing can be changed'}</Text>
           </View>
         </View>
 
@@ -464,7 +463,7 @@ export default function NewOrder() {
         </View>
 
         <BigCta
-          label={isHe ? '💬 שלח ב-WhatsApp' : '💬 Invite via WhatsApp'}
+          label={isHe ? 'שלח ב-WhatsApp' : 'Invite via WhatsApp'}
           onPress={() => handleWhatsApp(liveMsg)}
           dark
         />

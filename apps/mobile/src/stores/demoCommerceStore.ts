@@ -556,7 +556,7 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
         const updatedOrder = { ...order, participants: [...order.participants, participant] };
         const remaining = getRemainingToGoal(updatedOrder);
         const goalSuffix = remaining <= 0
-          ? ' • Free shipping reached! 🎉'
+          ? ' • Free shipping reached!'
           : remaining < FREE_SHIPPING_GOAL * 0.25
             ? ` • ₪${Math.round(remaining)} to free shipping`
             : '';
