@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 
@@ -48,6 +48,7 @@ export default function InviteSheet() {
         directLink: 'קישור ישיר לאפליקציה',
         creating: 'יוצר...',
         shareButton: 'שתף קישור עם חבר',
+        whatsApp: 'שלח בוואטסאפ',
         back: 'חזרה להזמנה',
         oneLinkTitle: 'זה הקישור היחיד ששולחים',
         oneLinkBody: 'החבר פותח, מתחבר עם החשבון שלו, ונכנס לאותה הזמנה עם אותו סל.',
@@ -69,6 +70,7 @@ export default function InviteSheet() {
         directLink: 'Direct app link',
         creating: 'creating...',
         shareButton: 'Share link with a friend',
+        whatsApp: 'Send on WhatsApp',
         back: 'Back to order',
         oneLinkTitle: 'This is the one link to send',
         oneLinkBody: 'Your friend opens it, signs in with their own account, and lands inside the same shared order.',
@@ -145,6 +147,17 @@ export default function InviteSheet() {
     pushToast(copy.copied, 'success');
   };
 
+  const onWhatsApp = async () => {
+    if (!token || !id) return;
+    const msg = encodeURIComponent(`${smartShareMessage}\n\n${universal}`);
+    try {
+      await Linking.openURL(`whatsapp://send?text=${msg}`);
+      trackInviteSent(String(id));
+    } catch {
+      onShare();
+    }
+  };
+
   return (
     <ScreenBase style={{ paddingTop: 20, paddingBottom: 36 }}>
       <View style={styles.header}>
@@ -183,6 +196,16 @@ export default function InviteSheet() {
       <View style={{ flex: 1 }} />
 
       <View style={{ gap: 10 }}>
+        {Platform.OS !== 'web' ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={onWhatsApp}
+            disabled={!token}
+            style={[styles.whatsappBtn, !token && { opacity: 0.5 }]}
+          >
+            <Text style={styles.whatsappBtnText}>💬 {copy.whatsApp}</Text>
+          </Pressable>
+        ) : null}
         <PrimaryBtn label={copy.shareButton} onPress={onShare} disabled={!token} />
         <Pressable
           accessibilityRole="button"
@@ -198,6 +221,19 @@ export default function InviteSheet() {
 }
 
 const styles = StyleSheet.create({
+  whatsappBtn: {
+    minHeight: 52,
+    borderRadius: radii.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#25D366',
+  },
+  whatsappBtnText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 15,
+    color: '#FFFFFF',
+    letterSpacing: 0.4,
+  },
   doneBtn: {
     minHeight: 50,
     borderRadius: radii.lg,

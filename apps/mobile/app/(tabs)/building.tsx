@@ -1,7 +1,7 @@
 import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { ScreenBase } from '@/components/primitives/ScreenBase';
 import { colors, radii, shadow } from '@/theme/tokens';
@@ -104,6 +104,12 @@ function FeaturedCard({
 
 const AVATAR_COLORS = ['#C5654B', '#D29A4A', '#E3D6BE', '#7A5B43', '#B8956A'];
 
+const DEMO_NEIGHBORS = [
+  { name: 'ענבל כ.', enName: 'Inbal K.', initial: 'ע', store: 'Zara', heStore: 'זרה', spots: 2, color: '#C5654B' },
+  { name: 'נועה מ.', enName: 'Noa M.', initial: 'נ', store: 'H&M', heStore: 'H&M', spots: 1, color: '#D29A4A' },
+  { name: 'אורי ש.', enName: 'Uri S.', initial: 'א', store: 'Amazon', heStore: 'אמזון', spots: 3, color: '#5A8A7A' },
+];
+
 function OrderCard({
   title,
   subtitle,
@@ -182,6 +188,17 @@ export default function BuildingTab() {
   const completedOrders = orders.filter((order) => order.status === 'completed').length;
   const openOrders = orders.filter((order) => !['completed', 'cancelled'].includes(order.status));
   const topOrders = orders.slice(0, 3);
+  const totalSavingsAgorot = useMemo(
+    () =>
+      orders
+        .filter((o) => ['completed', 'delivered'].includes(o.status))
+        .reduce((sum, o) => {
+          const n = o.max_participants;
+          if (!n || n <= 1) return sum;
+          return sum + Math.round((o.estimated_shipping_agorot ?? 0) * (1 - 1 / n));
+        }, 0),
+    [orders],
+  );
   const orderMeta = (order: (typeof orders)[number]) => {
     const timing = order.closes_at
       ? `${isHebrew ? 'נסגר בעוד' : 'closes in'} ${formatCompactDuration(Math.max(0, new Date(order.closes_at).getTime() - Date.now()))}`
@@ -239,10 +256,10 @@ export default function BuildingTab() {
               </Text>
             </View>
             <View style={styles.heroAmountRow}>
-              {completedOrders > 0 ? (
+              {totalSavingsAgorot > 0 ? (
                 <>
-                  <Text style={styles.heroAmount}>₪{Math.round(completedOrders * 42).toLocaleString()}</Text>
-                  <Text style={styles.heroAmountSub}>{isHebrew ? 'השנה' : 'this year'}</Text>
+                  <Text style={styles.heroAmount}>₪{Math.round(totalSavingsAgorot / 100).toLocaleString()}</Text>
+                  <Text style={styles.heroAmountSub}>{isHebrew ? 'נחסך' : 'saved'}</Text>
                 </>
               ) : (
                 <Text style={styles.heroAmount}>{isHebrew ? 'הזמן ראשון' : 'First order'}</Text>
@@ -295,6 +312,32 @@ export default function BuildingTab() {
               </Pressable>
             ))}
           </ScrollView>
+
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{isHebrew ? 'שכנים פעילים' : 'Active neighbors'}</Text>
+            <Text style={styles.sectionLink}>{DEMO_NEIGHBORS.length} {isHebrew ? 'בבניין' : 'in building'}</Text>
+          </View>
+          <View style={styles.neighborRow}>
+            {DEMO_NEIGHBORS.map((n) => (
+              <Pressable
+                key={n.initial}
+                style={styles.neighborCard}
+                onPress={() => router.push('/order/new')}
+                accessibilityRole="button"
+              >
+                <View style={[styles.neighborAvatar, { backgroundColor: n.color }]}>
+                  <Text style={styles.neighborAvatarText}>{n.initial}</Text>
+                </View>
+                <Text style={styles.neighborName}>{isHebrew ? n.name : n.enName}</Text>
+                <View style={styles.neighborStorePill}>
+                  <Text style={styles.neighborStore}>{isHebrew ? n.heStore : n.store}</Text>
+                </View>
+                <Text style={styles.neighborSpots}>
+                  {n.spots} {isHebrew ? 'מקומות פנויים' : 'spots open'}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
 
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{homeCopy.smartFlow}</Text>
@@ -834,6 +877,58 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 1.4,
     color: colors.white,
+  },
+  neighborRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  neighborCard: {
+    flex: 1,
+    minWidth: 90,
+    backgroundColor: colors.s1,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.br,
+    padding: 12,
+    alignItems: 'center',
+    gap: 6,
+    ...shadow.card,
+  },
+  neighborAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  neighborAvatarText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 16,
+    color: colors.white,
+  },
+  neighborName: {
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 12,
+    color: colors.tx,
+    textAlign: 'center',
+  },
+  neighborStorePill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: radii.pill,
+    backgroundColor: colors.s3,
+  },
+  neighborStore: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 10,
+    letterSpacing: 0.8,
+    color: colors.tx,
+  },
+  neighborSpots: {
+    fontFamily: fontFamily.body,
+    fontSize: 10,
+    color: colors.hot,
+    textAlign: 'center',
   },
   newOrderCta: {
     flexDirection: 'row',
