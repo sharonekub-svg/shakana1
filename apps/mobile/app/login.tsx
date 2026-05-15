@@ -9,7 +9,7 @@ import { useUiStore } from '@/stores/uiStore';
 import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { useLocale } from '@/i18n/locale';
-import { consumePendingInvite } from '@/lib/deeplinks';
+
 import { env } from '@/lib/env';
 
 const D = {
@@ -65,15 +65,10 @@ export default function LoginScreen() {
 
   useEffect(() => { initDemoCommerceSync(); }, []);
 
-  const continueAsUser = async () => {
+  const continueAsUser = () => {
     if (!env.enableDemo) return;
-    setDemoMode(true); setDemoRole('user');
-    const pendingInvite = await consumePendingInvite();
-    if (pendingInvite) {
-      router.replace(`/user?join=${encodeURIComponent(pendingInvite)}` as any);
-    } else {
-      router.replace('/user');
-    }
+    // Route through real auth — _layout.tsx redirects to /user after sign-in
+    router.push('/(auth)/phone');
   };
   const continueAsStore = () => {
     if (!env.enableDemo) return;
