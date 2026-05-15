@@ -492,10 +492,10 @@ const s = StyleSheet.create({
   // Progress dots
   dots: { flexDirection: 'row', gap: 6, alignItems: 'center' },
   dot:  { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.br },
-  dotOn:{ backgroundColor: colors.acc },
+  dotOn:{ backgroundColor: colors.hot },
 
   // Question text
-  kicker:   { fontFamily: fontFamily.bodyBold, fontSize: 10, letterSpacing: 2.4, color: colors.acc, textTransform: 'uppercase', marginTop: 6 },
+  kicker:   { fontFamily: fontFamily.bodyBold, fontSize: 10, letterSpacing: 2.4, color: colors.hot, textTransform: 'uppercase', marginTop: 6 },
   question: { fontFamily: fontFamily.display, fontSize: 36, color: colors.tx, lineHeight: 42 },
   qSub:     { fontFamily: fontFamily.body, fontSize: 14, color: colors.mu, lineHeight: 20 },
 
