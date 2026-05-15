@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   kicker: {
-    color: colors.acc,
+    color: colors.hot,
     fontFamily: fontFamily.bodyBold,
     fontSize: 11,
     letterSpacing: 1.3,

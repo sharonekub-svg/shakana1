@@ -1,4 +1,4 @@
-// Shein-inspired palette: pure white, neutral grays, black accent, hot pink-red highlights.
+// Black-and-white base with tiny hot-pink accent for kickers and badges only.
 export const colors = {
   bg:        '#FFFFFF',
   s1:        '#FFFFFF',
@@ -7,12 +7,12 @@ export const colors = {
   tx:        '#000000',
   mu:        '#767676',
   mu2:       '#9E9E9E',
-  acc:       '#FF2D55',
+  acc:       '#000000',
   hot:       '#FF2D55',
   hotSoft:   '#FFF0F3',
-  lime:      '#FFE0E8',
-  limeSoft:  '#FFF0F3',
-  accLight:  '#FFF0F3',
+  lime:      '#F0F0F0',
+  limeSoft:  '#F5F5F5',
+  accLight:  '#F0F0F0',
   grn:       '#000000',
   err:       '#E53935',
   br:        '#E8E8E8',
@@ -21,7 +21,7 @@ export const colors = {
   ink:       '#000000',
   pink:      '#FF2D55',
   gold:      '#000000',
-  goldLight: '#EBEBEB',
+  goldLight: '#F0F0F0',
   card:      '#FFFFFF',
   cardSoft:  '#F5F5F5',
   navy:      '#000000',
@@ -55,8 +55,8 @@ export const shadow = {
     elevation: 2,
   },
   cta: {
-    shadowColor:   '#FF2D55',
-    shadowOpacity: 0.22,
+    shadowColor:   '#000000',
+    shadowOpacity: 0.14,
     shadowRadius:  18,
     shadowOffset:  { width: 0, height: 6 },
     elevation: 4,
