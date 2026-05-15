@@ -1,4 +1,5 @@
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
@@ -29,6 +30,7 @@ function OrdersMark() {
 export default function OrdersTab() {
   const router = useRouter();
   const { language, t } = useLocale();
+  const [joinCode, setJoinCode] = useState('');
   const user = useAuthStore((s) => s.user);
   const { data: orders = [], isLoading } = useUserOrders(user?.id);
   const openOrders = orders.filter((order) => !['completed', 'cancelled'].includes(order.status)).length;
@@ -89,13 +91,49 @@ export default function OrdersTab() {
       </View>
 
       {isLoading || orders.length === 0 ? (
-        <EmptyState
-          badge="ORD"
-          title={t('tabs.orders.noOrdersTitle')}
-          subtitle={t('tabs.orders.noOrdersBody')}
-          cta={t('tabs.orders.newOrder')}
-          onCta={newOrder}
-        />
+        <View style={{ flex: 1 }}>
+          <EmptyState
+            badge="ORD"
+            title={t('tabs.orders.noOrdersTitle')}
+            subtitle={t('tabs.orders.noOrdersBody')}
+            cta={t('tabs.orders.newOrder')}
+            onCta={newOrder}
+          />
+          <View style={styles.joinCard}>
+            <Text style={styles.joinCardTitle}>
+              {language === 'he' ? 'קיבלתם קישור מחבר?' : 'Got a link from a neighbor?'}
+            </Text>
+            <Text style={styles.joinCardSub}>
+              {language === 'he'
+                ? 'הדבקו את הקישור או קוד ההזמנה כדי להצטרף להזמנה קבוצתית.'
+                : 'Paste the invite link or code to join a group order.'}
+            </Text>
+            <View style={styles.joinRow}>
+              <TextInput
+                style={styles.joinInput}
+                placeholder={language === 'he' ? 'הדבק קישור…' : 'Paste link…'}
+                placeholderTextColor={colors.mu2}
+                value={joinCode}
+                onChangeText={setJoinCode}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <Pressable
+                style={[styles.joinBtn, !joinCode.trim() && { opacity: 0.4 }]}
+                disabled={!joinCode.trim()}
+                onPress={() => {
+                  const code = joinCode.trim();
+                  const match = code.match(/\/join\/([^/?#]+)/);
+                  const token = match?.[1] ?? code;
+                  router.push(`/join/${token}` as never);
+                }}
+                accessibilityRole="button"
+              >
+                <Text style={styles.joinBtnText}>{language === 'he' ? 'כנס' : 'Join'}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
       ) : (
         <FlatList
           data={orders}
@@ -271,4 +309,57 @@ const styles = StyleSheet.create({
   },
   rowTitle: { fontFamily: fontFamily.bodyBold, fontSize: 16, color: colors.tx },
   rowSub: { fontFamily: fontFamily.body, fontSize: 13, color: colors.mu },
+  joinCard: {
+    marginHorizontal: 18,
+    marginBottom: 28,
+    padding: 18,
+    borderRadius: 24,
+    backgroundColor: colors.s1,
+    borderWidth: 1,
+    borderColor: colors.br,
+    gap: 10,
+    ...shadow.card,
+  },
+  joinCardTitle: {
+    fontFamily: fontFamily.bodySemi,
+    fontSize: 15,
+    color: colors.tx,
+  },
+  joinCardSub: {
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    color: colors.mu,
+    lineHeight: 19,
+  },
+  joinRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  joinInput: {
+    flex: 1,
+    height: 44,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.br,
+    paddingHorizontal: 12,
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    color: colors.tx,
+    backgroundColor: colors.s2,
+  },
+  joinBtn: {
+    height: 44,
+    paddingHorizontal: 18,
+    borderRadius: radii.md,
+    backgroundColor: colors.acc,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  joinBtnText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 13,
+    color: colors.white,
+    letterSpacing: 0.8,
+  },
 });

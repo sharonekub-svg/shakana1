@@ -553,10 +553,16 @@ export const useDemoCommerceStore = create<DemoState>((set, get) => ({
         if (order.id !== orderId) return order;
         if (order.participants.some((participant) => participant.id === participantId)) return order;
         const participant = { ...participantTemplate, joinedAt: now() };
+        const updatedOrder = { ...order, participants: [...order.participants, participant] };
+        const remaining = getRemainingToGoal(updatedOrder);
+        const goalSuffix = remaining <= 0
+          ? ' • Free shipping reached! 🎉'
+          : remaining < FREE_SHIPPING_GOAL * 0.25
+            ? ` • ₪${Math.round(remaining)} to free shipping`
+            : '';
         return {
-          ...order,
-          participants: [...order.participants, participant],
-          lastEvent: `${participant.name} joined the group order`,
+          ...updatedOrder,
+          lastEvent: `${participant.name} joined the group order${goalSuffix}`,
         };
       });
       const joinedOrder = orders.find((order) => order.id === orderId);

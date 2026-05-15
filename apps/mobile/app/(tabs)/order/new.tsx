@@ -28,14 +28,14 @@ const TIMER_SLOT = TIMER_ITEM_WIDTH + 8; // chip width + marginHorizontal*2
 const TIMER_PRESETS = [6, 12, 24, 48, 72] as const;
 
 type StoreId = 'zara' | 'hm' | 'amazon' | 'superpharm' | 'ikea';
-type StoreInfo = { id: StoreId; name: string; logo: string; subtitle: string; active: boolean };
+type StoreInfo = { id: StoreId; name: string; logo: string; subtitle: string; heSubtitle: string; active: boolean };
 
 const STORES: StoreInfo[] = [
-  { id: 'zara',       name: 'Zara',        logo: 'Z',  subtitle: 'Fashion · Spring drop',    active: true  },
-  { id: 'hm',         name: 'H&M',         logo: 'H',  subtitle: 'Fashion · Mid-season sale', active: false },
-  { id: 'amazon',     name: 'Amazon',      logo: 'A',  subtitle: 'Pantry & home',             active: false },
-  { id: 'superpharm', name: 'Super-Pharm', logo: 'SP', subtitle: 'Pharmacy & beauty',         active: false },
-  { id: 'ikea',       name: 'IKEA',        logo: 'I',  subtitle: 'Home & furniture',          active: false },
+  { id: 'zara',       name: 'Zara',        logo: 'Z',  subtitle: 'Fashion · Spring drop',    heSubtitle: 'אופנה · קולקציית אביב',    active: true  },
+  { id: 'hm',         name: 'H&M',         logo: 'H',  subtitle: 'Fashion · Mid-season sale', heSubtitle: 'אופנה · מבצע אמצע עונה',  active: false },
+  { id: 'amazon',     name: 'Amazon',      logo: 'A',  subtitle: 'Pantry & home',             heSubtitle: 'מזון ובית',                 active: false },
+  { id: 'superpharm', name: 'Super-Pharm', logo: 'SP', subtitle: 'Pharmacy & beauty',         heSubtitle: 'פארמה וטיפוח',              active: false },
+  { id: 'ikea',       name: 'IKEA',        logo: 'I',  subtitle: 'Home & furniture',          heSubtitle: 'בית ורהיטים',               active: false },
 ];
 
 function ProgressDots({ current }: { current: number }) {
@@ -235,7 +235,7 @@ export default function NewOrder() {
                     <Text style={[s.storeName, on && s.storeNameOn]}>{store.name}</Text>
                     {store.active && <View style={s.activePip} />}
                   </View>
-                  <Text style={s.storeSub}>{store.subtitle}</Text>
+                  <Text style={s.storeSub}>{isHe ? store.heSubtitle : store.subtitle}</Text>
                 </View>
                 <Text style={[s.storeChevron, on && s.storeChevronOn]}>{on ? '✓' : '›'}</Text>
               </Pressable>
