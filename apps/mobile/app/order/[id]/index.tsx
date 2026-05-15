@@ -212,6 +212,15 @@ export default function OrderShell() {
     }
   };
 
+  const onLaunch = async () => {
+    try {
+      await closeOrder.mutateAsync(order.id);
+      await onShareOrder();
+    } catch (e) {
+      pushToast(e instanceof Error ? e.message : isHebrew ? 'שגיאה בהשקה' : 'Launch error', 'error');
+    }
+  };
+
   const statusLabel = me?.status === 'paid' ? (isHebrew ? 'שולם' : 'PAID') : (isHebrew ? 'הצטרפת' : 'JOINED');
 
   return (
@@ -390,6 +399,29 @@ export default function OrderShell() {
           </View>
         )}
 
+        {/* Launch CTA — creator only, while order is still open */}
+        {order.status === 'open' && order.creator_id === userId ? (
+          <View style={styles.launchCard}>
+            <Text style={styles.launchHint}>
+              {isHebrew
+                ? 'הוסף פריטים לסל ולחץ על השקה — תוכל לשלוח הזמנה לשכנים ולשלם יחד.'
+                : 'Add your items, then press Launch — you\'ll invite neighbors and pay together.'}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => void onLaunch()}
+              disabled={closeOrder.isPending || generateInvite.isPending}
+              style={({ pressed }) => [styles.launchBtn, pressed && { opacity: 0.88 }]}
+            >
+              <Text style={styles.launchBtnText}>
+                {(closeOrder.isPending || generateInvite.isPending)
+                  ? (isHebrew ? 'מאיץ...' : 'Launching...')
+                  : (isHebrew ? '🚀  השקה' : '🚀  Launch')}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         {/* Share / Invite */}
         <View style={styles.inviteCard}>
           <View style={styles.inviteCardTop}>
@@ -425,8 +457,8 @@ export default function OrderShell() {
           </Pressable>
         </View>
 
-        {/* Close order (creator only, no timer) */}
-        {!order.closes_at && order.creator_id === userId && ['open', 'paying'].includes(order.status) ? (
+        {/* Close order (creator only, no timer) — hidden while Launch card is visible */}
+        {!order.closes_at && order.creator_id === userId && order.status === 'paying' ? (
           <Pressable
             accessibilityRole="button"
             onPress={() => void closeOrder.mutateAsync(order.id).catch((e: unknown) => pushToast(e instanceof Error ? e.message : 'Error', 'error'))}
@@ -819,6 +851,32 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodyBold,
     fontSize: 15,
     color: colors.white,
+    letterSpacing: 0.4,
+  },
+  launchCard: {
+    backgroundColor: colors.acc,
+    borderRadius: 26,
+    padding: 20,
+    gap: 14,
+    ...shadow.cta,
+  },
+  launchHint: {
+    fontFamily: fontFamily.body,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.75)',
+    lineHeight: 19,
+    textAlign: 'center',
+  },
+  launchBtn: {
+    backgroundColor: colors.white,
+    borderRadius: radii.pill,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  launchBtnText: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 16,
+    color: colors.acc,
     letterSpacing: 0.4,
   },
   closeBtn: {
