@@ -321,7 +321,7 @@ export default function AccountTab() {
                 ? 'כתובת לא הוגדרה'
                 : 'No address set'
             }
-            onPress={() => router.push('/profile/index')}
+            onPress={() => router.push('/(auth)/address')}
           />
           <View style={styles.divider} />
           <Row

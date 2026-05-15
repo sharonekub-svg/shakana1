@@ -331,7 +331,7 @@ export default function ProfileScreen() {
           </View>
           <View style={styles.quickGrid}>
             <QuickAction title={copy.newOrder} body={copy.newOrderBody} badge="NO" primary onPress={() => router.push('/new-order' as Href)} />
-            <QuickAction title={copy.myOrders} body={copy.myOrdersBody} badge="MO" onPress={() => router.push('/user')} />
+            <QuickAction title={copy.myOrders} body={copy.myOrdersBody} badge="MO" onPress={() => router.push('/(tabs)/orders')} />
             <QuickAction title={copy.copyInvite} body={copy.copyInviteBody} badge="SH" onPress={copyLatestInvite} />
             <QuickAction title={copy.storeView} body={copy.storeViewBody} badge="ST" onPress={() => router.push('/store')} />
           </View>
@@ -435,9 +435,21 @@ export default function ProfileScreen() {
         </View>
 
         {session ? (
-          <Pressable accessibilityRole="button" onPress={() => router.push('/profile/delete')} style={styles.deleteButton}>
-            <Text style={styles.deleteText}>{copy.deleteAccount}</Text>
-          </Pressable>
+          <View style={styles.sessionActions}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onSignOut}
+              disabled={signOut.isPending}
+              style={({ pressed }) => [styles.signOutButton, pressed && styles.pressed]}
+            >
+              <Text style={styles.signOutButtonText}>
+                {signOut.isPending ? copy.signingOut : copy.signOut}
+              </Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" onPress={() => router.push('/profile/delete')} style={styles.deleteButton}>
+              <Text style={styles.deleteText}>{copy.deleteAccount}</Text>
+            </Pressable>
+          </View>
         ) : null}
         <Pressable
           accessibilityRole="button"
@@ -786,8 +798,24 @@ const styles = StyleSheet.create({
   linkText: { color: colors.tx, fontFamily: fontFamily.bodyBold, fontSize: 14 },
   linkNote: { marginTop: 2, color: colors.mu, fontFamily: fontFamily.body, fontSize: 12 },
   linkArrow: { color: colors.mu, fontFamily: fontFamily.display, fontSize: 24, lineHeight: 26 },
+  sessionActions: {
+    gap: 10,
+  },
+  signOutButton: {
+    minHeight: 52,
+    borderRadius: radii.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.acc,
+  },
+  signOutButtonText: {
+    color: colors.white,
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 15,
+    letterSpacing: 0.4,
+  },
   deleteButton: {
-    minHeight: 50,
+    minHeight: 46,
     borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.err,
@@ -795,7 +823,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.s1,
   },
-  deleteText: { color: colors.err, fontFamily: fontFamily.bodyBold, fontSize: 14 },
+  deleteText: { color: colors.err, fontFamily: fontFamily.bodyBold, fontSize: 13 },
   resetButton: {
     minHeight: 48,
     borderRadius: radii.lg,
