@@ -260,9 +260,9 @@ export function CelebrationBanner({ pulse }: { pulse: DemoPulse | null }) {
   const isWin = pulse.message.toLowerCase().includes('free') || pulse.message.includes('חינם') || pulse.message.includes('חסכ') || pulse.message.toLowerCase().includes('unlock');
   return (
     <Animated.View style={[styles.celebration, isWin && styles.celebrationWin, { opacity, transform: [{ translateY }] }]}>
-      <Text style={styles.celebrationSpark}>{isWin ? '🎉' : '✨'}</Text>
+      <Text style={styles.celebrationSpark}>{isWin ? '+' : 'NEW'}</Text>
       <View style={{ flex: 1 }}>
-        <Text style={styles.celebrationTitle}>{isWin ? 'חיסכון! ביחד הצלחנו 🙌' : 'עדכון חי'}</Text>
+        <Text style={styles.celebrationTitle}>{isWin ? 'חיסכון! ביחד הצלחנו' : 'עדכון חי'}</Text>
         <Text style={styles.celebrationBody}>{pulse.message}</Text>
       </View>
     </Animated.View>
