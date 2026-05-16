@@ -48,6 +48,7 @@ export default function Escrow() {
   const refund = useRefundOrder();
   const pushToast = useUiStore((s) => s.pushToast);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [confirmRefund, setConfirmRefund] = useState(false);
 
   const order = data?.order;
   const participants = data?.participants ?? [];
@@ -62,6 +63,11 @@ export default function Escrow() {
   const me = participants.find((p) => p.user_id === userId);
   const allDelivered = participants.filter((p) => p.status === 'paid').every((p) => Boolean(p.delivered_to_user_at));
   const allReceived = participants.filter((p) => p.status === 'paid').every((p) => Boolean(p.received_confirmed_at));
+
+  const createdAt = order?.created_at ? new Date(order.created_at) : null;
+  const refundDeadline = createdAt ? new Date(createdAt.getTime() + 14 * 24 * 60 * 60 * 1000) : null;
+  const daysLeft = refundDeadline ? Math.ceil((refundDeadline.getTime() - Date.now()) / (24 * 60 * 60 * 1000)) : 0;
+  const withinRefundWindow = daysLeft > 0;
 
   const runAction = async (action: DeliveryAction, participantId?: string) => {
     if (!order) return;
@@ -156,31 +162,44 @@ export default function Escrow() {
           ) : null}
         </View>
 
-        {isCreator && order.status !== 'completed' && order.status !== 'cancelled' && shippingStatus === 'not_shipped' ? (
+        {isCreator && order.status !== 'completed' && order.status !== 'cancelled' ? (
           <View style={styles.card}>
-            <Text style={styles.kicker}>Cancel order</Text>
-            <Text style={styles.cardTitle}>Cancel & refund all</Text>
-            <Text style={styles.body}>
-              This will cancel the order and release all held funds back to participants. This cannot be undone.
+            <Text style={styles.kicker}>ביטול והחזר כספי</Text>
+            <Text style={styles.cardTitle}>
+              {withinRefundWindow
+                ? daysLeft === 1 ? 'נותר יום אחד לביטול' : `נותרו ${daysLeft} ימים לביטול`
+                : 'חלון הביטול הסתיים'}
             </Text>
-            {!confirmCancel ? (
-              <Pressable style={styles.cancelBtn} onPress={() => setConfirmCancel(true)}>
-                <Text style={styles.cancelBtnText}>Cancel order</Text>
-              </Pressable>
-            ) : (
-              <View style={{ gap: 10 }}>
-                <Text style={[styles.body, { color: colors.err }]}>
-                  Are you sure? All participants will be refunded.
+            {withinRefundWindow ? (
+              <>
+                <Text style={styles.body}>
+                  לפי חוק הגנת הצרכן, ניתן לבטל עד 14 ימים מיצירת ההזמנה.
+                  {shippingStatus !== 'not_shipped'
+                    ? ' ההזמנה כבר בדרך — ביטול עדיין אפשרי וכל הכסף יוחזר למשתתפים.'
+                    : ' כל הכסף יוחזר לכל המשתתפים.'}
                 </Text>
-                <PrimaryBtn
-                  label="Yes, cancel & refund"
-                  onPress={onCancelOrder}
-                  loading={refund.isPending}
-                />
-                <Pressable style={styles.cancelBtn} onPress={() => setConfirmCancel(false)}>
-                  <Text style={styles.cancelBtnText}>Keep order</Text>
-                </Pressable>
-              </View>
+                {!confirmRefund ? (
+                  <Pressable style={styles.cancelBtn} onPress={() => setConfirmRefund(true)}>
+                    <Text style={styles.cancelBtnText}>בטל הזמנה והחזר כספי</Text>
+                  </Pressable>
+                ) : (
+                  <View style={{ gap: 10 }}>
+                    <Text style={[styles.body, { color: colors.err }]}>
+                      בטוח? לא ניתן לבטל את הפעולה. כל המשתתפים יזוכו במלואם.
+                    </Text>
+                    <PrimaryBtn label="כן, בטל והחזר" onPress={onCancelOrder} loading={refund.isPending} />
+                    <Pressable style={styles.cancelBtn} onPress={() => setConfirmRefund(false)}>
+                      <Text style={styles.cancelBtnText}>חזור</Text>
+                    </Pressable>
+                  </View>
+                )}
+              </>
+            ) : (
+              <Text style={styles.body}>
+                {'חלון הביטול של 14 ימים הסתיים ב-'}
+                {refundDeadline?.toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' })}.
+                {'\nלמקרים חריגים פנה לתמיכה.'}
+              </Text>
             )}
           </View>
         ) : null}
