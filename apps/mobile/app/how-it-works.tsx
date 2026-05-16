@@ -1,7 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
@@ -110,15 +109,12 @@ function StepDot({ number, active }: { number: string; active?: boolean }) {
   );
 }
 
-const ONBOARDING_KEY = 'shakana_seen_onboarding';
-
 export default function HowItWorksScreen() {
   const router = useRouter();
   const { language } = useLocale();
   const isHe = language === 'he';
 
   function goToLogin() {
-    AsyncStorage.setItem(ONBOARDING_KEY, 'true').catch(() => {});
     router.replace('/(auth)/welcome');
   }
 
