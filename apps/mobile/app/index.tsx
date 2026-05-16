@@ -6,14 +6,18 @@ import { colors } from '@/theme/tokens';
 export default function Index() {
   const rootNavigationState = useRootNavigationState();
   const session = useAuthStore((s) => s.session);
-  if (!rootNavigationState?.key) {
+  const hydrated = useAuthStore((s) => s.hydrated);
+
+  if (!rootNavigationState?.key || !hydrated) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator size="small" color={colors.mu} />
       </View>
     );
   }
-  return session ? <Redirect href="/(tabs)/building" /> : <Redirect href="/(auth)/welcome" />;
+
+  if (session) return <Redirect href="/(tabs)/building" />;
+  return <Redirect href="/how-it-works" />;
 }
 
 const styles = StyleSheet.create({

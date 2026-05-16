@@ -114,14 +114,18 @@ export default function HowItWorksScreen() {
   const { language } = useLocale();
   const isHe = language === 'he';
 
+  function goToLogin() {
+    router.replace('/(auth)/welcome');
+  }
+
   const steps = isHe ? STEPS_HE : STEPS_EN;
   const why = isHe ? WHY_HE : WHY_EN;
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      {/* Back */}
-      <Pressable onPress={() => router.back()} style={styles.back} accessibilityRole="button">
-        <Text style={styles.backText}>‹ {isHe ? 'חזרה' : 'Back'}</Text>
+      {/* Skip — go straight to login */}
+      <Pressable onPress={goToLogin} style={styles.back} accessibilityRole="button">
+        <Text style={styles.backText}>{isHe ? 'דלג ›' : 'Skip ›'}</Text>
       </Pressable>
 
       {/* Hero */}
@@ -174,8 +178,8 @@ export default function HowItWorksScreen() {
       </View>
 
       {/* CTA */}
-      <Pressable onPress={() => router.push('/order/new')} style={styles.ctaBtn} accessibilityRole="button">
-        <Text style={styles.ctaBtnText}>{isHe ? 'התחל הזמנה קבוצתית' : 'Start a group order'}</Text>
+      <Pressable onPress={goToLogin} style={styles.ctaBtn} accessibilityRole="button">
+        <Text style={styles.ctaBtnText}>{isHe ? 'בואו נתחיל' : "Let's get started"}</Text>
       </Pressable>
 
       <View style={{ height: 40 }} />
