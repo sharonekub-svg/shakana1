@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import * as Linking from 'expo-linking';
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { env } from '@/lib/env';
 
 export function useSendOtp() {
   return useMutation({

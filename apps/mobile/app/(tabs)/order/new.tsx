@@ -29,7 +29,7 @@ const STORES: { id: StoreId; he: string; en: string }[] = [
 function extractToken(raw: string): string {
   const trimmed = raw.trim();
   const match = trimmed.match(/\/join\/([^/?#\s]+)/);
-  return match ? match[1] : trimmed;
+  return match ? match[1] ?? trimmed : trimmed;
 }
 
 export default function NewOrder() {
@@ -225,7 +225,7 @@ function JoinForm({
   isHe: boolean;
   joinName: string; setJoinName: (v: string) => void;
   code: string; setCode: (v: string) => void;
-  codeRef: React.RefObject<TextInput | null>;
+  codeRef: React.RefObject<TextInput>;
   valid: boolean; onSubmit: () => void;
 }) {
   return (

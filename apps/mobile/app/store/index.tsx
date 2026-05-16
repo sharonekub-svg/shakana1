@@ -130,9 +130,9 @@ export default function StoreDashboardScreen() {
   const displayOrders = activeOrders.slice(0, 5);
 
   const firstActiveBrand =
-    activeOrders.length > 0 ? activeOrders[0].brand : storeFilter !== 'all' ? storeFilter : null;
+    activeOrders.length > 0 ? activeOrders[0]?.brand ?? null : storeFilter !== 'all' ? storeFilter : null;
   const firstStore = firstActiveBrand ? demoStores[firstActiveBrand] : null;
-  const avatarLetter = firstStore ? firstStore.name[0].toUpperCase() : 'Z';
+  const avatarLetter = firstStore ? (firstStore.name[0] ?? 'Z').toUpperCase() : 'Z';
   const hubName = firstStore
     ? `${firstStore.name.toUpperCase()} · TEL AVIV HUB`
     : 'ZARA · TEL AVIV HUB';
