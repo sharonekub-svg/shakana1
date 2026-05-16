@@ -106,7 +106,19 @@ function IconGear() {
   );
 }
 
-function IconBell() {
+function IconBug() {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M8 2l1.5 1.5M16 2l-1.5 1.5M12 4a4 4 0 00-4 4v5a4 4 0 008 0V8a4 4 0 00-4-4zM8 8H4m16 0h-4M8 13H4m16 0h-4M9 19l-2 2m8-2l2 2"
+        stroke={colors.mu}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
   return (
     <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
       <Path
@@ -351,6 +363,19 @@ export default function AccountTab() {
             label={isHebrew ? 'שפה' : 'Language'}
             subtitle={language === 'he' ? 'עברית' : 'English'}
             onPress={() => {}}
+          />
+        </View>
+
+        <Text style={styles.sectionHeader}>
+          {isHebrew ? 'תמיכה' : 'SUPPORT'}
+        </Text>
+
+        <View style={styles.listCard}>
+          <Row
+            icon={<IconBug />}
+            label={isHebrew ? 'רוצה לדווח על בעיה?' : 'Wanna report a bug?'}
+            subtitle={isHebrew ? 'אנחנו קוראים הכל ומגיבים' : 'We read everything and respond'}
+            onPress={() => router.push('/profile/bug-report')}
           />
         </View>
 

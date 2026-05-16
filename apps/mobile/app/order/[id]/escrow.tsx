@@ -24,18 +24,18 @@ function Lock() {
 }
 
 const statusLabels: Record<ShippingStatus, string> = {
-  not_shipped: 'Waiting for store shipment',
-  shipped: 'Order shipped',
-  ready_for_pickup: 'Ready for pickup',
-  picked_up: 'Picked up',
-  ready_for_distribution: 'Ready for distribution',
+  not_shipped: 'ממתין לשליחה מהחנות',
+  shipped: 'ההזמנה נשלחה',
+  ready_for_pickup: 'מוכן לאיסוף',
+  picked_up: 'נאסף',
+  ready_for_distribution: 'מוכן לחלוקה',
 };
 
 const nextActions: Partial<Record<ShippingStatus, { action: DeliveryAction; label: string }>> = {
-  not_shipped: { action: 'mark_shipped', label: 'Mark order shipped' },
-  shipped: { action: 'mark_ready_for_pickup', label: 'Mark ready for pickup' },
-  ready_for_pickup: { action: 'mark_picked_up', label: 'Mark picked up' },
-  picked_up: { action: 'mark_ready_for_distribution', label: 'Ready for distribution' },
+  not_shipped: { action: 'mark_shipped', label: 'סמן כנשלח' },
+  shipped: { action: 'mark_ready_for_pickup', label: 'סמן כמוכן לאיסוף' },
+  ready_for_pickup: { action: 'mark_picked_up', label: 'סמן כנאסף' },
+  picked_up: { action: 'mark_ready_for_distribution', label: 'מוכן לחלוקה' },
 };
 
 export default function Escrow() {
@@ -47,7 +47,6 @@ export default function Escrow() {
   const updateDelivery = useUpdateDelivery();
   const refund = useRefundOrder();
   const pushToast = useUiStore((s) => s.pushToast);
-  const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmRefund, setConfirmRefund] = useState(false);
 
   const order = data?.order;
@@ -73,9 +72,9 @@ export default function Escrow() {
     if (!order) return;
     try {
       await updateDelivery.mutateAsync({ orderId: order.id, action, participantId });
-      pushToast('Order status updated.', 'success');
+      pushToast('הסטטוס עודכן.', 'success');
     } catch (e) {
-      pushToast(e instanceof Error ? e.message : 'Could not update delivery status.', 'error');
+      pushToast(e instanceof Error ? e.message : 'לא הצלחנו לעדכן את הסטטוס.', 'error');
     }
   };
 
@@ -86,10 +85,10 @@ export default function Escrow() {
       if (result.completed) {
         router.replace(`/order/${order.id}/complete`);
       } else {
-        pushToast('Received confirmation saved. Waiting for the rest of the group.', 'success');
+        pushToast('אישור קבלה נשמר. ממתין לשאר הקבוצה.', 'success');
       }
     } catch (e) {
-      pushToast(e instanceof Error ? e.message : 'Could not confirm received.', 'error');
+      pushToast(e instanceof Error ? e.message : 'לא הצלחנו לאשר קבלה.', 'error');
     }
   };
 
@@ -97,10 +96,10 @@ export default function Escrow() {
     if (!order) return;
     try {
       await refund.mutateAsync(order.id);
-      pushToast('Order cancelled. Refunds are being processed.', 'success');
+      pushToast('ההזמנה בוטלה. ההחזרים מתבצעים.', 'success');
       router.replace('/(tabs)/orders');
     } catch (e) {
-      pushToast(e instanceof Error ? e.message : 'Could not cancel order.', 'error');
+      pushToast(e instanceof Error ? e.message : 'לא הצלחנו לבטל את ההזמנה.', 'error');
     }
   };
 
@@ -121,32 +120,32 @@ export default function Escrow() {
       <ScrollView contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <BackBtn onPress={() => router.replace('/(tabs)/orders')} />
-          <Text style={styles.headerTitle}>Pickup</Text>
+          <Text style={styles.headerTitle}>איסוף</Text>
           <View style={{ width: 40 }} />
         </View>
 
         <View style={styles.lockBox}>
           <Lock />
-          <Text style={styles.lockTitle}>Money is safely held</Text>
+          <Text style={styles.lockTitle}>הכסף מוחזק בבטחה</Text>
           <Text style={styles.lockSub}>
             {allPaid
-              ? 'Everyone paid. Stripe will only capture funds after all users confirm they received their item.'
-              : `Paid: ${paidCount} of ${total}. Delivery controls unlock after the group is paid.`}
+              ? 'כולם שילמו. Stripe ישחרר את הכסף רק לאחר שכל המשתתפים יאשרו קבלה.'
+              : `שילמו: ${paidCount} מתוך ${total}. שליטת המשלוח תיפתח כשהקבוצה תשלם במלואה.`}
           </Text>
           <Text style={styles.amount}>{formatAgorot(order.product_price_agorot)}</Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.kicker}>Pickup plan</Text>
-          <Text style={styles.cardTitle}>{order.pickup_responsible_name || 'Pickup manager'}</Text>
-          <Text style={styles.body}>Preferred location: {order.preferred_pickup_location || 'Not set'}</Text>
+          <Text style={styles.kicker}>תוכנית איסוף</Text>
+          <Text style={styles.cardTitle}>{order.pickup_responsible_name || 'אחראי איסוף'}</Text>
+          <Text style={styles.body}>מיקום מועדף: {order.preferred_pickup_location || 'לא הוגדר'}</Text>
           <Text style={styles.warning}>
-            {order.pickup_location_note || 'Pickup location may vary depending on the store/shipping provider'}
+            {order.pickup_location_note || 'מיקום האיסוף עשוי להשתנות בהתאם לחנות או ספק המשלוח'}
           </Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.kicker}>Delivery status</Text>
+          <Text style={styles.kicker}>סטטוס משלוח</Text>
           <Text style={styles.cardTitle}>{statusLabels[shippingStatus]}</Text>
           <TrackingTimeline events={trackingEvents} shippingStatus={shippingStatus} />
           {canManageDelivery && next ? (
@@ -158,7 +157,7 @@ export default function Escrow() {
             />
           ) : null}
           {!canManageDelivery ? (
-            <Text style={styles.body}>Only the order creator or pickup manager can update delivery status.</Text>
+            <Text style={styles.body}>רק יוצר ההזמנה או אחראי האיסוף יכולים לעדכן את הסטטוס.</Text>
           ) : null}
         </View>
 
@@ -206,8 +205,8 @@ export default function Escrow() {
 
         {shippingStatus === 'ready_for_distribution' ? (
           <View style={styles.card}>
-            <Text style={styles.kicker}>Distribution</Text>
-            <Text style={styles.cardTitle}>Hand items to participants</Text>
+            <Text style={styles.kicker}>חלוקה</Text>
+            <Text style={styles.cardTitle}>העבר פריטים למשתתפים</Text>
             {participants.filter((p) => p.status === 'paid').map((p, index) => (
               <ParticipantDeliveryRow
                 key={p.id}
@@ -220,10 +219,10 @@ export default function Escrow() {
               />
             ))}
             {canConfirmReceived ? (
-              <PrimaryBtn label="I received my item" onPress={onReceived} loading={confirm.isPending} />
+              <PrimaryBtn label="קיבלתי את הפריט שלי" onPress={onReceived} loading={confirm.isPending} />
             ) : null}
             {allDelivered && !allReceived ? (
-              <Text style={styles.body}>All items were handed out. Waiting for every user to confirm received.</Text>
+              <Text style={styles.body}>כל הפריטים נמסרו. ממתין לאישור קבלה מכל המשתתפים.</Text>
             ) : null}
           </View>
         ) : null}
@@ -247,7 +246,6 @@ function TrackingTimeline({
   };
 
   if (events.length === 0) {
-    // Fall back to milestone dots when no tracking events are logged yet.
     const pendingLabels = STATUS_ORDER.filter(
       (s) => STATUS_ORDER.indexOf(s) > STATUS_ORDER.indexOf(shippingStatus),
     );
@@ -312,13 +310,13 @@ function ParticipantDeliveryRow({
   return (
     <View style={styles.participantRow}>
       <View style={{ flex: 1 }}>
-        <Text style={styles.participantTitle}>{isMe ? 'You' : `Participant ${index + 1}`}</Text>
+        <Text style={styles.participantTitle}>{isMe ? 'אתה' : `משתתף ${index + 1}`}</Text>
         <Text style={styles.participantState}>
-          {received ? 'Received confirmed' : delivered ? 'Delivered, waiting for confirmation' : 'Not delivered yet'}
+          {received ? 'קבלה אושרה' : delivered ? 'נמסר, ממתין לאישור' : 'טרם נמסר'}
         </Text>
       </View>
       {canManage && !delivered ? (
-        <PrimaryBtn label="Delivered" onPress={onMarkDelivered} loading={loading} />
+        <PrimaryBtn label="נמסר" onPress={onMarkDelivered} loading={loading} />
       ) : null}
     </View>
   );
