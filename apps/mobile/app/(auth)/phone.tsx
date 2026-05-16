@@ -9,25 +9,25 @@ import { StepDots } from '@/components/primitives/StepDots';
 import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { useSendOtp } from '@/api/auth';
-import { formatPhoneIL, phoneDigitsOnly } from '@/utils/format';
 import { useUiStore } from '@/stores/uiStore';
 import { useLocale } from '@/i18n/locale';
+
+const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 
 export default function Phone() {
   const router = useRouter();
   const { t } = useLocale();
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [focused, setFocused] = useState(false);
   const sendOtp = useSendOtp();
   const pushToast = useUiStore((s) => s.pushToast);
-  const digits = phoneDigitsOnly(phone);
-  const valid = digits.length >= 9;
+  const valid = isValidEmail(email);
 
   const submit = async () => {
     if (!valid || sendOtp.isPending) return;
     try {
-      const { phone: e164 } = await sendOtp.mutateAsync(phone);
-      router.push({ pathname: '/(auth)/otp', params: { phone: e164, display: phone } });
+      await sendOtp.mutateAsync(email.trim().toLowerCase());
+      router.push({ pathname: '/(auth)/otp', params: { phone: email.trim().toLowerCase(), display: email.trim() } });
     } catch (e) {
       pushToast(e instanceof Error ? e.message : t('auth.phone.sendError'), 'error');
     }
@@ -47,23 +47,20 @@ export default function Phone() {
       </View>
 
       <View style={styles.inputCard}>
-        <View style={styles.countryBox}>
-          <Text style={styles.country}>IL +972</Text>
-        </View>
         <TextInput
-          value={phone}
-          onChangeText={(v) => setPhone(formatPhoneIL(v))}
+          value={email}
+          onChangeText={setEmail}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           placeholder={t('auth.phone.placeholder')}
           placeholderTextColor={colors.mu}
-          keyboardType="phone-pad"
-          inputMode="tel"
+          keyboardType="email-address"
+          inputMode="email"
           autoFocus
-          maxLength={12}
           autoCorrect={false}
-          autoComplete="tel"
-          textContentType="telephoneNumber"
+          autoCapitalize="none"
+          autoComplete="email"
+          textContentType="emailAddress"
           style={[
             styles.input,
             { borderColor: focused ? colors.acc : colors.br },
@@ -117,8 +114,6 @@ const styles = StyleSheet.create({
     maxWidth: 320,
   },
   inputCard: {
-    flexDirection: 'row',
-    gap: 10,
     padding: 12,
     borderRadius: 28,
     backgroundColor: colors.s1,
@@ -126,15 +121,6 @@ const styles = StyleSheet.create({
     borderColor: colors.br,
     ...shadow.card,
   },
-  countryBox: {
-    backgroundColor: colors.cardSoft,
-    borderColor: colors.br,
-    borderWidth: 1,
-    borderRadius: radii.pill,
-    paddingHorizontal: 14,
-    justifyContent: 'center',
-  },
-  country: { fontSize: 15, color: colors.tx, fontFamily: fontFamily.bodyBold },
   input: {
     flex: 1,
     backgroundColor: colors.cardSoft,
@@ -142,7 +128,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     paddingHorizontal: 18,
     paddingVertical: 15,
-    fontSize: 18,
+    fontSize: 16,
     color: colors.tx,
     fontFamily: fontFamily.body,
     textAlign: 'left',

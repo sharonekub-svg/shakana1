@@ -177,7 +177,7 @@ export default function LoginScreen() {
         </Pressable>
         <Pressable accessibilityRole="button" onPress={() => router.push('/(auth)/phone')}
           style={({ pressed }) => [s.phoneBtn, pressed && { opacity: 0.88 }]}>
-          <Text style={s.phoneBtnTx}>{isHebrew ? 'המשך עם טלפון' : 'Continue with phone'}</Text>
+          <Text style={s.phoneBtnTx}>{isHebrew ? 'המשך עם אימייל' : 'Continue with email'}</Text>
         </Pressable>
       </View>
 
