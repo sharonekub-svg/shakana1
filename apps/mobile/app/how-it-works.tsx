@@ -1,6 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
@@ -109,19 +110,26 @@ function StepDot({ number, active }: { number: string; active?: boolean }) {
   );
 }
 
+const ONBOARDING_KEY = 'shakana_seen_onboarding';
+
 export default function HowItWorksScreen() {
   const router = useRouter();
   const { language } = useLocale();
   const isHe = language === 'he';
+
+  function goToLogin() {
+    AsyncStorage.setItem(ONBOARDING_KEY, 'true').catch(() => {});
+    router.replace('/(auth)/welcome');
+  }
 
   const steps = isHe ? STEPS_HE : STEPS_EN;
   const why = isHe ? WHY_HE : WHY_EN;
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      {/* Back */}
-      <Pressable onPress={() => router.back()} style={styles.back} accessibilityRole="button">
-        <Text style={styles.backText}>‹ {isHe ? 'חזרה' : 'Back'}</Text>
+      {/* Skip — go straight to login */}
+      <Pressable onPress={goToLogin} style={styles.back} accessibilityRole="button">
+        <Text style={styles.backText}>{isHe ? 'דלג ›' : 'Skip ›'}</Text>
       </Pressable>
 
       {/* Hero */}
@@ -174,8 +182,8 @@ export default function HowItWorksScreen() {
       </View>
 
       {/* CTA */}
-      <Pressable onPress={() => router.push('/order/new')} style={styles.ctaBtn} accessibilityRole="button">
-        <Text style={styles.ctaBtnText}>{isHe ? 'התחל הזמנה קבוצתית' : 'Start a group order'}</Text>
+      <Pressable onPress={goToLogin} style={styles.ctaBtn} accessibilityRole="button">
+        <Text style={styles.ctaBtnText}>{isHe ? 'בואו נתחיל' : "Let's get started"}</Text>
       </Pressable>
 
       <View style={{ height: 40 }} />
