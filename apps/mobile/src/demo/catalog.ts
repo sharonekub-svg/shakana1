@@ -1412,6 +1412,8 @@ export const demoProducts: DemoProduct[] = [
     stockStatus: 'In stock',
   },
 ];
+
+export const demoCategories = [
   'Best Sellers',
   'New Arrivals',
   'Shirts',

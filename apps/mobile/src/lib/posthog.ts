@@ -29,6 +29,7 @@ export type ShakanaEvent =
   | 'delivery_status_updated'
   | 'order_timer_locked'
   | 'order_completed'
+  | 'order_cancelled'
   | 'cart_item_added';
 
 export function track(event: ShakanaEvent, props?: Record<string, unknown>): void {

@@ -311,12 +311,12 @@ export default function NewOrderScreen() {
                   scrollEventThrottle={16}
                   onScroll={(e) => {
                     const idx = Math.round(e.nativeEvent.contentOffset.x / TIMER_SLOT);
-                    const h = TIMER_PRESETS[Math.max(0, Math.min(idx, TIMER_PRESETS.length - 1))];
+                    const h = TIMER_PRESETS[Math.max(0, Math.min(idx, TIMER_PRESETS.length - 1))] ?? 1;
                     if (h !== timerHours) setTimerHours(h);
                   }}
                   onMomentumScrollEnd={(e) => {
                     const idx = Math.round(e.nativeEvent.contentOffset.x / TIMER_SLOT);
-                    setTimerHours(TIMER_PRESETS[Math.max(0, Math.min(idx, TIMER_PRESETS.length - 1))]);
+                    setTimerHours(TIMER_PRESETS[Math.max(0, Math.min(idx, TIMER_PRESETS.length - 1))] ?? 1);
                   }}
                 >
                   <View style={{ width: (Math.min(SCREEN_WIDTH - 28, 460) - TIMER_SLOT) / 2 }} />
