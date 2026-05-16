@@ -850,5 +850,5 @@ export function detectDemoBrand(input: string) {
 
 export function buildInviteMessage(name: string, brand: DemoBrandId, link: string, code: string) {
   const store = demoStores[brand];
-  return `${name} is ordering from ${store.name}. 15 mins left to join and save on delivery. Join here: ${link} Code: ${code}`;
+  return `🛍️ היי שכנים!\n${name} פותח/ת הזמנה קבוצתית מ-${store.name}.\n\nהצטרפו עכשיו — נגיע לסף ביחד ונחסוך על המשלוח לכולם 🎉\n\n👉 ${link}\nקוד: ${code}`;
 }

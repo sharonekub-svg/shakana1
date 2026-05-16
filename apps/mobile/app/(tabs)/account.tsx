@@ -120,6 +120,27 @@ function IconBug() {
   );
 }
 
+function IconFAQ() {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
+        stroke={colors.mu}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"
+        stroke={colors.mu}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
 function IconBell() {
   return (
     <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
@@ -373,6 +394,12 @@ export default function AccountTab() {
         </Text>
 
         <View style={styles.listCard}>
+          <Row
+            icon={<IconFAQ />}
+            label={isHebrew ? 'שאלות נפוצות' : 'FAQ'}
+            subtitle={isHebrew ? 'תשובות לכל השאלות הנפוצות' : 'Answers to common questions'}
+            onPress={() => router.push('/profile/faq')}
+          />
           <Row
             icon={<IconBug />}
             label={isHebrew ? 'רוצה לדווח על בעיה?' : 'Wanna report a bug?'}
