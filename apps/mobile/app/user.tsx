@@ -849,7 +849,7 @@ export default function DemoUserScreen() {
                 onPress={() => router.push('/profile')}
                 style={({ pressed }) => [styles.homeActionCard, pressed && demoStyles.pressed]}
               >
-                <Text style={styles.homeActionIcon}>👤</Text>
+                <Text style={styles.homeActionIcon}>ID</Text>
                 <Text style={styles.homeActionTitle}>{homeDashboardCopy.profile}</Text>
               </Pressable>
               <Pressable
@@ -857,7 +857,7 @@ export default function DemoUserScreen() {
                 onPress={() => router.push('/store')}
                 style={({ pressed }) => [styles.homeActionCard, pressed && demoStyles.pressed]}
               >
-                <Text style={styles.homeActionIcon}>🏪</Text>
+                <Text style={styles.homeActionIcon}>ST</Text>
                 <Text style={styles.homeActionTitle}>{homeDashboardCopy.store}</Text>
               </Pressable>
               </View>
