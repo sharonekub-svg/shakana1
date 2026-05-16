@@ -840,15 +840,16 @@ export default function DemoUserScreen() {
                 onPress={() => openNewOrderSetup()}
                 style={({ pressed }) => [styles.homeActionCard, styles.homeActionPrimary, pressed && demoStyles.pressed]}
               >
-                <Text style={styles.homeActionIcon}>+</Text>
+                <Text style={styles.homeActionIconPrimary}>+</Text>
                 <Text style={styles.homeActionTitlePrimary}>{homeDashboardCopy.newOrder}</Text>
               </Pressable>
+              <View style={styles.homeActionRow}>
               <Pressable
                 accessibilityRole="button"
                 onPress={() => router.push('/profile')}
                 style={({ pressed }) => [styles.homeActionCard, pressed && demoStyles.pressed]}
               >
-                <Text style={styles.homeActionIcon}>ID</Text>
+                <Text style={styles.homeActionIcon}>👤</Text>
                 <Text style={styles.homeActionTitle}>{homeDashboardCopy.profile}</Text>
               </Pressable>
               <Pressable
@@ -856,9 +857,10 @@ export default function DemoUserScreen() {
                 onPress={() => router.push('/store')}
                 style={({ pressed }) => [styles.homeActionCard, pressed && demoStyles.pressed]}
               >
-                <Text style={styles.homeActionIcon}>ST</Text>
+                <Text style={styles.homeActionIcon}>🏪</Text>
                 <Text style={styles.homeActionTitle}>{homeDashboardCopy.store}</Text>
               </Pressable>
+              </View>
             </View>
           </Card>
           <Card style={styles.savingsHero}>
@@ -2855,28 +2857,40 @@ const styles = StyleSheet.create({
     color: colors.mu,
   },
   homeActionGrid: {
+    flexDirection: 'column',
+    gap: 10,
+  },
+  homeActionRow: {
     flexDirection: 'row',
     gap: 10,
-    flexWrap: 'wrap',
   },
   homeActionCard: {
     flex: 1,
-    minWidth: 96,
     borderRadius: 18,
     backgroundColor: colors.s1,
     borderWidth: 1,
     borderColor: colors.br,
     padding: 14,
-    gap: 10,
+    gap: 6,
   },
   homeActionPrimary: {
     backgroundColor: colors.acc,
     borderColor: colors.acc,
+    paddingVertical: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
   },
   homeActionIcon: {
     fontFamily: fontFamily.bodyBold,
     fontSize: 13,
-    color: colors.tx,
+    color: colors.mu,
+  },
+  homeActionIconPrimary: {
+    fontFamily: fontFamily.bodyBold,
+    fontSize: 22,
+    color: colors.white,
   },
   homeActionTitle: {
     fontFamily: fontFamily.bodyBold,
@@ -2885,8 +2899,8 @@ const styles = StyleSheet.create({
   },
   homeActionTitlePrimary: {
     fontFamily: fontFamily.bodyBold,
-    fontSize: 14,
-    color: colors.ink,
+    fontSize: 17,
+    color: colors.white,
   },
   savingsHero: {
     display: 'none',

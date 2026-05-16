@@ -257,11 +257,12 @@ export function CelebrationBanner({ pulse }: { pulse: DemoPulse | null }) {
     outputRange: [0, 1],
   });
 
+  const isWin = pulse.message.toLowerCase().includes('free') || pulse.message.includes('חינם') || pulse.message.includes('חסכ') || pulse.message.toLowerCase().includes('unlock');
   return (
-    <Animated.View style={[styles.celebration, { opacity, transform: [{ translateY }] }]}>
-      <Text style={styles.celebrationSpark}>NEW</Text>
+    <Animated.View style={[styles.celebration, isWin && styles.celebrationWin, { opacity, transform: [{ translateY }] }]}>
+      <Text style={styles.celebrationSpark}>{isWin ? '🎉' : '✨'}</Text>
       <View style={{ flex: 1 }}>
-        <Text style={styles.celebrationTitle}>Live update</Text>
+        <Text style={styles.celebrationTitle}>{isWin ? 'חיסכון! ביחד הצלחנו 🙌' : 'עדכון חי'}</Text>
         <Text style={styles.celebrationBody}>{pulse.message}</Text>
       </View>
     </Animated.View>
@@ -574,6 +575,11 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 8 },
     elevation: 3,
+  },
+  celebrationWin: {
+    backgroundColor: '#F0FAF4',
+    borderColor: '#A8DDB5',
+    shadowColor: '#2D9E6B',
   },
   celebrationSpark: {
     color: colors.acc,

@@ -2,37 +2,24 @@ import { Platform } from 'react-native';
 import * as Linking from 'expo-linking';
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { env } from '@/lib/env';
-import { phoneDigitsOnly } from '@/utils/format';
 
 export function useSendOtp() {
   return useMutation({
-    mutationFn: async (phoneFormatted: string) => {
-      if (!env.supabaseUrl || !env.supabaseAnonKey) {
-        throw new Error('Phone sign-in is not configured yet.');
-      }
-      const digits = phoneDigitsOnly(phoneFormatted);
-      const e164 = `+972${digits.replace(/^0/, '')}`;
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: e164,
-        options: { channel: 'sms' },
-      });
+    mutationFn: async (email: string) => {
+      const { error } = await supabase.auth.signInWithOtp({ email });
       if (error) throw error;
-      return { phone: e164 };
+      return { phone: email };
     },
   });
 }
 
 export function useVerifyOtp() {
   return useMutation({
-    mutationFn: async ({ phone, token }: { phone: string; token: string }) => {
-      if (!env.supabaseUrl || !env.supabaseAnonKey) {
-        throw new Error('Phone sign-in is not configured yet.');
-      }
+    mutationFn: async ({ phone: email, token }: { phone: string; token: string }) => {
       const { data, error } = await supabase.auth.verifyOtp({
-        phone,
+        email,
         token,
-        type: 'sms',
+        type: 'email',
       });
       if (error) throw error;
       if (!data.session) throw new Error('No active session');

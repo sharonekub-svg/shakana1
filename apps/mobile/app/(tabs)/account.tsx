@@ -106,6 +106,41 @@ function IconGear() {
   );
 }
 
+function IconBug() {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M8 2l1.5 1.5M16 2l-1.5 1.5M12 4a4 4 0 00-4 4v5a4 4 0 008 0V8a4 4 0 00-4-4zM8 8H4m16 0h-4M8 13H4m16 0h-4M9 19l-2 2m8-2l2 2"
+        stroke={colors.mu}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function IconFAQ() {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
+        stroke={colors.mu}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"
+        stroke={colors.mu}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
 function IconBell() {
   return (
     <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
@@ -351,6 +386,25 @@ export default function AccountTab() {
             label={isHebrew ? 'שפה' : 'Language'}
             subtitle={language === 'he' ? 'עברית' : 'English'}
             onPress={() => {}}
+          />
+        </View>
+
+        <Text style={styles.sectionHeader}>
+          {isHebrew ? 'תמיכה' : 'SUPPORT'}
+        </Text>
+
+        <View style={styles.listCard}>
+          <Row
+            icon={<IconFAQ />}
+            label={isHebrew ? 'שאלות נפוצות' : 'FAQ'}
+            subtitle={isHebrew ? 'תשובות לכל השאלות הנפוצות' : 'Answers to common questions'}
+            onPress={() => router.push('/profile/faq')}
+          />
+          <Row
+            icon={<IconBug />}
+            label={isHebrew ? 'רוצה לדווח על בעיה?' : 'Wanna report a bug?'}
+            subtitle={isHebrew ? 'אנחנו קוראים הכל ומגיבים' : 'We read everything and respond'}
+            onPress={() => router.push('/profile/bug-report')}
           />
         </View>
 
