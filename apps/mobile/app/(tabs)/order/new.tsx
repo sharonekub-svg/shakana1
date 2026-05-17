@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
+import { BackBtn } from '@/components/primitives/BackBtn';
 import { colors, radii, shadow } from '@/theme/tokens';
 import { fontFamily } from '@/theme/fonts';
 import { useAuthStore } from '@/stores/authStore';
@@ -73,6 +74,9 @@ export default function NewOrder() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        <View style={s.backRow}>
+          <BackBtn fallback="/(tabs)/building" />
+        </View>
         {/* Mode toggle */}
         <View style={s.toggle}>
           <Pressable
@@ -326,6 +330,8 @@ const s = StyleSheet.create({
   safe:    { flex: 1, backgroundColor: colors.bg },
   scroll:  { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 120, gap: 24 },
+
+  backRow: { alignSelf: 'flex-start' },
 
   // Mode toggle
   toggle: {

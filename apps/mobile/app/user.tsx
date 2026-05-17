@@ -31,6 +31,7 @@ import {
   buildSharedDemoInviteLink,
   useDemoCommerceStore,
 } from '@/stores/demoCommerceStore';
+import { BackBtn } from '@/components/primitives/BackBtn';
 import { fontFamily } from '@/theme/fonts';
 import { colors } from '@/theme/tokens';
 import { useLocale } from '@/i18n/locale';
@@ -787,7 +788,10 @@ export default function DemoUserScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <DemoPage>
           <View style={styles.topBar}>
-            <Text style={styles.logo}>shakana</Text>
+            <View style={styles.topBarLeft}>
+              <BackBtn fallback="/(tabs)/building" />
+              <Text style={styles.logo}>shakana</Text>
+            </View>
             <View style={styles.topActions}>
               <DemoButton label="New order" onPress={() => openNewOrderSetup()} tone="accent" style={styles.smallBtn} />
               <DemoButton label="How it works" onPress={() => router.push('/how-it-works')} tone="light" style={styles.smallBtn} />
@@ -2220,6 +2224,7 @@ const styles = StyleSheet.create({
     gap: 12,
     flexWrap: 'wrap',
   },
+  topBarLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   topActions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   logo: {
     color: colors.acc,

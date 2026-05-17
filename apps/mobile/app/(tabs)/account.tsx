@@ -221,7 +221,7 @@ function Row({ icon, label, subtitle, onPress }: RowProps) {
 
 export default function AccountTab() {
   const router = useRouter();
-  const { language } = useLocale();
+  const { language, setLanguage } = useLocale();
   const signOut = useSignOut();
   const user = useAuthStore((s) => s.user);
   const resetAuth = useAuthStore((s) => s.reset);
@@ -231,6 +231,10 @@ export default function AccountTab() {
   const loadNotifications = useNotificationSettingsStore((s) => s.load);
   const paymentsHydrated = usePaymentSettingsStore((s) => s.hydrated);
   const loadPayments = usePaymentSettingsStore((s) => s.load);
+  const paymentSettings = usePaymentSettingsStore((s) => s.settings);
+  const enabledPaymentCount = Object.values(paymentSettings).filter(
+    (m) => m.enabled && m.link.trim().length > 0,
+  ).length;
   const { data: orders = [] } = useUserOrders(user?.id);
 
   const isHebrew = language === 'he';
@@ -260,14 +264,18 @@ export default function AccountTab() {
 
   const memberSince = formatMemberSince(user?.created_at);
 
-  const orderCount = orders.length || 23;
-  const savedAmount = 842;
-  const neighborCount = 46;
-  const ecoDeliveries = orders.length || 18;
-
+  const orderCount = orders.length;
+  const completedOrders = orders.filter((o) => ['completed', 'delivered'].includes(o.status));
+  const ecoDeliveries = completedOrders.length;
   const activeOrders = orders.filter(
     (o) => !['completed', 'cancelled'].includes(o.status),
   ).length;
+  const savedAgorot = completedOrders.reduce((sum, o) => {
+    const shipping = o.estimated_shipping_agorot ?? 0;
+    const split = Math.max(2, o.max_participants ?? 2);
+    return sum + Math.floor((shipping * (split - 1)) / split);
+  }, 0);
+  const savedAmount = Math.floor(savedAgorot / 100);
 
   const onSignOut = async () => {
     try {
@@ -291,13 +299,19 @@ export default function AccountTab() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.topBar}>
-        <Pressable style={styles.topBarIcon} hitSlop={8}>
+        <View style={styles.topBarIcon}>
           <IconGear />
-        </Pressable>
+        </View>
         <Text style={styles.topBarTitle}>
           {isHebrew ? 'פרופיל' : 'Profile'}
         </Text>
-        <Pressable style={styles.topBarIcon} hitSlop={8}>
+        <Pressable
+          style={styles.topBarIcon}
+          hitSlop={8}
+          onPress={() => router.push('/profile/alerts')}
+          accessibilityRole="button"
+          accessibilityLabel={isHebrew ? 'התראות' : 'Notifications'}
+        >
           <IconBell />
         </Pressable>
       </View>
@@ -333,21 +347,23 @@ export default function AccountTab() {
             </Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{neighborCount}</Text>
+            <Text style={styles.statNumber}>{activeOrders}</Text>
             <Text style={styles.statLabel}>
-              {isHebrew ? 'שכנים' : 'NEIGHBORS'}
+              {isHebrew ? 'פעילות' : 'ACTIVE'}
             </Text>
           </View>
         </View>
 
-        <View style={styles.ecoCard}>
-          <LeafIcon />
-          <Text style={styles.ecoText}>
-            {isHebrew
-              ? `חסכת ${ecoDeliveries} משלוחים השנה · 7.4 ק"ג CO₂ · משאית אחת פחות ברחוב שלך`
-              : `You spared ${ecoDeliveries} deliveries this year · 7.4 kg CO₂ · one truck on your street`}
-          </Text>
-        </View>
+        {ecoDeliveries > 0 ? (
+          <View style={styles.ecoCard}>
+            <LeafIcon />
+            <Text style={styles.ecoText}>
+              {isHebrew
+                ? `חסכת ${ecoDeliveries} משלוחים בשכונה · ${(ecoDeliveries * 1.4).toFixed(1)} ק"ג CO₂ פחות`
+                : `You shared ${ecoDeliveries} deliver${ecoDeliveries === 1 ? 'y' : 'ies'} with neighbors · ${(ecoDeliveries * 1.4).toFixed(1)} kg CO₂ saved`}
+            </Text>
+          </View>
+        ) : null}
 
         <Text style={styles.sectionHeader}>
           {isHebrew ? 'חשבון' : 'ACCOUNT'}
@@ -370,9 +386,7 @@ export default function AccountTab() {
             label={isHebrew ? 'כתובות' : 'Addresses'}
             subtitle={
               addressLine
-                ? isHebrew
-                  ? `${addressLine} · עוד 1`
-                  : `${addressLine} · 1 more`
+                ? addressLine
                 : isHebrew
                 ? 'כתובת לא הוגדרה'
                 : 'No address set'
@@ -383,7 +397,15 @@ export default function AccountTab() {
           <Row
             icon={<IconPayments />}
             label={isHebrew ? 'תשלומים' : 'Payments'}
-            subtitle={isHebrew ? 'Apple Pay · Visa 4421' : 'Apple Pay · Visa 4421'}
+            subtitle={
+              enabledPaymentCount > 0
+                ? isHebrew
+                  ? `${enabledPaymentCount} אפשרויות תשלום מוכנות`
+                  : `${enabledPaymentCount} payment option${enabledPaymentCount === 1 ? '' : 's'} ready`
+                : isHebrew
+                ? 'הגדר אפשרויות תשלום'
+                : 'Set up payment options'
+            }
             onPress={() => router.push('/profile/payment')}
           />
           <View style={styles.divider} />
@@ -405,8 +427,18 @@ export default function AccountTab() {
           <Row
             icon={<IconLanguage />}
             label={isHebrew ? 'שפה' : 'Language'}
-            subtitle={language === 'he' ? 'עברית' : 'English'}
-            onPress={() => {}}
+            subtitle={
+              isHebrew
+                ? `עברית · החלף לאנגלית`
+                : `English · switch to Hebrew`
+            }
+            onPress={() => {
+              void setLanguage(language === 'he' ? 'en' : 'he');
+              pushToast(
+                language === 'he' ? 'Switched to English' : 'עברנו לעברית',
+                'success',
+              );
+            }}
           />
         </View>
 
