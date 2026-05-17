@@ -1,6 +1,7 @@
 import { handleOptions } from '../_shared/cors.ts';
 import { errorJson, json, readJson } from '../_shared/json.ts';
 import { admin, authedUserId, httpError } from '../_shared/supabaseAdmin.ts';
+import { enforceRateLimit } from '../_shared/rateLimit.ts';
 import { CONNECTED_ACCOUNT_ID, stripe } from '../_shared/stripe.ts';
 import { idempotencyKeyFrom } from '../_shared/idempotency.ts';
 import { calcCommission } from '../_shared/shippingPolicies.ts';
@@ -17,6 +18,7 @@ Deno.serve(async (req) => {
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
       throw httpError(401, 'invalid_user_id_format');
     }
+    await enforceRateLimit(userId, 'create-payment-intent', { max: 10, windowSeconds: 60 });
     const body = await readJson<Body>(req);
     if (!body.orderId) throw httpError(400, 'missing_orderId');
     const idemp = idempotencyKeyFrom(body, req);

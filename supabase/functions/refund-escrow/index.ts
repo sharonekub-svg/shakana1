@@ -1,6 +1,7 @@
 import { handleOptions } from '../_shared/cors.ts';
 import { errorJson, json, readJson } from '../_shared/json.ts';
 import { admin, authedUserId, httpError } from '../_shared/supabaseAdmin.ts';
+import { enforceRateLimit } from '../_shared/rateLimit.ts';
 import { stripe } from '../_shared/stripe.ts';
 import { idempotencyKeyFrom } from '../_shared/idempotency.ts';
 
@@ -13,6 +14,7 @@ Deno.serve(async (req) => {
 
   try {
     const userId = await authedUserId(req);
+    await enforceRateLimit(userId, 'refund-escrow', { max: 10, windowSeconds: 3600 });
     const body = await readJson<Body>(req);
     if (!body.orderId) throw httpError(400, 'missing_orderId');
     const idemp = idempotencyKeyFrom(body, req);

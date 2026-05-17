@@ -1,6 +1,7 @@
 import { handleOptions } from '../_shared/cors.ts';
 import { errorJson, json, readJson } from '../_shared/json.ts';
 import { admin, authedUserId, httpError } from '../_shared/supabaseAdmin.ts';
+import { enforceRateLimit } from '../_shared/rateLimit.ts';
 
 type Body = { orderId: string; idempotency_key?: string };
 
@@ -22,6 +23,7 @@ Deno.serve(async (req) => {
 
   try {
     const userId = await authedUserId(req);
+    await enforceRateLimit(userId, 'generate-invite', { max: 30, windowSeconds: 3600 });
     const { orderId } = await readJson<Body>(req);
     if (!orderId) throw httpError(400, 'missing_orderId');
 

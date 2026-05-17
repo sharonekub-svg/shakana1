@@ -1,6 +1,7 @@
 import { handleOptions } from '../_shared/cors.ts';
 import { errorJson, json, readJson } from '../_shared/json.ts';
 import { admin, authedUserId, httpError } from '../_shared/supabaseAdmin.ts';
+import { enforceRateLimit } from '../_shared/rateLimit.ts';
 
 type Body = {
   productUrl: string;
@@ -25,6 +26,7 @@ Deno.serve(async (req) => {
 
   try {
     const userId = await authedUserId(req);
+    await enforceRateLimit(userId, 'create-order', { max: 5, windowSeconds: 3600 });
     const body = await readJson<Body>(req);
 
     if (!body.productUrl || !/^https?:\/\//i.test(body.productUrl)) {
@@ -76,57 +78,30 @@ Deno.serve(async (req) => {
     const hasTimer = body.timerMinutes > 0;
     const closesAt = hasTimer ? new Date(Date.now() + body.timerMinutes * 60_000) : null;
     const editLocksAt = closesAt ? new Date(closesAt.getTime() - 15_000) : null;
-
-    const orderInsert = {
-      creator_id: userId,
-      building_id: profile?.building_id ?? null,
-      product_url: body.productUrl,
-      product_title: body.productTitle.trim(),
-      product_image: body.productImage ?? null,
-      product_price_agorot: body.productPriceAgorot,
-      max_participants: body.maxParticipants,
-      stripe_transfer_group: transferGroup,
-      status: 'open',
-      store_key: storeKey,
-      store_label: storeLabel,
-      estimated_shipping_agorot: body.estimatedShippingAgorot,
-      free_shipping_threshold_agorot: body.freeShippingThresholdAgorot,
-      closes_at: closesAt?.toISOString() ?? null,
-      edit_locks_at: editLocksAt?.toISOString() ?? null,
-      founder_checkout_url: body.productUrl,
-      pickup_responsible_user_id: userId,
-      pickup_responsible_name: pickupName || 'Order creator',
-      preferred_pickup_location: pickupLocation,
-    };
-
-    const { data: order, error: insErr } = await admin
-      .from('orders')
-      .insert(orderInsert)
-      .select('*')
-      .single();
-
-    if (insErr) throw insErr;
-    if (!order) throw httpError(500, 'order_insert_failed');
-
-    // Creator is always the first participant.
     const amount = body.productPriceAgorot + body.estimatedShippingAgorot;
-    const { data: participant, error: partErr } = await admin.from('participants').insert({
-      order_id: order.id,
-      user_id: userId,
-      status: 'joined',
-      amount_agorot: amount,
-    }).select('id').single();
-    if (partErr) throw partErr;
 
-    const { error: itemErr } = await admin.from('order_items').insert({
-      order_id: order.id,
-      participant_id: participant.id,
-      title: body.productTitle.trim(),
-      ref: body.productUrl,
-      size: null,
-      price_agorot: body.productPriceAgorot,
+    const { data: order, error: rpcErr } = await admin.rpc('create_order_atomic', {
+      p_creator_id: userId,
+      p_building_id: profile?.building_id ?? null,
+      p_product_url: body.productUrl,
+      p_product_title: body.productTitle.trim(),
+      p_product_image: body.productImage ?? null,
+      p_product_price_agorot: body.productPriceAgorot,
+      p_max_participants: body.maxParticipants,
+      p_stripe_transfer_group: transferGroup,
+      p_store_key: storeKey,
+      p_store_label: storeLabel,
+      p_estimated_shipping_agorot: body.estimatedShippingAgorot,
+      p_free_shipping_threshold_agorot: body.freeShippingThresholdAgorot,
+      p_closes_at: closesAt?.toISOString() ?? null,
+      p_edit_locks_at: editLocksAt?.toISOString() ?? null,
+      p_pickup_responsible_name: pickupName || 'Order creator',
+      p_preferred_pickup_location: pickupLocation,
+      p_amount_agorot: amount,
     });
-    if (itemErr) throw itemErr;
+
+    if (rpcErr) throw rpcErr;
+    if (!order) throw httpError(500, 'order_insert_failed');
 
     return json({ order });
   } catch (e) {
