@@ -14,6 +14,7 @@ import {
   type DemoOrder,
   type OrderStatus,
 } from '@/stores/demoCommerceStore';
+import { BackBtn } from '@/components/primitives/BackBtn';
 import { fontFamily } from '@/theme/fonts';
 import { colors, radii, shadow } from '@/theme/tokens';
 import { useLocale } from '@/i18n/locale';
@@ -152,6 +153,9 @@ export default function StoreDashboardScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.backRow}>
+          <BackBtn fallback="/(tabs)/building" />
+        </View>
         {/* Top header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
@@ -350,6 +354,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F4EDE3',
   },
+  backRow: { paddingHorizontal: 18, paddingTop: 14, alignSelf: 'flex-start' },
   content: {
     paddingBottom: 60,
     gap: 20,
