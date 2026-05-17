@@ -1,6 +1,7 @@
 import { handleOptions } from '../_shared/cors.ts';
 import { errorJson, json } from '../_shared/json.ts';
 import { admin, authedUserId, httpError } from '../_shared/supabaseAdmin.ts';
+import { enforceRateLimit } from '../_shared/rateLimit.ts';
 
 Deno.serve(async (req) => {
   const pre = handleOptions(req);
@@ -9,6 +10,7 @@ Deno.serve(async (req) => {
 
   try {
     const userId = await authedUserId(req);
+    await enforceRateLimit(userId, 'delete-account', { max: 3, windowSeconds: 86400 });
 
     // Refuse deletion while the user has an order in escrow — they still
     // have funds held. They must refund / complete first.
