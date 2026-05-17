@@ -68,10 +68,11 @@ Deno.serve(async (req) => {
 
     const { data: profile, error: profErr } = await admin
       .from('profiles')
-      .select('building_id, first_name, last_name')
+      .select('building_id, first_name, last_name, banned_at')
       .eq('id', userId)
       .maybeSingle();
     if (profErr) throw profErr;
+    if (profile?.banned_at) throw httpError(403, 'user_banned');
     const pickupName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim();
 
     const transferGroup = `order_${crypto.randomUUID()}`;

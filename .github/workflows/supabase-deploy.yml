@@ -29,7 +29,7 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
-          for fn in create-order generate-invite claim-invite create-payment-intent update-delivery confirm-delivery refund-escrow delete-account; do
+          for fn in create-order generate-invite claim-invite create-payment-intent update-delivery confirm-delivery refund-escrow delete-account admin-list-orders admin-list-users admin-cancel-order admin-ban-user; do
             supabase functions deploy "$fn"
           done
           # Stripe posts to webhook directly, no caller JWT to verify.

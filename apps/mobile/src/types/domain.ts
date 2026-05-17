@@ -27,6 +27,8 @@ export type Profile = {
   building: string;
   apt: string;
   floor: string | null;
+  is_admin?: boolean;
+  banned_at?: string | null;
 };
 
 export type Order = {
