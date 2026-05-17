@@ -13,6 +13,7 @@ import { useAddOrderItem, useCloseOrder, useOrder } from '@/api/orders';
 import { useGenerateInvite } from '@/api/invites';
 import { useAuthStore } from '@/stores/authStore';
 import { useUiStore } from '@/stores/uiStore';
+import { Sentry } from '@/lib/sentry';
 import { formatAgorot } from '@/utils/format';
 import { formatCompactDuration } from '@/utils/timer';
 import { useLocale } from '@/i18n/locale';
@@ -129,7 +130,7 @@ export default function OrderShell() {
   useEffect(() => {
     if (!order?.closes_at || !['open', 'paying'].includes(order.status) || closeOrder.isPending) return;
     if (new Date(order.closes_at).getTime() <= now) {
-      void closeOrder.mutateAsync(order.id).catch(() => {});
+      void closeOrder.mutateAsync(order.id).catch((err) => Sentry.captureException(err));
     }
   }, [closeOrder, now, order]);
 

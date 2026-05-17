@@ -11,6 +11,7 @@ import { fontFamily } from '@/theme/fonts';
 import { useConfirmDelivery, useOrder, useRefundOrder, useUpdateDelivery, type DeliveryAction } from '@/api/orders';
 import { useAuthStore } from '@/stores/authStore';
 import { useUiStore } from '@/stores/uiStore';
+import { useLocale } from '@/i18n/locale';
 import { formatAgorot } from '@/utils/format';
 import type { Participant, ShippingStatus, TrackingEvent } from '@/types/domain';
 
@@ -23,7 +24,7 @@ function Lock() {
   );
 }
 
-const statusLabels: Record<ShippingStatus, string> = {
+const statusLabelsHe: Record<ShippingStatus, string> = {
   not_shipped: 'ממתין לשליחה מהחנות',
   shipped: 'ההזמנה נשלחה',
   ready_for_pickup: 'מוכן לאיסוף',
@@ -31,11 +32,26 @@ const statusLabels: Record<ShippingStatus, string> = {
   ready_for_distribution: 'מוכן לחלוקה',
 };
 
-const nextActions: Partial<Record<ShippingStatus, { action: DeliveryAction; label: string }>> = {
+const statusLabelsEn: Record<ShippingStatus, string> = {
+  not_shipped: 'Awaiting shipment from store',
+  shipped: 'Order shipped',
+  ready_for_pickup: 'Ready for pickup',
+  picked_up: 'Picked up',
+  ready_for_distribution: 'Ready for distribution',
+};
+
+const nextActionsHe: Partial<Record<ShippingStatus, { action: DeliveryAction; label: string }>> = {
   not_shipped: { action: 'mark_shipped', label: 'סמן כנשלח' },
   shipped: { action: 'mark_ready_for_pickup', label: 'סמן כמוכן לאיסוף' },
   ready_for_pickup: { action: 'mark_picked_up', label: 'סמן כנאסף' },
   picked_up: { action: 'mark_ready_for_distribution', label: 'מוכן לחלוקה' },
+};
+
+const nextActionsEn: Partial<Record<ShippingStatus, { action: DeliveryAction; label: string }>> = {
+  not_shipped: { action: 'mark_shipped', label: 'Mark as shipped' },
+  shipped: { action: 'mark_ready_for_pickup', label: 'Mark as ready for pickup' },
+  ready_for_pickup: { action: 'mark_picked_up', label: 'Mark as picked up' },
+  picked_up: { action: 'mark_ready_for_distribution', label: 'Ready for distribution' },
 };
 
 export default function Escrow() {
@@ -47,6 +63,10 @@ export default function Escrow() {
   const updateDelivery = useUpdateDelivery();
   const refund = useRefundOrder();
   const pushToast = useUiStore((s) => s.pushToast);
+  const { language } = useLocale();
+  const isHe = language === 'he';
+  const statusLabels = isHe ? statusLabelsHe : statusLabelsEn;
+  const nextActions = isHe ? nextActionsHe : nextActionsEn;
   const [confirmRefund, setConfirmRefund] = useState(false);
 
   const order = data?.order;
@@ -72,9 +92,12 @@ export default function Escrow() {
     if (!order) return;
     try {
       await updateDelivery.mutateAsync({ orderId: order.id, action, participantId });
-      pushToast('הסטטוס עודכן.', 'success');
+      pushToast(isHe ? 'הסטטוס עודכן.' : 'Status updated.', 'success');
     } catch (e) {
-      pushToast(e instanceof Error ? e.message : 'לא הצלחנו לעדכן את הסטטוס.', 'error');
+      pushToast(
+        e instanceof Error ? e.message : isHe ? 'לא הצלחנו לעדכן את הסטטוס.' : 'Could not update status.',
+        'error',
+      );
     }
   };
 
@@ -85,10 +108,16 @@ export default function Escrow() {
       if (result.completed) {
         router.replace(`/order/${order.id}/complete`);
       } else {
-        pushToast('אישור קבלה נשמר. ממתין לשאר הקבוצה.', 'success');
+        pushToast(
+          isHe ? 'אישור קבלה נשמר. ממתין לשאר הקבוצה.' : 'Delivery confirmed. Waiting for the rest of the group.',
+          'success',
+        );
       }
     } catch (e) {
-      pushToast(e instanceof Error ? e.message : 'לא הצלחנו לאשר קבלה.', 'error');
+      pushToast(
+        e instanceof Error ? e.message : isHe ? 'לא הצלחנו לאשר קבלה.' : 'Could not confirm delivery.',
+        'error',
+      );
     }
   };
 
@@ -96,10 +125,16 @@ export default function Escrow() {
     if (!order) return;
     try {
       await refund.mutateAsync(order.id);
-      pushToast('ההזמנה בוטלה. ההחזרים מתבצעים.', 'success');
+      pushToast(
+        isHe ? 'ההזמנה בוטלה. ההחזרים מתבצעים.' : 'Order cancelled. Refunds in progress.',
+        'success',
+      );
       router.replace('/(tabs)/orders');
     } catch (e) {
-      pushToast(e instanceof Error ? e.message : 'לא הצלחנו לבטל את ההזמנה.', 'error');
+      pushToast(
+        e instanceof Error ? e.message : isHe ? 'לא הצלחנו לבטל את ההזמנה.' : 'Could not cancel the order.',
+        'error',
+      );
     }
   };
 
@@ -120,34 +155,48 @@ export default function Escrow() {
       <ScrollView contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <BackBtn onPress={() => router.replace('/(tabs)/orders')} />
-          <Text style={styles.headerTitle}>איסוף</Text>
+          <Text style={styles.headerTitle}>{isHe ? 'איסוף' : 'Pickup'}</Text>
           <View style={{ width: 40 }} />
         </View>
 
         <View style={styles.lockBox}>
           <Lock />
-          <Text style={styles.lockTitle}>הכסף מוחזק בבטחה</Text>
+          <Text style={styles.lockTitle}>
+            {isHe ? 'הכסף מוחזק בבטחה' : 'Funds held in escrow'}
+          </Text>
           <Text style={styles.lockSub}>
             {allPaid
-              ? 'כולם שילמו. Stripe ישחרר את הכסף רק לאחר שכל המשתתפים יאשרו קבלה.'
-              : `שילמו: ${paidCount} מתוך ${total}. שליטת המשלוח תיפתח כשהקבוצה תשלם במלואה.`}
+              ? isHe
+                ? 'כולם שילמו. Stripe ישחרר את הכסף רק לאחר שכל המשתתפים יאשרו קבלה.'
+                : 'Everyone paid. Stripe releases the funds only after every participant confirms delivery.'
+              : isHe
+              ? `שילמו: ${paidCount} מתוך ${total}. שליטת המשלוח תיפתח כשהקבוצה תשלם במלואה.`
+              : `Paid: ${paidCount} of ${total}. Delivery controls unlock once the group is fully paid.`}
           </Text>
           <Text style={styles.amount}>{formatAgorot(order.product_price_agorot)}</Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.kicker}>תוכנית איסוף</Text>
-          <Text style={styles.cardTitle}>{order.pickup_responsible_name || 'אחראי איסוף'}</Text>
-          <Text style={styles.body}>מיקום מועדף: {order.preferred_pickup_location || 'לא הוגדר'}</Text>
+          <Text style={styles.kicker}>{isHe ? 'תוכנית איסוף' : 'PICKUP PLAN'}</Text>
+          <Text style={styles.cardTitle}>
+            {order.pickup_responsible_name || (isHe ? 'אחראי איסוף' : 'Pickup manager')}
+          </Text>
+          <Text style={styles.body}>
+            {isHe ? 'מיקום מועדף: ' : 'Preferred location: '}
+            {order.preferred_pickup_location || (isHe ? 'לא הוגדר' : 'not set')}
+          </Text>
           <Text style={styles.warning}>
-            {order.pickup_location_note || 'מיקום האיסוף עשוי להשתנות בהתאם לחנות או ספק המשלוח'}
+            {order.pickup_location_note ||
+              (isHe
+                ? 'מיקום האיסוף עשוי להשתנות בהתאם לחנות או ספק המשלוח'
+                : 'The pickup location may change depending on the store or carrier')}
           </Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.kicker}>סטטוס משלוח</Text>
+          <Text style={styles.kicker}>{isHe ? 'סטטוס משלוח' : 'SHIPPING STATUS'}</Text>
           <Text style={styles.cardTitle}>{statusLabels[shippingStatus]}</Text>
-          <TrackingTimeline events={trackingEvents} shippingStatus={shippingStatus} />
+          <TrackingTimeline events={trackingEvents} shippingStatus={shippingStatus} statusLabels={statusLabels} isHe={isHe} />
           {canManageDelivery && next ? (
             <PrimaryBtn
               label={next.label}
@@ -157,47 +206,73 @@ export default function Escrow() {
             />
           ) : null}
           {!canManageDelivery ? (
-            <Text style={styles.body}>רק יוצר ההזמנה או אחראי האיסוף יכולים לעדכן את הסטטוס.</Text>
+            <Text style={styles.body}>
+              {isHe
+                ? 'רק יוצר ההזמנה או אחראי האיסוף יכולים לעדכן את הסטטוס.'
+                : 'Only the order creator or the pickup manager can update the status.'}
+            </Text>
           ) : null}
         </View>
 
         {isCreator && order.status !== 'completed' && order.status !== 'cancelled' ? (
           <View style={styles.card}>
-            <Text style={styles.kicker}>ביטול והחזר כספי</Text>
+            <Text style={styles.kicker}>{isHe ? 'ביטול והחזר כספי' : 'CANCEL & REFUND'}</Text>
             <Text style={styles.cardTitle}>
               {withinRefundWindow
-                ? daysLeft === 1 ? 'נותר יום אחד לביטול' : `נותרו ${daysLeft} ימים לביטול`
-                : 'חלון הביטול הסתיים'}
+                ? isHe
+                  ? daysLeft === 1
+                    ? 'נותר יום אחד לביטול'
+                    : `נותרו ${daysLeft} ימים לביטול`
+                  : daysLeft === 1
+                  ? '1 day left to cancel'
+                  : `${daysLeft} days left to cancel`
+                : isHe
+                ? 'חלון הביטול הסתיים'
+                : 'Cancellation window has closed'}
             </Text>
             {withinRefundWindow ? (
               <>
                 <Text style={styles.body}>
-                  לפי חוק הגנת הצרכן, ניתן לבטל עד 14 ימים מיצירת ההזמנה.
+                  {isHe
+                    ? 'לפי חוק הגנת הצרכן, ניתן לבטל עד 14 ימים מיצירת ההזמנה.'
+                    : 'Under Israeli Consumer Protection Law you can cancel up to 14 days after creating the order.'}
                   {shippingStatus !== 'not_shipped'
-                    ? ' ההזמנה כבר בדרך — ביטול עדיין אפשרי וכל הכסף יוחזר למשתתפים.'
-                    : ' כל הכסף יוחזר לכל המשתתפים.'}
+                    ? isHe
+                      ? ' ההזמנה כבר בדרך — ביטול עדיין אפשרי וכל הכסף יוחזר למשתתפים.'
+                      : ' The order is already on its way — cancellation is still possible and every participant will be refunded in full.'
+                    : isHe
+                    ? ' כל הכסף יוחזר לכל המשתתפים.'
+                    : ' Everyone will be refunded in full.'}
                 </Text>
                 {!confirmRefund ? (
                   <Pressable style={styles.cancelBtn} onPress={() => setConfirmRefund(true)}>
-                    <Text style={styles.cancelBtnText}>בטל הזמנה והחזר כספי</Text>
+                    <Text style={styles.cancelBtnText}>
+                      {isHe ? 'בטל הזמנה והחזר כספי' : 'Cancel order & refund'}
+                    </Text>
                   </Pressable>
                 ) : (
                   <View style={{ gap: 10 }}>
                     <Text style={[styles.body, { color: colors.err }]}>
-                      בטוח? לא ניתן לבטל את הפעולה. כל המשתתפים יזוכו במלואם.
+                      {isHe
+                        ? 'בטוח? לא ניתן לבטל את הפעולה. כל המשתתפים יזוכו במלואם.'
+                        : 'Are you sure? This cannot be undone. Every participant will be refunded in full.'}
                     </Text>
-                    <PrimaryBtn label="כן, בטל והחזר" onPress={onCancelOrder} loading={refund.isPending} />
+                    <PrimaryBtn
+                      label={isHe ? 'כן, בטל והחזר' : 'Yes, cancel and refund'}
+                      onPress={onCancelOrder}
+                      loading={refund.isPending}
+                    />
                     <Pressable style={styles.cancelBtn} onPress={() => setConfirmRefund(false)}>
-                      <Text style={styles.cancelBtnText}>חזור</Text>
+                      <Text style={styles.cancelBtnText}>{isHe ? 'חזור' : 'Back'}</Text>
                     </Pressable>
                   </View>
                 )}
               </>
             ) : (
               <Text style={styles.body}>
-                {'חלון הביטול של 14 ימים הסתיים ב-'}
-                {refundDeadline?.toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' })}.
-                {'\nלמקרים חריגים פנה לתמיכה.'}
+                {isHe
+                  ? `חלון הביטול של 14 ימים הסתיים ב-${refundDeadline?.toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' })}.\nלמקרים חריגים פנה לתמיכה.`
+                  : `The 14-day cancellation window closed on ${refundDeadline?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.\nContact support for exceptional cases.`}
               </Text>
             )}
           </View>
@@ -205,8 +280,10 @@ export default function Escrow() {
 
         {shippingStatus === 'ready_for_distribution' ? (
           <View style={styles.card}>
-            <Text style={styles.kicker}>חלוקה</Text>
-            <Text style={styles.cardTitle}>העבר פריטים למשתתפים</Text>
+            <Text style={styles.kicker}>{isHe ? 'חלוקה' : 'DISTRIBUTION'}</Text>
+            <Text style={styles.cardTitle}>
+              {isHe ? 'העבר פריטים למשתתפים' : 'Hand out items to participants'}
+            </Text>
             {participants.filter((p) => p.status === 'paid').map((p, index) => (
               <ParticipantDeliveryRow
                 key={p.id}
@@ -215,14 +292,23 @@ export default function Escrow() {
                 isMe={p.user_id === userId}
                 canManage={canManageDelivery}
                 loading={updateDelivery.isPending}
+                isHe={isHe}
                 onMarkDelivered={() => runAction('mark_delivered_to_user', p.id)}
               />
             ))}
             {canConfirmReceived ? (
-              <PrimaryBtn label="קיבלתי את הפריט שלי" onPress={onReceived} loading={confirm.isPending} />
+              <PrimaryBtn
+                label={isHe ? 'קיבלתי את הפריט שלי' : 'I received my item'}
+                onPress={onReceived}
+                loading={confirm.isPending}
+              />
             ) : null}
             {allDelivered && !allReceived ? (
-              <Text style={styles.body}>כל הפריטים נמסרו. ממתין לאישור קבלה מכל המשתתפים.</Text>
+              <Text style={styles.body}>
+                {isHe
+                  ? 'כל הפריטים נמסרו. ממתין לאישור קבלה מכל המשתתפים.'
+                  : 'All items handed out. Waiting for everyone to confirm receipt.'}
+              </Text>
             ) : null}
           </View>
         ) : null}
@@ -236,13 +322,17 @@ const STATUS_ORDER = ['shipped', 'ready_for_pickup', 'picked_up', 'ready_for_dis
 function TrackingTimeline({
   events,
   shippingStatus,
+  statusLabels,
+  isHe,
 }: {
   events: TrackingEvent[];
   shippingStatus: ShippingStatus;
+  statusLabels: Record<ShippingStatus, string>;
+  isHe: boolean;
 }) {
   const fmt = (iso: string) => {
     const d = new Date(iso);
-    return d.toLocaleDateString('he-IL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   };
 
   if (events.length === 0) {
@@ -296,6 +386,7 @@ function ParticipantDeliveryRow({
   isMe,
   canManage,
   loading,
+  isHe,
   onMarkDelivered,
 }: {
   participant: Participant;
@@ -303,6 +394,7 @@ function ParticipantDeliveryRow({
   isMe: boolean;
   canManage: boolean;
   loading: boolean;
+  isHe: boolean;
   onMarkDelivered: () => void;
 }) {
   const delivered = Boolean(participant.delivered_to_user_at);
@@ -310,13 +402,19 @@ function ParticipantDeliveryRow({
   return (
     <View style={styles.participantRow}>
       <View style={{ flex: 1 }}>
-        <Text style={styles.participantTitle}>{isMe ? 'אתה' : `משתתף ${index + 1}`}</Text>
+        <Text style={styles.participantTitle}>
+          {isMe ? (isHe ? 'אתה' : 'You') : isHe ? `משתתף ${index + 1}` : `Participant ${index + 1}`}
+        </Text>
         <Text style={styles.participantState}>
-          {received ? 'קבלה אושרה' : delivered ? 'נמסר, ממתין לאישור' : 'טרם נמסר'}
+          {received
+            ? isHe ? 'קבלה אושרה' : 'Receipt confirmed'
+            : delivered
+            ? isHe ? 'נמסר, ממתין לאישור' : 'Handed over, awaiting confirmation'
+            : isHe ? 'טרם נמסר' : 'Not yet handed over'}
         </Text>
       </View>
       {canManage && !delivered ? (
-        <PrimaryBtn label="נמסר" onPress={onMarkDelivered} loading={loading} />
+        <PrimaryBtn label={isHe ? 'נמסר' : 'Handed over'} onPress={onMarkDelivered} loading={loading} />
       ) : null}
     </View>
   );
