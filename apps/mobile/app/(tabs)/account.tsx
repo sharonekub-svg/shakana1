@@ -120,6 +120,27 @@ function IconBug() {
   );
 }
 
+function IconAdmin() {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 2L4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4z"
+        stroke={colors.hot}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M9 12l2 2 4-4"
+        stroke={colors.hot}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
 function IconFAQ() {
   return (
     <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
@@ -392,6 +413,17 @@ export default function AccountTab() {
         <Text style={styles.sectionHeader}>
           {isHebrew ? 'תמיכה' : 'SUPPORT'}
         </Text>
+
+        {profile?.is_admin ? (
+          <View style={styles.listCard}>
+            <Row
+              icon={<IconAdmin />}
+              label={isHebrew ? 'ניהול' : 'Admin'}
+              subtitle={isHebrew ? 'הזמנות, משתמשים, חסימות' : 'Orders, users, bans'}
+              onPress={() => router.push('/admin')}
+            />
+          </View>
+        ) : null}
 
         <View style={styles.listCard}>
           <Row

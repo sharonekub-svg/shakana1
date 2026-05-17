@@ -25,6 +25,13 @@ Deno.serve(async (req) => {
     const { token } = await readJson<Body>(req);
     if (!token || typeof token !== 'string') throw httpError(400, 'missing_token');
 
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('banned_at')
+      .eq('id', userId)
+      .maybeSingle();
+    if (profile?.banned_at) throw httpError(403, 'user_banned');
+
     const { data, error } = await admin.rpc('claim_invite', {
       p_token: token,
       p_user_id: userId,
