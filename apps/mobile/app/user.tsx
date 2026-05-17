@@ -32,7 +32,7 @@ import {
   useDemoCommerceStore,
 } from '@/stores/demoCommerceStore';
 import { fontFamily } from '@/theme/fonts';
-import { colors } from '@/theme/tokens';
+import { colors, shadow } from '@/theme/tokens';
 import { useLocale } from '@/i18n/locale';
 import { formatMoney } from '@/utils/money';
 import { useAuthStore } from '@/stores/authStore';
@@ -2228,12 +2228,12 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   smallBtn: { flexGrow: 1, flexBasis: 136, minHeight: 40 },
-  storeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
+  storeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   homeStepperCard: {
     gap: 16,
     backgroundColor: colors.s1,
-    borderRadius: 28,
-    borderWidth: 1,
+    borderRadius: 24,
+    borderWidth: 0,
     borderColor: colors.br,
   },
   homeStepperHeader: {
@@ -2256,7 +2256,7 @@ const styles = StyleSheet.create({
     minHeight: 82,
     borderRadius: 20,
     backgroundColor: colors.s2,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: colors.br,
     padding: 12,
     flexDirection: 'row',
@@ -2268,8 +2268,8 @@ const styles = StyleSheet.create({
     height: 34,
     borderRadius: 17,
     overflow: 'hidden',
-    backgroundColor: colors.ink,
-    color: colors.white,
+    backgroundColor: colors.lime,
+    color: colors.ink,
     fontFamily: fontFamily.bodyBold,
     fontSize: 13,
     lineHeight: 34,
@@ -2294,9 +2294,9 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 4,
     padding: 16,
-    borderRadius: 22,
-    backgroundColor: colors.goldLight,
-    borderWidth: 1,
+    borderRadius: 24,
+    backgroundColor: colors.limeSoft,
+    borderWidth: 0,
     borderColor: colors.br,
   },
   joinStateCard: {
@@ -2328,10 +2328,11 @@ const styles = StyleSheet.create({
   storeChoice: {
     flexGrow: 1,
     flexBasis: 280,
-    height: 320,
-    borderRadius: 24,
+    height: 260,
+    borderRadius: 26,
     overflow: 'hidden',
-    backgroundColor: colors.s3,
+    backgroundColor: colors.s2,
+    ...shadow.card,
   },
   storeChoiceSelected: {
     borderColor: colors.acc,
@@ -2343,7 +2344,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: 10,
     padding: 18,
-    backgroundColor: 'rgba(37,32,27,0.34)',
+    backgroundColor: 'rgba(21,21,21,0.32)',
   },
   storeName: {
     color: '#FFFFFF',
@@ -2356,8 +2357,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   hero: {
-    minHeight: 280,
-    borderRadius: 24,
+    minHeight: 260,
+    borderRadius: 28,
     overflow: 'hidden',
     backgroundColor: colors.s3,
   },
@@ -2366,7 +2367,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: 10,
     padding: 18,
-    backgroundColor: 'rgba(37,32,27,0.36)',
+    backgroundColor: 'rgba(21,21,21,0.36)',
   },
   heroTitle: {
     color: '#FFFFFF',
@@ -2816,7 +2817,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodyBold,
     fontSize: 10,
     letterSpacing: 1.8,
-    color: colors.acc,
+    color: colors.tx,
   },
   homeHeroTitle: {
     fontFamily: fontFamily.display,
@@ -2834,6 +2835,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     flexWrap: 'wrap',
+    paddingHorizontal: 2,
   },
   homeHeroStatBox: {
     flex: 1,

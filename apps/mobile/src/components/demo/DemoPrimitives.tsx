@@ -405,27 +405,27 @@ const styles = StyleSheet.create({
   },
   shell: {
     width: '100%',
-    maxWidth: 1180,
+    maxWidth: 430,
     paddingHorizontal: 18,
     paddingVertical: 22,
     gap: 18,
   },
   wideShell: {
-    maxWidth: 1320,
+    maxWidth: 1180,
   },
   card: {
     backgroundColor: colors.card,
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: colors.br,
-    borderRadius: 24,
+    borderRadius: 22,
     ...shadow.card,
   },
   cardPad: {
     padding: 18,
   },
   button: {
-    minHeight: 50,
-    borderRadius: 18,
+    minHeight: 48,
+    borderRadius: 999,
     paddingHorizontal: 18,
     paddingVertical: 14,
     alignItems: 'center',
@@ -440,8 +440,8 @@ const styles = StyleSheet.create({
     borderColor: colors.br,
   },
   accentButton: {
-    backgroundColor: colors.acc,
-    borderColor: colors.acc,
+    backgroundColor: colors.ink,
+    borderColor: colors.ink,
     ...shadow.cta,
   },
   dangerButton: {
@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   kicker: {
-    color: colors.hot,
+    color: colors.mu,
     fontFamily: fontFamily.bodyBold,
     fontSize: 11,
     letterSpacing: 1.3,
@@ -487,8 +487,8 @@ const styles = StyleSheet.create({
   h2: {
     color: colors.tx,
     fontFamily: fontFamily.display,
-    fontSize: 28,
-    lineHeight: 32,
+    fontSize: 24,
+    lineHeight: 28,
   },
   h3: {
     color: colors.tx,
@@ -513,19 +513,19 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: colors.white,
-    borderColor: colors.br,
+    backgroundColor: colors.ink,
+    borderColor: colors.ink,
     alignSelf: 'flex-start',
   },
   brandPillText: {
-    color: colors.acc,
+    color: colors.white,
     fontFamily: fontFamily.display,
     fontSize: 22,
   },
   productImage: {
     width: '100%',
     aspectRatio: 0.84,
-    borderRadius: 20,
+    borderRadius: 18,
     backgroundColor: colors.s2,
   },
   progressOuter: {
@@ -564,10 +564,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.brBr,
-    backgroundColor: colors.accLight,
+    borderRadius: 22,
+    borderWidth: 0,
+    borderColor: colors.br,
+    backgroundColor: colors.limeSoft,
     paddingHorizontal: 14,
     paddingVertical: 12,
     shadowColor: colors.acc,
@@ -608,8 +608,8 @@ const styles = StyleSheet.create({
   },
   socialBadge: {
     minWidth: 94,
-    borderRadius: 16,
-    backgroundColor: colors.s2,
+    borderRadius: 18,
+    backgroundColor: colors.limeSoft,
     paddingHorizontal: 12,
     paddingVertical: 10,
     alignItems: 'center',
@@ -657,16 +657,16 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   statusItem: {
-    borderRadius: 10,
-    backgroundColor: colors.s3,
+    borderRadius: 999,
+    backgroundColor: colors.s2,
     paddingHorizontal: 9,
     paddingVertical: 5,
   },
   statusItemDone: {
-    backgroundColor: colors.accLight,
+    backgroundColor: colors.limeSoft,
   },
   statusItemCurrent: {
-    backgroundColor: colors.acc,
+    backgroundColor: colors.ink,
   },
   statusDot: {
     width: 10,
@@ -694,7 +694,7 @@ const styles = StyleSheet.create({
     color: colors.acc,
   },
   statusTextCurrent: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontFamily: fontFamily.bodyBold,
   },
 });
